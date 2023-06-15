@@ -1,0 +1,54 @@
+							Funtion Name : update_product_woocom
+							Workflow Name : Update_Product_WooCom
+
+
+
+Inventory_Item = zoho.inventory.getRecordsByID("items","666479573",item.get("item_id"));
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+Item_obj = Inventory_Item.get("item");
+if(Item_obj.get("custom_fields").size() == 1)
+{
+	info "Yes";
+	Item = Map();
+	Item.put("name",Item_obj.get("name"));
+	Item.put("sku",Item_obj.get("sku"));
+	Item.put("regular_price",Item_obj.get("rate"));
+	Item.put("weight",Item_obj.get("package_details").get("weight"));
+	Item.put("manage_stock","true");
+	Item.put("stock_quantity",Item_obj.get("stock_on_hand"));
+	////////////////////////////////////////////////////////////////////////
+	woo_product_id = Item_obj.get("custom_fields").get(0).get("value");
+	Response = invokeurl
+	[
+		url :"https://blinkswag.com/re-max/wp-json/wc/v3/products/" + woo_product_id + "?consumer_secret=cs_81615f9feb4fae0b60e4dcbf290b289b614cc439&consumer_key=ck_9aa1a46d414ecb880fc544b7e06b3c1bef15c147"
+		type :PUT
+		parameters:Item
+	];
+	info Response;
+}
+else
+{
+	info "Yes 2";
+	woo_product_id = Item_obj.get("custom_fields").get(0).get("value");
+	woo_product_vari = Item_obj.get("custom_fields").get(2).get("value");
+	Woo_Item_variation = invokeurl
+	[
+		url :"https://blinkswag.com/re-max/wp-json/wc/v3/products/" + woo_product_id + "/variations/" + woo_product_vari + "?consumer_secret=cs_81615f9feb4fae0b60e4dcbf290b289b614cc439&consumer_key=ck_9aa1a46d414ecb880fc544b7e06b3c1bef15c147"
+		type :GET
+	];
+	Item = Map();
+	Item.put("sku",Item_obj.get("sku"));
+	Item.put("regular_price",Item_obj.get("rate"));
+	Item.put("weight",Item_obj.get("package_details").get("weight"));
+	Item.put("manage_stock","true");
+	Item.put("stock_quantity",Item_obj.get("stock_on_hand"));
+	////////////////////////////////////////////////////////////////////////
+	woo_product_id = Item_obj.get("custom_fields").get(0).get("value");
+	Response = invokeurl
+	[
+		url :"https://blinkswag.com/re-max/wp-json/wc/v3/products/" + woo_product_id + "/variations/" + woo_product_vari + "?consumer_secret=cs_81615f9feb4fae0b60e4dcbf290b289b614cc439&consumer_key=ck_9aa1a46d414ecb880fc544b7e06b3c1bef15c147"
+		type :PUT
+		parameters:Item
+	];
+	info Response;
+}

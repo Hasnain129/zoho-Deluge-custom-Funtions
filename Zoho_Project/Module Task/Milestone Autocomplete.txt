@@ -1,0 +1,74 @@
+
+								Funtion Name: Milestone Autocomplete
+
+Arguments
+Parameter Name  		Parameter Value
+milestoneId	=	Milestone System ID
+milestoneName	=	Milestone Name
+portalId		=	Portal System ID
+projectId		=	Project System ID
+projectName	=	Project Name
+projectOwner	=	Project Owner Details
+
+Description : Milestone status will be marked as completed when the count of open tasks and issues reaches zero. This function has to be associated with task workflow which executes when the Status field is updated.
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+taskParam = Map();
+taskParam.put("status","notcompleted");
+taskParam.put("milestone_id",milestoneId);
+taskResponse = zoho.projects.getRecords(portalId,projectId,"tasks",taskParam,1,"zohoprojects");
+ownerEmail = projectOwner.get(0).get('email');
+ownerName = projectOwner.get(0).get('name');
+info "taskResponse:" + taskResponse;
+info "------------------------------------";
+projectsAPIEndPoint = "https://projectsapi.zoho.com/restapi";
+isMilestoneUpdate = false;
+// If no open tasks are found, then open bugs will be checked in the milestone.
+if(taskResponse.isEmpty())
+{
+	milestoneList = list();
+	milestoneList.add(milestoneId);
+	bugParam = Map();
+	bugParam.put("statustype","open");
+	bugParam.put("milestone",milestoneList);
+	info "bugParam:" + bugParam;
+	info "------------------------------------";
+	bugResponse = zoho.projects.getRecords(portalId,projectId,"bugs",bugParam,1,"zohoprojects");
+	info bugResponse;
+	info "------------------------------------";
+	if(bugResponse.isEmpty())
+	{
+		isMilestoneUpdate = true;
+	}
+}
+info "TaskResponse Is Empty :" + taskResponse.isEmpty() + ", isMilestoneUpdate:" + isMilestoneUpdate;
+info "---------------------";
+if(!milestoneId.isNull() && isMilestoneUpdate)
+{
+	milestoneParam = Map();
+	// Modify the status of the milestone.(1 - notcompleted, 2 - completed)
+	milestoneParam.put("status",2);
+	info milestoneParam;
+	info "---------------------";
+	updateMilestoneResponse = invokeurl
+	[
+		url :projectsAPIEndPoint + "/portal/" + portalId + "/projects/" + projectId + "/milestones/" + milestoneId + "/status/"
+		type :POST
+		parameters:milestoneParam
+		connection:"zohoprojects"
+	];
+	info updateMilestoneResponse;
+	info "-------------------------------------";
+	info ownerEmail;
+	sendmail
+	[
+		from :zoho.loginuserid
+		to :ownerEmail
+		subject :"Completed Milestone: " + milestoneName + "  | Project: " + projectName
+		message :"Hi " + ownerName + ", <br><br> Milestone Name: <strong>" + milestoneName + "</strong>, from your project: <strong>" + projectName + "</strong>, has been completed. <br> To view your milestones and/or activate the next milestone please go to the following link. <br> <br> <a href=\"https://projects.zoho.com/portal/blinksigns#milestones/" + projectId + "/" + milestoneId + "\">https://projects.zoho.com/portal/blinksigns#milestones/" + projectId + "/" + milestoneId + "</a>"
+	]
+}
+return "success";
+// TODO: Please create a connection for the Zoho Projects service with the scopes "ZohoProjects.tasks.READ, ZohoProjects.bugs.READ, ZohoProjects.milestones.UPDATE". Replace 'xxxxxxxxx' with the connection name. Click this link below to learn how to create the connection.
+// Link - https://help.zoho.com/portal/en/kb/projects/integration/connections/articles/connections-23-5-2022#How_to_establish_a_Connection

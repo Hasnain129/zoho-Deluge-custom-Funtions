@@ -1,0 +1,42 @@
+						Function Name : update_presta_order
+
+
+
+Description : 	Get sales order reference number .and check if refrence number. contains ("Presta Order")
+		update order history
+		update id order state and so on.
+		and send customer mail to erp@blinksigns.com
+		subject : So order status update / inventory
+
+
+try 
+{
+	SO_reference = salesorder.get("reference_number");
+	if(SO_reference.contains("Presta Order"))
+	{
+		Reference = SO_reference.removeAllAlpha().remove(":").remove(" ").remove("-");
+		Order_ID = Reference.subString(0,5);
+		Status_update = "<?xml version='1.0' encoding='UTF-8' ?>";
+		Status_update = Status_update + "<prestashop xmlns:xlink='http://www.w3.org/1999/xlink'>";
+		Status_update = Status_update + "<order_history>";
+		Status_update = Status_update + "<id_order_state><![CDATA[4]]></id_order_state>";
+		Status_update = Status_update + "<id_order><![CDATA[" + Order_ID + "]]></id_order>";
+		Status_update = Status_update + "</order_history>";
+		Status_update = Status_update + "</prestashop>";
+		Presta_Order_Update = invokeurl
+		[
+			url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/api/order_histories?output_format=JSON"
+			type :POST
+			parameters:Status_update
+		];
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :" SO Order Status Update / Inventory"
+		message :"SO Reference: " + SO_reference + " Root Cause: " + e
+	]
+}

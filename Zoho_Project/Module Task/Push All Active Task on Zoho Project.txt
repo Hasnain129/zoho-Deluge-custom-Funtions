@@ -1,0 +1,46 @@
+								Funtion Name: Push All Active Task on Zoho Project
+Arguments
+Parameter Name  		Parameter Value
+Project_id			=	Project System ID
+Project_Name		=	Project Name
+Project_Status		=	Project Status
+Task_ID			=	Task System ID
+Task_Number		=	Task Number
+
+Description : Get Project task and update task Project Name & Satus
+
+
+info Task_ID;
+info Task_Number;
+//////////////////////////////////////////// Sort the Tasks /////////////////////////////////////////
+Task_key = 1;
+Asc_Tasks = "";
+Project_Tasks = invokeurl
+[
+	url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + Project_id + "/tasks/"
+	type :GET
+	connection:"zohoprojects"
+];
+All_Tasks = Project_Tasks.get("tasks");
+for each  tsk in All_Tasks
+{
+	if(tsk.get("status").get("name") == "Active")
+	{
+		Asc_Tasks = Asc_Tasks + tsk.get("name") + "\n";
+	}
+}
+info Project_Status.lower();
+mp = Map();
+mp.put("name",Project_Name);
+mp.put("status","active");
+mp.put("UDF_TEXT5",Asc_Tasks.removeLastOccurence(","));
+info mp;
+Update_Current_Task = invokeurl
+[
+	url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + Project_id + "/"
+	type :POST
+	parameters:mp
+	connection:"zohoprojects"
+];
+info Update_Current_Task;
+return "success";

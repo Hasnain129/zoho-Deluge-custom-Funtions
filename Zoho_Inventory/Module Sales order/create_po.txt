@@ -1,0 +1,30 @@
+					funtion Name : Create_po
+					worflow Name : Create_po_from_so
+
+Description: create purchase order when sales order is created or updated 
+
+
+
+line_items = salesorder.get("line_items");
+so_reference = salesorder.get("salesorder_number");
+status = "draft";
+prestashop_vendor = {};
+for each  line_item in line_items
+{
+	item_id = line_item.get("item_id");
+	response = zoho.inventory.getRecordsByID("items","666479573",item_id);
+	item = response.get("item");
+	preferred_vendor = item.get("preferred_vendors");
+	vendor_id = preferred_vendor.get(0).get("vendor_id");
+	if(vendor_id == 1316483000017857926)
+	{
+		data = Map();
+		data.put("item_id",item_id);
+		prestashop_vendor.add(data);
+	}
+}
+if(prestashop_vendor.isEmpty() != true)
+{
+	purchase_order = {"date":today,"expected_delivery_date":"","expected_delivery_date_formatted":"","reference_number":so_reference,"status":"draft","status_formatted":"Draft","vendor_id":"1316483000017857926","vendor_name":"Presta-shop","line_items":prestashop_vendor};
+	response = zoho.inventory.createRecord("PurchaseOrders","666479573",purchase_order);
+}

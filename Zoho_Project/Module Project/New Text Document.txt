@@ -1,0 +1,76 @@
+ 							2/Funtion Name: Update Stage from ZP to Sign Project
+
+Arguments
+Parameter Name  		Parameter Value
+deal_id	=		CRM Id
+Project_Owner   =   		Project Owners Details
+Z_Project_id   =		Project System ID
+Z_Project_Status   = 	Project Status
+
+Description: Get Current Stage & Transition ID to zoho crm Sign Project Module 
+if (project status = "Completed") Then Transition id Updated to "Project Completed"
+else if (project status = "on Hold") Then Transition id "Hold" And showing MSG
+Reason for Hold "Status Updated By zoho Project"
+Notes for Hold  "Status updated by zoho project"
+and update it to zoho crm
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+Sign_Project_obj = zoho.crm.getRecordById("Deals",deal_id,"zoho_crm");
+CurrentStage = Sign_Project_obj.get("Stage");
+TransitionsIDs = Sign_Project_obj.get("Blueprint_Transitions_IDs").toMap();
+dataMp = Map();
+blueprint1 = Map();
+if(Z_Project_Status == "Completed")
+{
+	blueprint1.put("transition_id",TransitionsIDs.get("Project Completed"));
+}
+else if(Z_Project_Status == "On Hold")
+{
+	blueprint1.put("transition_id",TransitionsIDs.get("Hold"));
+	dataMp.put("Reason_for_Hold","Status Updated by Zoho Project");
+	dataMp.put("Notes_for_Hold","Status Updated by Zoho Project");
+	blueprint1.put("data",dataMp);
+}
+else if(Z_Project_Status == "Lost")
+{
+	blueprint1.put("transition_id",TransitionsIDs.get("Lost"));
+	dataMp.put("Reason_for_Lost","Status Updated by Zoho Project");
+	dataMp.put("Notes_for_Lost","Status Updated by Zoho Project");
+	blueprint1.put("data",dataMp);
+	Project_Tasks = invokeurl
+	[
+		url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + Z_Project_id + "/tasks/"
+		type :GET
+		connection:"zohoprojects"
+	];
+	All_Tasks = Project_Tasks.get("tasks");
+	for each  task in All_Tasks
+	{
+		task_mp = Map();
+		task_mp.put("custom_status",1264527000001311125);
+		Update_Task = invokeurl
+		[
+			url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + Z_Project_id + "/tasks/" + task.get("id") + "/"
+			type :POST
+			parameters:task_mp
+			connection:"zohoprojects"
+		];
+		info "Update" + Update_Task;
+	}
+}
+else
+{
+	blueprint1.put("transition_id",TransitionsIDs.get("Pre-Production"));
+}
+blueprintList = List();
+blueprintList.add(blueprint1);
+param = Map();
+param.put("blueprint",blueprintList);
+response = invokeurl
+[
+	url :"https://www.zohoapis.com/crm/v2/deals/" + deal_id + "/actions/blueprint"
+	type :PUT
+	parameters:param.toString()
+	connection:"zoho_crm"
+];
+//info response;
+return "success";

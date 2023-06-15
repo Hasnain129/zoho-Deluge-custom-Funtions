@@ -1,0 +1,22 @@
+							Function Name : create_notification_on_dashboard_invoice
+
+Description : create_notification_on_dashboard_invoice
+
+/*
+This is a sample function. Uncomment to execute or make changes to this function.
+invoiceID = invoice.get("invoice_id");
+invoicedate = invoice.get("date").toDate();
+organizationID = organization.get("organization_id");
+*/
+customerID = invoice.get("customer_id");
+invoiceNo = invoice.get("invoice_number");
+invoiceID = invoice.get("invoice_id");
+notification = "New Invoice has been created " + invoiceNo;
+url = "https://dashboard.blinkswag.com/invoices/view/" + invoiceID;
+myMap = Map();
+myMap.put("apiKey","8ab576fc17374751ad3cb7018f1672f3");
+myMap.put("notification",notification);
+myMap.put("company_id",customerID);
+myMap.put("url",url);
+resp = postUrl("https://dashboard.blinkswag.com/createnotification",myMap);
+info resp;

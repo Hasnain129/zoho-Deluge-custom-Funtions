@@ -1,0 +1,196 @@
+								Funtion Name: Set_Milestone_Start_and_End_Date
+Arguments
+Parameter Name  		Parameter Value
+CRM_id			=	CRM Id
+Milestone_EndDate		=	Milestone End Date
+milestone_flag		=	Milestone Flag
+milestone_id		=	Milestone System ID
+milestone_name		=	Milestone Name
+milestone_owner		=	Milestone Owner
+milestone_start_date	=	Milestone Start Date
+Project_id			=	Project System ID
+Project_Name		=	Project Name
+Project_Status		=	Project Status
+Task_due_date		=	Task Due Date
+Task_duration		=	Task Duration
+Task_Id			=	Task ID
+Task_Name		=	Task Name
+Task_Number		=	Task Number
+Task_start_date		=	Task Start Date
+
+Description : This function will do the following operations:
+
+1. Check if task Start Date is not Empty.
+2. It will get the all the task related to this milstone.
+3. It will get first task Start Date and will add its duration.
+4. It will consider 1st Task End Date as 2nd Task Start date and add duration of its.
+5. By doing this it will get the last Task End Date and Update it as Milestone End Date.
+
+
+//////////////////////////////// Get Milestone  //////////////////////////////
+if(milestone_id != null)
+{
+	Project = invokeurl
+	[
+		url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + Project_id + "/"
+		type :GET
+		connection:"zohoprojects"
+	];
+	project_status = Project.get("projects").get(0).get("status");
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	Milestone = invokeurl
+	[
+		url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + Project_id + "/milestones/" + milestone_id + "/"
+		type :GET
+		connection:"zohoprojects"
+	];
+	//info Milestone;
+	task_counter = false;
+	Task_List = "";
+	milestone_owner = Milestone.get("milestones").get(0).get("owner_id");
+	milestone_startdate = Milestone.get("milestones").get(0).get("start_date");
+	//////////////////////////////////// All Tasks ///////////////////////////////////////////////
+	Project_Tasks = invokeurl
+	[
+		url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + Project_id + "/tasks/"
+		type :GET
+		connection:"zohoprojects"
+	];
+	All_Tasks = Project_Tasks.get("tasks");
+	///////////////////////////////////////////////////////////////////////////////////////////////
+	//milestone_found = false;
+	Project_Milestones = invokeurl
+	[
+		url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + Project_id + "/milestones/"
+		type :GET
+		connection:"zohoprojects"
+	];
+	All_Milestones = Project_Milestones.get("milestones");
+	Task_Active = false;
+	milestone_found = false;
+	duration = 0;
+	Task_Start_Date = Task_start_date;
+	//info Task_Start_Date;
+	Task_largest_Duedate = Task_due_date;
+	for each  milestone in All_Milestones
+	{
+		if(milestone_found == false && milestone_id == milestone.get("id"))
+		{
+			for each  mil_task in All_Tasks
+			{
+				if(mil_task.get("milestone_id") == milestone_id && mil_task.get("start_date") != null)
+				{
+					if(mil_task.get("status").get("name") == "Active" && mil_task.get("status").get("name") != "Cancelled" && mil_task.get("id") != Task_Id)
+					{
+						info mil_task.get("status").get("name");
+						task_counter = true;
+						if(mil_task.get("end_date").daysBetween(Task_largest_Duedate) < 0)
+						{
+							Task_largest_Duedate = mil_task.get("end_date");
+							task_counter = true;
+						}
+					}
+					if(mil_task.get("status").get("name") != "Active" && mil_task.get("status").get("name") != "Cancelled" && mil_task.get("id") != Task_Id)
+					{
+						info mil_task.get("status").get("name");
+						duration = duration + mil_task.get("duration").toLong() - 1;
+					}
+				}
+			}
+			//info Task_largest_Duedate;
+			Mp = Map();
+			Mp.put("name",milestone.get("name"));
+			if(task_counter == false)
+			{
+				Mp.put("start_date",Task_start_date);
+			}
+			else
+			{
+				Mp.put("start_date",milestone.get("start_date"));
+			}
+			Mp.put("end_date",Task_largest_Duedate.addBusinessDay(duration).toString("MM-dd-yyyy"));
+			Mp.put("owner",milestone.get("owner_id"));
+			Mp.put("flag",milestone.get("flag").lower());
+			Update_milestone = invokeurl
+			[
+				url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + Project_id + "/milestones/" + milestone.get("id") + "/"
+				type :POST
+				parameters:Mp
+				connection:"zohoprojects"
+			];
+			//info "Update_milestone "+ Update_milestone;
+			milestone_found = true;
+			milestone_startdate = Task_largest_Duedate.addBusinessDay(duration).toString("MM-dd-yyyy");
+			info "start_date" + milestone_startdate;
+		}
+		if(milestone_found == true && milestone_id != milestone.get("id"))
+		{
+			//next_milestone_end_date = "";
+			counter = false;
+			//milestone_startdate = milestone_end_date;
+			for each  task in All_Tasks
+			{
+				if(task.get("milestone_id") == milestone.get("id"))
+				{
+					if(task.get("status").get("name") != "Cancelled" && task.get("start_date") != null)
+					{
+						info "OK found";
+						//info task.get("name");
+						if(counter == false)
+						{
+							next_milestone_end_date = milestone_startdate.addBusinessDay(task.get("duration").toLong() - 1).toString("MM-dd-yyyy");
+							counter = true;
+						}
+						else
+						{
+							next_milestone_end_date = next_milestone_end_date.addBusinessDay(task.get("duration").toLong() - 1).toString("MM-dd-yyyy");
+						}
+					}
+				}
+			}
+			Mp2 = Map();
+			Mp2.put("name",milestone.get("name"));
+			Mp2.put("start_date",milestone_startdate);
+			Mp2.put("end_date",next_milestone_end_date);
+			Mp2.put("owner",milestone.get("owner_id"));
+			Mp2.put("flag",milestone.get("flag").lower());
+			Update_milestone = invokeurl
+			[
+				url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + Project_id + "/milestones/" + milestone.get("id") + "/"
+				type :POST
+				parameters:Mp2
+				connection:"zohoprojects"
+			];
+			info "Update_milestone" + Update_milestone;
+			info "Found" + "start" + milestone_startdate + "		" + "End" + next_milestone_end_date;
+			milestone_startdate = next_milestone_end_date;
+			counter = false;
+		}
+	}
+	info "Project End Date	" + next_milestone_end_date;
+	//////////////////////////////////// Update End Date On Zoho Project ////////////////////////////////////
+	Mp3 = Map();
+	Mp3.put("name",Project_Name);
+	Mp3.put("status",project_status);
+	Mp3.put("end_date",next_milestone_end_date);
+	info "Milestone Name " + milestone_name;
+	if(milestone_name == "Design")
+	{
+		info "Here Design";
+		Mp3.put("custom_status",1264527000041100489);
+	}
+	else if(milestone_name == "Estimate")
+	{
+		Mp3.put("custom_status",1264527000041100569);
+	}
+	info Mp3;
+	Update_Project = invokeurl
+	[
+		url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + Project_id + "/"
+		type :POST
+		parameters:Mp3
+		connection:"zohoprojects"
+	];
+	//info Update_Project;
+}
+return "success";

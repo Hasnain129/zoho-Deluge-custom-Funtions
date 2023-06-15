@@ -1,0 +1,403 @@
+					Funtion Name : create_variable_product
+					Workflow Name : create_variable_product
+
+
+
+
+abc = {"Black","Pink","Blue","green","White"};
+info abc.sort();
+Item_id = item.get("item_id");
+Response = zoho.inventory.getRecordsByID("items","666479573",Item_id);
+Item_obj = Response.get("item");
+///////////////////////////// Prestashop Shops //////////////////////////////////////////// 
+if(Item_obj.get("brand") == "Test")
+{
+	Shop = "Test";
+	Shop_id = 13;
+}
+if(Item_obj.get("brand") == "My shop")
+{
+	Shop = "re-max";
+	Shop_id = 1;
+}
+if(Item_obj.get("brand") == "Blink Signs")
+{
+	Shop = "blinksigns";
+	Shop_id = 20;
+}
+if(Item_obj.get("brand") == "Party City")
+{
+	Shop = "partycity";
+	Shop_id = 21;
+}
+if(Item_obj.get("brand") == "Remax bayside")
+{
+	Shop = "baysidenh";
+	Shop_id = 18;
+}
+if(Item_obj.get("brand") == "Remax common wealth")
+{
+	Shop = "commonwealth";
+	Shop_id = 17;
+}
+if(Item_obj.get("brand") == "Remax concepts")
+{
+	Shop = "concepts";
+	Shop_id = 19;
+}
+if(Item_obj.get("brand") == "Remax homes of new england")
+{
+	Shop = "homesofnewengland";
+	Shop_id = 6;
+}
+if(Item_obj.get("brand") == "Remax motto mortgage")
+{
+	Shop = "mottomortgage";
+	Shop_id = 12;
+}
+////  If product is Group Item skip first item and update zero in all items  ///
+if(Item_obj.containsKey("group_id") == true)
+{
+	Item_Group = ifnull(Item_obj.get("group_id"),"");
+	Response1 = invokeurl
+	[
+		url :"https://inventory.zoho.com/api/v1/itemgroups/" + Item_Group + "?organization_id=666479573"
+		type :GET
+		connection:"zoho_inventory"
+	];
+	Group_items = Response1.get("item_group").get("items").toList();
+	Group_items_Size = Response1.get("item_group").get("items").size();
+	Attributed = Response1.get("item_group").get("attributes");
+	for each index items in Group_items
+	{
+		Mp = Map();
+		mpvar = Group_items.get(items);
+		finalMp = mpvar.toMap();
+		if(finalMp.get("attribute_option_name1") != "")
+		{
+			Mp.put("attribute_option_name1",finalMp.get("attribute_option_name1"));
+		}
+		if(finalMp.get("attribute_option_name2") != "")
+		{
+			Mp.put("attribute_option_name2",finalMp.get("attribute_option_name2"));
+		}
+		if(finalMp.get("attribute_option_name3") != "")
+		{
+			Mp.put("attribute_option_name3",finalMp.get("attribute_option_name3"));
+		}
+		if(finalMp.get("attribute_option_name4") != "")
+		{
+			Mp.put("attribute_option_name4",finalMp.get("attribute_option_name4"));
+		}
+		if(finalMp.get("attribute_option_name5") != "")
+		{
+			Mp.put("attribute_option_name5",finalMp.get("attribute_option_name5"));
+		}
+		update_woo_id = Map();
+		update_woo_id.put("label","Workflow Trigger");
+		update_woo_id.put("value",items);
+		Mp.put("custom_fields",update_woo_id.toJSONList());
+		JSONString = Map();
+		JSONString.put("JSONString",Mp);
+		Response2 = invokeurl
+		[
+			url :"https://inventory.zoho.com/api/v1/items/" + finalMp.get("item_id") + "?organization_id=666479573"
+			type :PUT
+			parameters:JSONString
+			connection:"zoho_inventory"
+		];
+	}
+	///Get Attribute Options from Inventory and check in PrestaShop ///
+	Item_Group = ifnull(Item_obj.get("group_id"),"");
+	Response4 = invokeurl
+	[
+		url :"https://inventory.zoho.com/api/v1/items/" + Item_id + "?organization_id=666479573"
+		type :GET
+		connection:"zoho_inventory"
+	];
+	Custom = Response4.get("item").get("custom_fields");
+	for each  fields in Custom
+	{
+		if(fields.get("value") == 0)
+		{
+			Presta_Options = invokeurl
+			[
+				url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/" + Shop + "/api/product_options?output_format=JSON"
+				type :GET
+			];
+			Presta_Options_list = List();
+			Presta_Options_Id_list = List();
+			Presta_Options_Values_Id = List();
+			Presta_Options_Values_Name = List();
+			for each  options in Presta_Options
+			{
+				for each  option in options
+				{
+					product_options = invokeurl
+					[
+						url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/" + Shop + "/api/product_options/" + option.get("id") + "?output_format=JSON"
+						type :GET
+					];
+					Presta_Options_list.add(product_options.get("product_option").get("name"));
+					Presta_Options_Id_list.add(product_options.get("product_option").get("id"));
+					///// Presta Option Values /////
+					Records = product_options.get("product_option").get("associations").get("product_option_values");
+					for each  options_values in Records
+					{
+						product_options_values = invokeurl
+						[
+							url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/" + Shop + "/api/product_option_values/" + options_values.get("id") + "?output_format=JSON"
+							type :GET
+						];
+						Presta_Options_Values_Id.add(product_options_values.get("product_option_value").get("id"));
+						Presta_Options_Values_Name.add(product_options_values.get("product_option_value").get("name"));
+					}
+				}
+			}
+			////  Create Product Option in PrestaShop ////
+			Count_Attr = 1;
+			New_Attributes = List();
+			Att1 = List();
+			Att1_Name = Map();
+			Att2 = List();
+			Att2_Name = Map();
+			Att3 = List();
+			Att3_Name = Map();
+			for each  attribute in Attributed
+			{
+				if(Presta_Options_list.contains(attribute.get("name")))
+				{
+					for each  inv_options in attribute.get("options")
+					{
+						if(Presta_Options_Values_Name.contains(inv_options.get("name")))
+						{
+							if(Count_Attr == 1)
+							{
+								Product_key = Presta_Options_Values_Id.get(Presta_Options_Values_Name.indexOf(inv_options.get("name")));
+								Product_value = Presta_Options_Values_Name.get(Presta_Options_Values_Name.indexOf(inv_options.get("name")));
+								Att1_Name.put(Product_key,Product_value.subString(0,1).upper() + Product_value.subString(1,Product_value.length()));
+							}
+							if(Count_Attr == 2)
+							{
+								Product_key = Presta_Options_Values_Id.get(Presta_Options_Values_Name.indexOf(inv_options.get("name")));
+								Product_value = Presta_Options_Values_Name.get(Presta_Options_Values_Name.indexOf(inv_options.get("name")));
+								Att2_Name.put(Product_key,Product_value.subString(0,1).upper() + Product_value.subString(1,Product_value.length()));
+							}
+							if(Count_Attr == 3)
+							{
+								Product_key = Presta_Options_Values_Id.get(Presta_Options_Values_Name.indexOf(inv_options.get("name")));
+								Product_value = Presta_Options_Values_Name.get(Presta_Options_Values_Name.indexOf(inv_options.get("name")));
+								Att3_Name.put(Product_key,Product_value.subString(0,1).upper() + Product_value.subString(1,Product_value.length()));
+							}
+						}
+						else
+						{
+							////////////////////////////// Create Product Option Values (CPOV)
+							CPOV = "";
+							CPOV = "<?xml version='1.0' encoding='UTF-8' ?>";
+							CPOV = CPOV + "<prestashop xmlns:xlink='http://www.w3.org/1999/xlink'>";
+							CPOV = CPOV + "<product_option_value>";
+							CPOV = CPOV + "<id_attribute_group><![CDATA[" + Presta_Options_Id_list.get(Presta_Options_list.indexOf(attribute.get("name"))) + "]]></id_attribute_group>";
+							CPOV = CPOV + "<name><language id='1'><![CDATA[" + inv_options.get("name") + "]]></language></name>";
+							CPOV = CPOV + "</product_option_value>";
+							CPOV = CPOV + "</prestashop>";
+							Create_Product_Options_Val = invokeurl
+							[
+								url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/" + Shop + "/api/product_option_values?output_format=JSON"
+								type :POST
+								parameters:CPOV
+							];
+							if(Count_Attr == 1)
+							{
+								Att1_Name.put(Create_Product_Options_Val.get("product_option_value").get("id"),Create_Product_Options_Val.get("product_option_value").get("name"));
+							}
+							if(Count_Attr == 2)
+							{
+								Att2_Name.put(Create_Product_Options_Val.get("product_option_value").get("id"),Create_Product_Options_Val.get("product_option_value").get("name"));
+							}
+							if(Count_Attr == 3)
+							{
+								Att3_Name.put(Create_Product_Options_Val.get("product_option_value").get("id"),Create_Product_Options_Val.get("product_option_value").get("name"));
+							}
+						}
+					}
+				}
+				else
+				{
+					////// Create Product Options ( CPO )
+					CPO = "<?xml version='1.0' encoding='UTF-8' ?>";
+					CPO = CPO + "<prestashop xmlns:xlink='http://www.w3.org/1999/xlink'>";
+					CPO = CPO + "<product_option>";
+					CPO = CPO + "<is_color_group><![CDATA[0]]></is_color_group>";
+					CPO = CPO + "<group_type><![CDATA[select]]></group_type>";
+					CPO = CPO + "<position format='isInt'/>";
+					CPO = CPO + "<name><language id='1'><![CDATA[" + attribute.get("name") + "]]></language></name>";
+					CPO = CPO + "<public_name><language id='1'><![CDATA[" + attribute.get("name") + "]]></language></public_name>";
+					CPO = CPO + "<associations>";
+					CPO = CPO + "<product_option_values>";
+					CPO = CPO + "<product_option_value>";
+					CPO = CPO + "<id/>";
+					CPO = CPO + "</product_option_value>";
+					CPO = CPO + "</product_option_values>";
+					CPO = CPO + "</associations>";
+					CPO = CPO + "</product_option>";
+					CPO = CPO + "</prestashop>";
+					Create_Product_Options = invokeurl
+					[
+						url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/" + Shop + "/api/product_options?output_format=JSON"
+						type :POST
+						parameters:CPO
+					];
+					/////////////////////////  Create Option Values in PrestaShop //////////////////////////////////////////////
+					for each  values_list in attribute.get("options")
+					{
+						Cre_Pro_Opt_Val = "";
+						Cre_Pro_Opt_Val = "<?xml version='1.0' encoding='UTF-8' ?>";
+						Cre_Pro_Opt_Val = Cre_Pro_Opt_Val + "<prestashop xmlns:xlink='http://www.w3.org/1999/xlink'>";
+						Cre_Pro_Opt_Val = Cre_Pro_Opt_Val + "<product_option_value>";
+						Cre_Pro_Opt_Val = Cre_Pro_Opt_Val + "<id_attribute_group><![CDATA[" + Create_Product_Options.get("product_option").get("id") + "]]></id_attribute_group>";
+						Cre_Pro_Opt_Val = Cre_Pro_Opt_Val + "<name><language id='1'><![CDATA[" + values_list.get("name") + "]]></language></name>";
+						Cre_Pro_Opt_Val = Cre_Pro_Opt_Val + "</product_option_value>";
+						Cre_Pro_Opt_Val = Cre_Pro_Opt_Val + "</prestashop>";
+						Create_Product_Options_Val = invokeurl
+						[
+							url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/" + Shop + "/api/product_option_values?output_format=JSON"
+							type :POST
+							parameters:Cre_Pro_Opt_Val
+						];
+						if(Count_Attr == 1)
+						{
+							Att1_Name.put(Create_Product_Options_Val.get("product_option_value").get("id"),Create_Product_Options_Val.get("product_option_value").get("name"));
+						}
+						if(Count_Attr == 2)
+						{
+							Att2_Name.put(Create_Product_Options_Val.get("product_option_value").get("id"),Create_Product_Options_Val.get("product_option_value").get("name"));
+						}
+						if(Count_Attr == 3)
+						{
+							Att3_Name.put(Create_Product_Options_Val.get("product_option_value").get("id"),Create_Product_Options_Val.get("product_option_value").get("name"));
+						}
+					}
+				}
+				Count_Attr = Count_Attr + 1;
+			}
+			///// Create A Product in Prestashop  ( CP )/////
+			CP = "<?xml version='1.0' encoding='UTF-8' ?>";
+			CP = CP + "<prestashop xmlns:xlink='http://www.w3.org/1999/xlink'>";
+			CP = CP + "<product>";
+			CP = CP + "<id_category_default><![CDATA[2]]></id_category_default>";
+			CP = CP + "<new/>";
+			CP = CP + "<type/>";
+			CP = CP + "<id_shop_default/>";
+			CP = CP + "<reference/>";
+			CP = CP + "<state><![CDATA[1]]></state>";
+			CP = CP + "<minimal_quantity/>";
+			CP = CP + "<price><![CDATA[0]]></price>";
+			CP = CP + "<link_rewrite>";
+			CP = CP + "<language id='1'/>";
+			CP = CP + "</link_rewrite>";
+			CP = CP + "<name>";
+			CP = CP + "<language id='1'><![CDATA[" + Item_obj.get("group_name") + "]]></language>";
+			CP = CP + "</name>";
+			CP = CP + "<description>";
+			CP = CP + "<language id='1'/>";
+			CP = CP + "</description>";
+			CP = CP + "<description_short>";
+			CP = CP + "<language id='1'/>";
+			CP = CP + "</description_short>";
+			CP = CP + "<associations>";
+			CP = CP + "<categories>";
+			CP = CP + "<category>";
+			CP = CP + "<id><![CDATA[2]]></id>";
+			CP = CP + "</category>";
+			CP = CP + "</categories>";
+			CP = CP + "</associations>";
+			CP = CP + "</product>";
+			CP = CP + "</prestashop>";
+			Create_Product_resp = invokeurl
+			[
+				url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/" + Shop + "/api/products?output_format=JSON"
+				type :POST
+				parameters:CP
+			];
+			info Att1_Name.sort();
+			info Att1_Name.sort().keys();
+			info Att2_Name.sort().keys();
+			info Att3_Name.sort().keys();
+			///////////////////////// Update Product Product Id and Variatio ID///
+			coll_list = List();
+			Update_Product = Map();
+			Update_Product.put("attribute_option_id1",Item_obj.get("attribute_option_id1"));
+			Update_Product.put("attribute_option_id2",Item_obj.get("attribute_option_id2"));
+			Update_Product.put("attribute_option_id3",Item_obj.get("attribute_option_id3"));
+			Update_Product.put("attribute_option_name1",Item_obj.get("attribute_option_name1"));
+			Update_Product.put("attribute_option_name2",Item_obj.get("attribute_option_name2"));
+			Update_Product.put("attribute_option_name3",Item_obj.get("attribute_option_name3"));
+			update_Poduct_id = Map();
+			update_Poduct_id.put("label","Woo-commerce Item ID");
+			update_Poduct_id.put("value",Create_Product_resp.get("product").get("id").toString());
+			coll_list.add(update_Poduct_id);
+			update_woo_id = Map();
+			update_woo_id.put("label","Attribute 1");
+			update_woo_id.put("value",Att1_Name.sort().keys().toString());
+			coll_list.add(update_woo_id);
+			update_woo_id2 = Map();
+			update_woo_id2.put("label","Attribute 2");
+			update_woo_id2.put("value",Att2_Name.sort().keys().toString());
+			coll_list.add(update_woo_id2);
+			update_woo_id3 = Map();
+			update_woo_id3.put("label","Attribute 3");
+			update_woo_id3.put("value",Att3_Name.sort().keys().toString());
+			coll_list.add(update_woo_id3);
+			Update_Product.put("custom_fields",coll_list);
+			JSONString = Map();
+			JSONString.put("JSONString",Update_Product);
+			//info JSONString;
+			Response3 = invokeurl
+			[
+				url :"https://inventory.zoho.com/api/v1/items/" + Item_id + "?organization_id=666479573"
+				type :PUT
+				parameters:JSONString
+				connection:"zoho_inventory"
+			];
+			//	info Response3;
+			Para = Map();
+			Para.put("item",item);
+			Api_Response = invokeurl
+			[
+				url :"https://www.zohoapis.com/crm/v2/functions/test9/actions/execute?auth_type=apikey&zapikey=1003.92bd8627e27fde976f5cecde483425d6.4247c26ba87331570834d7fb4d0ff618"
+				type :GET
+				parameters:Para
+			];
+		}
+	}
+}
+// Custom = Response4.get("item").get("custom_fields");
+// for each  fields in Custom
+// {
+// 	if(fields.get("value") == Group_items_Size - 1)
+// 	{
+// 		coll_list = List();
+// 		Update_Product = Map();
+// 		Update_Product.put("attribute_option_id1",Item_obj.get("attribute_option_id1"));
+// 		Update_Product.put("attribute_option_id2",Item_obj.get("attribute_option_id2"));
+// 		Update_Product.put("attribute_option_name1",Item_obj.get("attribute_option_name1"));
+// 		Update_Product.put("attribute_option_name2",Item_obj.get("attribute_option_name2"));
+// 		update_Poduct_id = Map();
+// 		update_woo_id2 = Map();
+// 		update_woo_id2.put("label","Run Code");
+// 		update_woo_id2.put("value",true);
+// 		coll_list.add(update_woo_id2);
+// 		Update_Product.put("custom_fields",coll_list);
+// 		JSONString = Map();
+// 		JSONString.put("JSONString",Update_Product);
+// 		info JSONString;
+// 		Response3 = invokeurl
+// 		[
+// 			url :"https://inventory.zoho.com/api/v1/items/" + Item_id + "?organization_id=666479573"
+// 			type :PUT
+// 			parameters:JSONString
+// 			connection: "zoho_inventory"
+// 		];
+// 	}
+// }

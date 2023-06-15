@@ -1,0 +1,39 @@
+							Funtion Name: Update_Sign_Projects_Owner_to_CRM
+
+Arguments
+Parameter Name  	Parameter Value
+ZP_Id  	=	 Project System ID
+
+Description: Get Project owner from project and update it to Zoho Crm Deal Module,
+
+Get_project_details = invokeurl
+[
+	url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZP_Id + "/"
+	type :GET
+	connection:"zohoprojects"
+];
+// info Get_project_details;
+custom_fields = Get_project_details.get("projects").get("0").get("custom_fields");
+for each index fields in custom_fields
+{
+	if(custom_fields.get(fields).containKey("CRM Id") == true)
+	{
+		SP_Id = custom_fields.get(fields).get("CRM Id");
+	}
+}
+deal_obj = zoho.crm.getRecordById("Deals",SP_Id,"zoho_crm");
+//info deal_obj;
+project_Details = Get_project_details.get("projects");
+for each  details in project_Details
+{
+	zp_owner = details.get("owner_id");
+	info zp_owner;
+}
+info SP_Id;
+Mp = Map();
+mp1 = Map();
+mp1.put("Owner",zp_owner);
+update_SP_Owner = zoho.crm.updateRecord("Deals",SP_Id,mp1,Mp,"zoho_crm");
+// info update_SP_Owner;
+info update_SP_Owner;
+return "";

@@ -1,0 +1,72 @@
+						Funtion Name : create_po_bot
+
+
+
+
+/*
+This is a sample function. Uncomment to execute or make changes to this function.
+purchaseorderID = purchaseorder.get("purchaseorder_id");
+purchaseorderdate = purchaseorder.get("date").toDate();
+organizationID = organization.get("organization_id");
+*/
+deliveryaddress = purchaseorder.get("delivery_address");
+addressfrom = Map();
+addressfrom.put("address1","1925 Saint Clair Ave NE");
+addressfrom.put("city","Cleveland");
+addressfrom.put("zip","44114");
+addressfrom.put("country","US");
+addressfrom.put("company","Blinkswag");
+addressto = Map();
+addressto.put("address1",deliveryaddress.get("address"));
+addressto.put("city",deliveryaddress.get("city"));
+addressto.put("zip",deliveryaddress.get("zip"));
+addressto.put("country",deliveryaddress.get("country"));
+addressto.put("first_name",purchaseorder.get("delivery_customer_name"));
+addressto.put("last_name",purchaseorder.get("delivery_customer_name"));
+line_item_map = List();
+line_items = purchaseorder.get("line_items");
+for each  line_item in line_items
+{
+	item_id = line_item.get("item_id");
+	response = zoho.inventory.getRecordsByID("items","666479573",item_id);
+	item = response.get("item");
+	preferred_vendor = item.get("preferred_vendors");
+	custom_fields = item.get("custom_fields");
+	vendor_sku = "";
+	for each  custom_field in custom_fields
+	{
+		if(custom_field.get("label") == "Vendor SKU")
+		{
+			vendor_sku = custom_field.get("value_formatted");
+		}
+	}
+	vendor_id = preferred_vendor.get(0).get("vendor_id");
+	if(vendor_id == 1316483000062331183)
+	{
+		data = Map();
+		design = Map();
+		design.put("location","Front");
+		data.put("item_id",item_id);
+		data.put("sku",vendor_sku);
+		data.put("description",item.get("description"));
+		data.put("color",item.get("attribute_option_name1"));
+		data.put("size",item.get("attribute_option_name2"));
+		data.put("quantity",line_item.get("quantity"));
+		data.put("design",design);
+		data.put("type","DTG");
+		line_item_map.add(data);
+	}
+}
+final_map = Map();
+final_map.put("print_provider","USA");
+final_map.put("id",123223232444555666);
+final_map.put("address_from",addressfrom);
+final_map.put("address_to",addressto);
+final_map.put("items",line_item_map);
+response = invokeurl
+[
+	url :"https://bot2-app.herokuapp.com/Blinkswag/SubmitOrder"
+	type :POST
+	parameters:final_map
+];
+info response;

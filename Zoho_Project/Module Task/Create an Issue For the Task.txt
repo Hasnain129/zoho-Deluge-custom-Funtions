@@ -1,0 +1,43 @@
+
+								Funtion Name: Create an Issue For the Task
+
+Arguments
+Parameter Name  		Parameter Value
+portalId		=	Project System ID
+projectId		=	Project System ID
+taskId		=	Task System ID
+
+
+Description: Create a new issue and associate it with a current task.,
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// TODO: Please create a connection for the Zoho Projects service with the scopes "ZohoProjects.bugs.CREATE, ZohoProjects.tasks.UPDATE, ZohoProjects.tasks.CREATE ". Replace 'zohoprojects' with the connection name. Click this link below to learn how to create the connection. 
+// https://help.zoho.com/portal/en/kb/projects/integration/connections/articles/connections-23-5-2022#How_to_establish_a_Connection
+
+
+addBugParamMap = Map();
+addBugParamMap.put("title","Permit Audit ");
+addBugParamMap.put("description","This is auto escalation created since Permit has been started and yet submission is not confirmed. This confirmation is needed asap to ensure permits are submitted to city successfuly ");
+addBugResponse = zoho.projects.create(portalId,projectId,"Bugs",addBugParamMap,"zohoprojects");
+info "Create Bug Responce: " + addBugResponse;
+info "--------------------------------";
+projectsDomainURL = "https://projectsapi.zoho.com/api/v3";
+if(addBugResponse != null && addBugResponse.contains("bugs"))
+{
+	bugInfo = addBugResponse.get("bugs").get(0);
+	bugId = bugInfo.get("id");
+	associateTaskParam = Map();
+	associateTaskParam.put("bug_ids",{bugId});
+	associateBug = invokeurl
+	[
+		url :projectsDomainURL + "/portal/" + portalId + "/projects/" + projectId + "/tasks/" + taskId + "/bugs"
+		type :POST
+		parameters:associateTaskParam
+		connection:"zohoprojects"
+	];
+	info "Associate Bug : " + associateBug;
+	info "--------------------------------";
+}
+return "success";
+
+

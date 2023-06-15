@@ -1,0 +1,33 @@
+								Funtion Name: Task Comment Added
+
+Arguments
+Parameter Name  		Parameter Value
+client_reporting	=	Client reporting
+comment		=	Task Recent Comment
+customer_email	=	Customer Email
+project_id		=	Project System ID
+project_name	=	Project Name
+task_id		=	Task System ID
+task_name	=	Task Name
+task_status	=	Task Status
+
+Description : If task status = "Active" && Client_reporting == "External" then sendmail to customer email
+
+
+info customer_email;
+info client_reporting;
+info task_status;
+info task_name;
+info project_id;
+info task_id;
+info comment;
+if(task_status == "Active" && client_reporting == "External")
+{
+	sendmail
+	[
+		from :zoho.loginuserid
+		to :customer_email
+		subject :"A New Comment Added! " + task_name + " " + project_name + " . "
+		message :"<p>Dear Customer,</p><p></p><p>A new comment has been added to your project. </p><p> Project Name : " + project_name + "<br/>TO DO Name: <b>" + task_name + ". </b><br></p><p> " + comment + "For more details please click below <br/>https://signs.blinkswag.com/projects/" + project_id + "/todos/" + task_id + "</p><p>We are excited to work with you. </p><p>Have a great day!</p><p>Thank you,<br>Blink Signs</p>"
+	]
+}

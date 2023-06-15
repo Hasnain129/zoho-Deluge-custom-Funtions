@@ -1,0 +1,46 @@
+							Function Name : activity_log_projects 
+
+
+
+
+Get_projet_details = invokeurl
+[
+	url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + Project_id + "/"
+	type :GET
+	connection:"zohoprojects"
+];
+custom_fields = Get_projet_details.get("projects").get(0).get("custom_fields").toList();
+for each index fields in custom_fields
+{
+	if(custom_fields.get(fields).containKey("Project ID") == true)
+	{
+		Project_id = custom_fields.get(fields).get("Project ID");
+	}
+}
+Current_date_and_time = zoho.currenttime.toString();
+Rows_Det = List();
+row1 = Map();
+row1.put("Date & Time",Current_date_and_time);
+row1.put("Project ID",Project_id);
+row1.put("Project Name",Get_projet_details.get("projects").get("name"));
+row1.put("Project Owner",Get_projet_details.get("projects").get("owner_name"));
+row1.put("Status",Get_projet_details.get("projects").get("status"));
+row1.put("Created By ID",Get_projet_details.get("projects").get("created_by_id"));
+row1.put("Deleted By",zoho.loginuser.toString());
+Rows_Det.add(row1);
+resource_id = "spx0cf487a8085935406297c3790bf1e11a86";
+rowData = Map();
+rowData.put("method","worksheet.records.add");
+rowData.put("worksheet_name","Projects");
+rowData.put("header_row",1);
+rowData.put("json_data",Rows_Det);
+info rowData;
+// add_records = invokeurl
+// [
+// 	url :"https://sheet.zoho.com/api/v2/" + resource_id
+// 	type :POST
+// 	parameters:rowData
+// 	connection:"zoho_sheet"
+// ];
+// info add_records;
+return "success";

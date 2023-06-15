@@ -1,0 +1,186 @@
+							Funtion Name : update_prestashop_product
+							Workflow Name : Update_Prestashop_Product
+
+
+
+Inventory_Item = invokeurl
+[
+	url :"https://inventory.zoho.com/api/v1/items/" + item.get("item_id") + "?organization_id=666479573"
+	type :GET
+	connection:"zoho_inventory"
+];
+Item_obj = Inventory_Item.get("item");
+///////////////////////////// Prestashop Shops //////////////////////////////////////////// 
+if(Item_obj.get("brand") == "Test")
+{
+	Shop = "Test";
+	Shop_id = 13;
+}
+if(Item_obj.get("brand") == "My shop")
+{
+	Shop = "re-max";
+	Shop_id = 1;
+}
+if(Item_obj.get("brand") == "Blink Signs")
+{
+	Shop = "blinksigns";
+	Shop_id = 20;
+}
+if(Item_obj.get("brand") == "Party City")
+{
+	Shop = "partycity";
+	Shop_id = 21;
+}
+if(Item_obj.get("brand") == "Remax bayside")
+{
+	Shop = "baysidenh";
+	Shop_id = 18;
+}
+if(Item_obj.get("brand") == "Remax common wealth")
+{
+	Shop = "commonwealth";
+	Shop_id = 17;
+}
+if(Item_obj.get("brand") == "Remax concepts")
+{
+	Shop = "concepts";
+	Shop_id = 19;
+}
+if(Item_obj.get("brand") == "Remax homes of new england")
+{
+	Shop = "homesofnewengland";
+	Shop_id = 6;
+}
+if(Item_obj.get("brand") == "Remax motto mortgage")
+{
+	Shop = "mottomortgage";
+	Shop_id = 12;
+}
+////////////////////////////////////////////////////////////////////////////////
+for each  custom_field in Item_obj.get("custom_fields")
+{
+	if(custom_field.get("placeholder") == "cf_woo_commerce_item_id")
+	{
+		product_id = custom_field.get("value");
+	}
+	if(custom_field.get("placeholder") == "cf_woo_commerce_item_variation")
+	{
+		combination_id = custom_field.get("value");
+	}
+}
+info product_id;
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+if(Item_obj.containsKey("group_id") != true)
+{
+	Product_update = "<?xml version='1.0' encoding='UTF-8' ?>";
+	Product_update = Product_update + "<prestashop xmlns:xlink='http://www.w3.org/1999/xlink'>";
+	Product_update = Product_update + "<product>";
+	Product_update = Product_update + "<id><![CDATA[" + product_id + "]]></id>";
+	Product_update = Product_update + "<price><![CDATA[" + Item_obj.get("rate") + "]]></price>";
+	Product_update = Product_update + "<reference><![CDATA[" + Item_obj.get("sku") + "]]></reference>";
+	Product_update = Product_update + "<minimal_quantity><![CDATA[0]]></minimal_quantity>";
+	Product_update = Product_update + "<name><![CDATA[" + Item_obj.get("name") + "]]></name>";
+	Product_update = Product_update + "<description><![CDATA[" + Item_obj.get("description") + "]]></description>";
+	Product_update = Product_update + "</product>";
+	Product_update = Product_update + "</prestashop>";
+	Update_Product_resp = invokeurl
+	[
+		url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/" + Shop + "/api/products?output_format=JSON"
+		type :PUT
+		parameters:Product_update
+	];
+	info Update_Product_resp;
+	////////////////////////////////////// Update Stock of Product ///////////////////////////////////////////////
+	Products = invokeurl
+	[
+		url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/" + Shop + "/api/products/" + product_id + "?output_format=JSON"
+		type :GET
+	];
+	Stock_Availables = Products.get("product").get("associations").get("stock_availables");
+	for each  stock in Stock_Availables
+	{
+		info stock;
+		stock_id = stock.get("id");
+		stock_attr = stock.get("id_product_attribute");
+		Quantity = Inventory_Item.get("item").get("stock_on_hand").toLong();
+		stock = "<?xml version='1.0' encoding='UTF-8' ?>";
+		stock = stock + "<prestashop xmlns:xlink='http://www.w3.org/1999/xlink'>";
+		stock = stock + "<stock_available>";
+		stock = stock + "<id><![CDATA[" + stock_id + "]]></id>";
+		stock = stock + "<id_product><![CDATA[" + product_id + "]]></id_product>";
+		stock = stock + "<id_product_attribute><![CDATA[" + stock_attr + "]]></id_product_attribute>";
+		stock = stock + "<id_shop><![CDATA[" + Shop_id + "]]></id_shop>";
+		stock = stock + "<id_shop_group><![CDATA[0]]></id_shop_group>";
+		stock = stock + "<quantity><![CDATA[" + Quantity + "]]></quantity>";
+		stock = stock + "<depends_on_stock><![CDATA[0]]></depends_on_stock>";
+		stock = stock + "<out_of_stock><![CDATA[2]]></out_of_stock>";
+		stock = stock + "</stock_available>";
+		stock = stock + "</prestashop>";
+		Update_Stock = invokeurl
+		[
+			url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/" + Shop + "/api/stock_availables?output_format=JSON"
+			type :PUT
+			parameters:stock
+		];
+		info Update_Stock;
+	}
+}
+else
+{
+	//////////////////////////////////////// Update Price / SKU of Product /////////////////////////////////////////////// 
+	Comb = "<?xml version='1.0' encoding='UTF-8' ?>";
+	Comb = Comb + "<prestashop xmlns:xlink='http://www.w3.org/1999/xlink'>";
+	Comb = Comb + "<combination>";
+	Comb = Comb + "<id><![CDATA[" + combination_id + "]]></id>";
+	Comb = Comb + "<id_product><![CDATA[" + product_id + "]]></id_product>";
+	Comb = Comb + "<quantity/>";
+	Comb = Comb + "<reference><![CDATA[" + Item_obj.get("sku") + "]]></reference>";
+	Comb = Comb + "<supplier_reference/>";
+	Comb = Comb + "<wholesale_price/>";
+	Comb = Comb + "<price><![CDATA[" + Item_obj.get("rate") + "]]></price>";
+	Comb = Comb + "<minimal_quantity><![CDATA[0]]></minimal_quantity>";
+	Comb = Comb + "</combination>";
+	Comb = Comb + "</prestashop>";
+	Update_Combination_resp = invokeurl
+	[
+		url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/" + Shop + "/api/combinations?output_format=JSON"
+		type :PUT
+		parameters:Comb
+	];
+	info Update_Combination_resp;
+	//////////////////////////////////////// Update Stock of Product ///////////////////////////////////////////////
+	Products = invokeurl
+	[
+		url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/" + Shop + "/api/products/" + product_id + "?output_format=JSON"
+		type :GET
+	];
+	Stock_Availables = Products.get("product").get("associations").get("stock_availables");
+	for each  stock in Stock_Availables
+	{
+		if(stock.get("id_product_attribute") == combination_id)
+		{
+			stock_id = stock.get("id");
+			stock_attr = stock.get("id_product_attribute");
+			Quantity = Inventory_Item.get("item").get("stock_on_hand").toLong();
+			stock = "<?xml version='1.0' encoding='UTF-8' ?>";
+			stock = stock + "<prestashop xmlns:xlink='http://www.w3.org/1999/xlink'>";
+			stock = stock + "<stock_available>";
+			stock = stock + "<id><![CDATA[" + stock_id + "]]></id>";
+			stock = stock + "<id_product><![CDATA[" + product_id + "]]></id_product>";
+			stock = stock + "<id_product_attribute><![CDATA[" + stock_attr + "]]></id_product_attribute>";
+			stock = stock + "<id_shop><![CDATA[" + Shop_id + "]]></id_shop>";
+			stock = stock + "<id_shop_group><![CDATA[0]]></id_shop_group>";
+			stock = stock + "<quantity><![CDATA[" + Quantity + "]]></quantity>";
+			stock = stock + "<depends_on_stock><![CDATA[0]]></depends_on_stock>";
+			stock = stock + "<out_of_stock><![CDATA[2]]></out_of_stock>";
+			stock = stock + "</stock_available>";
+			stock = stock + "</prestashop>";
+			Update_Stock = invokeurl
+			[
+				url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/" + Shop + "/api/stock_availables?output_format=JSON"
+				type :PUT
+				parameters:stock
+			];
+		}
+	}
+}

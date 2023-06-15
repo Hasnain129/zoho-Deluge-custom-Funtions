@@ -1,0 +1,58 @@
+
+						Button Name : Sync Swag
+
+
+Description : 
+/* 
+ * This Function will 
+ * 1. Add the current selected image to Dashboard'
+ * 2. Sync the item category data to Dashboard
+ */
+
+
+item_id = item.get("item_id");
+organization_id = organization.get("organization_id");
+item_current = zoho.inventory.getRecordsByID("items",organization_id,item_id);
+/* 
+ * Uploading image to dashboard.
+ */
+image_name = item_current.get("item").get("image_name");
+image_type = item_current.get("item").get("image_type").toLowerCase();
+if(image_type != "png" && image_type != "jpg")
+{
+	info "Allowed image types are 'png' or 'jpg' only ";
+	return Map();
+}
+documents = item_current.get("item").get("documents");
+file_name = item_id + "." + image_type;
+for each  document in documents
+{
+	filename = document.get("file_name");
+	if(filename == image_name)
+	{
+		document_id = document.get("document_id");
+	}
+}
+imageMap = Map();
+imageMap.put("apiKey","8ab576fc17374751ad3cb7018f1672f3");
+imageMap.put("document_id",document_id);
+imageMap.put("filename",file_name);
+image_resp = postUrl("https://dashboard.blinkswag.com/Itemimage",imageMap);
+/* 
+ * Updating category JSON on dashboard
+ */
+category_id = item_current.get("item").get("category_id");
+category_name = item_current.get("item").get("category_name");
+update_url = "https://dashboard.blinkswag.com/swag/insertAllProductsByCategory/" + category_id;
+cat_res = invokeurl
+[
+	url :update_url
+	type :GET
+];
+resultMap = Map();
+resultMap.put("Image message ",image_name + " >> " + image_resp);
+resultMap.put("Category message ",category_name + " >> " + cat_res);
+resultMap.put("code",0);
+info resultMap;
+// 0 - Success ; Other than 0 will be considered as failure
+return resultMap;

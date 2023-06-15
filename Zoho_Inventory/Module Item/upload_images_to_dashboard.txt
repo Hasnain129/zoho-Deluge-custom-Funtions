@@ -1,0 +1,35 @@
+							Function Name : upload_images_to_dashboard
+							Workflow Name : Post item image
+
+Description function  : upload the item image to dashboard
+Description workflow : Post item image on dashboard.blinkswag.com/order
+
+
+
+itemID = item.get("item_id");
+organizationID = organization.get("organization_id");
+query_param = Map();
+query_param.put("item_id",itemID);
+response = zoho.inventory.getRecordsByID("items",organizationID,itemID);
+item = response.get('item');
+image_name = item.get("image_name");
+image_type = item.get("image_type");
+documents = item.get("documents");
+document_id = 0;
+file_name = itemID + "." + image_type;
+for each  document in documents
+{
+	filename = document.get("file_name");
+	if(filename == image_name)
+	{
+		document_id = document.get("document_id");
+	}
+}
+info document_id;
+info file_name;
+myMap = Map();
+myMap.put("apiKey","8ab576fc17374751ad3cb7018f1672f3");
+myMap.put("document_id",document_id);
+myMap.put("filename",file_name);
+resp = postUrl("https://dashboard.blinkswag.com/Itemimage",myMap);
+info resp;

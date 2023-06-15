@@ -1,0 +1,17 @@
+						Funtion Name : create_notification_on_dashboard_so	
+						Workflow Name : SO- Update notifications on dashboard
+
+Description : create_notification_on_dashboard_so
+
+customerID = salesorder.get("customer_id");
+soNo = salesorder.get("salesorder_number");
+soID = salesorder.get("salesorder_id");
+notification = "New Salesorder has been created " + soNo;
+url = "https://dashboard.blinkswag.com/salesorders/view/" + soID;
+myMap = Map();
+myMap.put("apiKey","8ab576fc17374751ad3cb7018f1672f3");
+myMap.put("notification",notification);
+myMap.put("company_id",customerID);
+myMap.put("url",url);
+resp = postUrl("https://dashboard.blinkswag.com/createnotification",myMap);
+info resp;

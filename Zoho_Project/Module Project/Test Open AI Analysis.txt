@@ -1,0 +1,82 @@
+								Funtion Name: Test Open AI Analysis
+
+Arguments
+Parameter Name  		Parameter Value
+portalNameOrId =		Portal Name
+project_id =   		Project System ID
+project_name   =		Project Name
+record_id   = 		Project System ID
+
+Description : Define a function that triggers when a project is update
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+Project_response = invokeurl
+[
+	url :"https://projectsapi.zoho.com/restapi/portal/blinksigns/projects/" + project_id + "/"
+	type :GET
+	connection:"zohoprojects"
+];
+//info Project_response;
+desc = Project_response.get("projects").get(0).get("description");
+data = "";
+data = "Current Project Status is " + Project_response.get("projects").get(0).get("custom_status_name") + ". ";
+data = data + "Project Start Date is " + Project_response.get("projects").get(0).get("start_date") + ". ";
+data = data + "Project End Date is " + Project_response.get("projects").get(0).get("end_date") + ". ";
+data = data + "Open Tasks are " + Project_response.get("projects").get(0).get("task_count").get("open") + " and ";
+data = data + "Completed Task are " + Project_response.get("projects").get(0).get("task_count").get("closed") + ". ";
+////////////////////////////////////// Project Activities /////////////////////////////////////
+Project_response = invokeurl
+[
+	url :"https://projectsapi.zoho.com/restapi/portal/blinksigns/projects/" + project_id + "/activities/"
+	type :GET
+	connection:"zohoprojects"
+];
+// Extract the necessary data from Project for analysis
+comments = List();
+activities = Project_response.get("activities");
+for each  activity in activities
+{
+	if(activity.get("state") == "add" || activity.get("state") == "new" && activity.get("name") != project_name)
+	{
+		data = data + "The Activity performed by " + activity.get("activity_by").toString() + ", ";
+		data = data + "that " + activity.get("name").toString() + ", ";
+		data = data + "at " + activity.get("time").toString() + ". ";
+		//data = data + "state :" + activity.get("state");
+		//data = data + "at " + activity.get("time") + ", \n";
+	}
+}
+//////////////////////////////////For Completion only ////////////////////////////////////////
+openAIRequest = Map();
+openAIRequest.put("model","text-davinci-003");
+//openAIRequest.put("prompt",data + "	Please analyze the activities and show the results in bullet points.");
+openAIRequest.put("prompt",data.remove("\n").removeLastOccurence(",") + "What are last 3 activities took place in this project and what is current standing of this project? Please provide analysis in bulletpoints.");
+openAIRequest.put("temperature",0.9);
+openAIRequest.put("max_tokens",1500);
+///////////////////////////////////////////////////////////////////////////////////////////////
+input_data = openAIRequest.toString();
+headerdata = Map();
+headerdata.put("Content-Type","application/json");
+headerdata.put("Authorization","Bearer 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");
+//info input_data;
+openAIResponse = invokeurl
+[
+	url :"https://api.openai.com/v1/completions"
+	type :POST
+	parameters:input_data + ""
+	headers:headerdata
+];
+//info openAIResponse;
+analysis = openAIResponse.get("choices").get(0).get("text");
+project_mp = Map();
+project_mp.put("name",project_name);
+project_mp.put("description",desc + analysis.replaceAll("\n","<br>").remove("\u").remove("2022"));
+project_mp.put("UDF_TEXT6",analysis.remove("\u").remove("2022"));
+project_mp.put("status","active");
+update_project = invokeurl
+[
+	url :"https://projectsapi.zoho.com/restapi/portal/blinksigns/projects/" + project_id + "/"
+	type :POST
+	parameters:project_mp
+	connection:"zohoprojects"
+];
+//info update_project;
+return "";

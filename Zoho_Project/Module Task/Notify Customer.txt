@@ -1,0 +1,32 @@
+								Funtion Name: Notify Customer
+
+Arguments
+Parameter Name  		Parameter Value
+client_reporting	=	Client reporting
+customer_email	=	Contact Email
+project_id		=	Project System ID
+project_name	=	Project Name
+task_id		=	Task System ID
+task_name	=	Task Name
+task_status	=	Task Status
+
+Description:  Notify customer : You have been assigned a new To Do item on your project.
+
+
+info customer_email;
+info client_reporting;
+info task_status;
+info task_name;
+info project_id;
+info task_id;
+if(task_status == "Active" && client_reporting == "External")
+{
+	sendmail
+	[
+		from :zoho.loginuserid
+		to :customer_email
+		subject :"Action Required! " + task_name + " " + project_name + " Required."
+		message :"<p>Dear Customer,</p><p></p><p>Thank you for choosing BlinkSigns as your sign partner. </p><p>You have been assigned a new To Do item on your project. " + project_name + "<br/>TO DO Name: <b>" + task_name + ". </b><br> Please update required details on your To Do item. </p><p>You can view your project status and To Do by simply clicking below <br/>https://signs.blinkswag.com/projects/" + project_id + "/todos/" + task_id + "</p><p>We are excited to work with you. </p><p>Have a great day!</p><p>Team,<br>BlinkSigns</p>"
+	]
+}
+return "";

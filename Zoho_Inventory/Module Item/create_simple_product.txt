@@ -1,0 +1,147 @@
+							Function Name : create_simple_product
+							Workflow Name : Create_Simple_Product
+
+Description : Create a Simple Product in Prestashop
+
+
+Item_id = item.get("item_id");
+Response = zoho.inventory.getRecordsByID("items","666479573",Item_id);
+Item_obj = Response.get("item");
+///////////////////////////// Prestashop Shops //////////////////////////////////////////// 
+if(Item_obj.get("brand") == "Test")
+{
+	Shop = "Test";
+	Shop_id = 13;
+}
+if(Item_obj.get("brand") == "My shop")
+{
+	Shop = "re-max";
+	Shop_id = 1;
+}
+if(Item_obj.get("brand") == "Blink Signs")
+{
+	Shop = "blinksigns";
+	Shop_id = 20;
+}
+if(Item_obj.get("brand") == "Party City")
+{
+	Shop = "partycity";
+	Shop_id = 21;
+}
+if(Item_obj.get("brand") == "Remax bayside")
+{
+	Shop = "baysidenh";
+	Shop_id = 18;
+}
+if(Item_obj.get("brand") == "Remax common wealth")
+{
+	Shop = "commonwealth";
+	Shop_id = 17;
+}
+if(Item_obj.get("brand") == "Remax concepts")
+{
+	Shop = "concepts";
+	Shop_id = 19;
+}
+if(Item_obj.get("brand") == "Remax homes of new england")
+{
+	Shop = "homesofnewengland";
+	Shop_id = 6;
+}
+if(Item_obj.get("brand") == "Remax motto mortgage")
+{
+	Shop = "mottomortgage";
+	Shop_id = 12;
+}
+////////////////////////////////////////// Create A Product in Prestashop ///////////////////////////////////
+if(Item_obj.containsKey("group_id") != true)
+{
+	Item_Resp = invokeurl
+	[
+		url :"https://inventory.zoho.com/api/v1/items/" + Item_id + "?organization_id=666479573"
+		type :GET
+		connection:"zoho_inventory"
+	];
+	//info Item_Resp;
+	Create_Product = "<?xml version='1.0' encoding='UTF-8' ?>";
+	Create_Product = Create_Product + "<prestashop xmlns:xlink='http://www.w3.org/1999/xlink'>";
+	Create_Product = Create_Product + "<product>";
+	Create_Product = Create_Product + "<id_category_default><![CDATA[2]]></id_category_default>";
+	Create_Product = Create_Product + "<new/>";
+	Create_Product = Create_Product + "<type/>";
+	Create_Product = Create_Product + "<id_shop_default/>";
+	Create_Product = Create_Product + "<reference><![CDATA[" + Item_Resp.get("item").get("sku") + "]]></reference>";
+	Create_Product = Create_Product + "<state><![CDATA[1]]></state>";
+	Create_Product = Create_Product + "<minimal_quantity/>";
+	Create_Product = Create_Product + "<price><![CDATA[" + Item_Resp.get("item").get("rate") + "]]></price>";
+	Create_Product = Create_Product + "<link_rewrite>";
+	Create_Product = Create_Product + "<language id='1'/>";
+	Create_Product = Create_Product + "</link_rewrite>";
+	Create_Product = Create_Product + "<name>";
+	Create_Product = Create_Product + "<language id='1'><![CDATA[" + Item_Resp.get("item").get("name") + "]]></language>";
+	Create_Product = Create_Product + "</name>";
+	Create_Product = Create_Product + "<description>";
+	Create_Product = Create_Product + "<language id='1'><![CDATA[" + Item_Resp.get("item").get("description") + "]]></language>";
+	Create_Product = Create_Product + "</description>";
+	Create_Product = Create_Product + "<description_short>";
+	Create_Product = Create_Product + "<language id='1'/>";
+	Create_Product = Create_Product + "</description_short>";
+	Create_Product = Create_Product + "<associations>";
+	Create_Product = Create_Product + "<categories>";
+	Create_Product = Create_Product + "<category>";
+	Create_Product = Create_Product + "<id><![CDATA[2]]></id>";
+	Create_Product = Create_Product + "</category>";
+	Create_Product = Create_Product + "</categories>";
+	Create_Product = Create_Product + "</associations>";
+	Create_Product = Create_Product + "</product>";
+	Create_Product = Create_Product + "</prestashop>";
+	Create_Product_resp = invokeurl
+	[
+		url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/" + Shop + "/api/products?output_format=JSON"
+		type :POST
+		parameters:Create_Product
+	];
+	info Create_Product_resp;
+	coll_list = List();
+	Update_Product = Map();
+	update_woo_id = Map();
+	update_woo_id.put("label","Woo-commerce Item ID");
+	update_woo_id.put("value",Create_Product_resp.get("product").get("id"));
+	coll_list.add(update_woo_id);
+	Update_Product.put("custom_fields",coll_list);
+	JSONString = Map();
+	JSONString.put("JSONString",Update_Product);
+	Response3 = invokeurl
+	[
+		url :"https://inventory.zoho.com/api/v1/items/" + Item_id + "?organization_id=666479573"
+		type :PUT
+		parameters:JSONString
+		connection:"zoho_inventory"
+	];
+	////////////////////////////////// Update Product Stock ///////////////////////////////////////////////////
+	stock_id = Create_Product_resp.get("product").get("associations").get("stock_availables").get(0).get("id");
+	info stock_id;
+	info Create_Product_resp.get("product").get("id");
+	Stock_Update = "<?xml version='1.0' encoding='UTF-8' ?>";
+	Stock_Update = Stock_Update + "<prestashop xmlns:xlink='http://www.w3.org/1999/xlink'>";
+	Stock_Update = Stock_Update + "<stock_available>";
+	Stock_Update = Stock_Update + "<id><![CDATA[" + stock_id + "]]></id>";
+	Stock_Update = Stock_Update + "<id_product><![CDATA[" + Create_Product_resp.get("product").get("id") + "]]></id_product>";
+	Stock_Update = Stock_Update + "<id_product_attribute><![CDATA[0]]></id_product_attribute>";
+	Stock_Update = Stock_Update + "<id_shop><![CDATA[" + Shop_id + "]]></id_shop>";
+	Stock_Update = Stock_Update + "<id_shop_group><![CDATA[0]]></id_shop_group>";
+	Stock_Update = Stock_Update + "<quantity><![CDATA[" + Item_Resp.get("item").get("stock_on_hand").toLong() + "]]></quantity>";
+	Stock_Update = Stock_Update + "<depends_on_stock><![CDATA[0]]></depends_on_stock>";
+	Stock_Update = Stock_Update + "<out_of_stock><![CDATA[0]]></out_of_stock>";
+	Stock_Update = Stock_Update + "<location/>";
+	Stock_Update = Stock_Update + "</stock_available>";
+	Stock_Update = Stock_Update + "</prestashop>";
+	//info Stock_Update;
+	Update_Product_stock = invokeurl
+	[
+		url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/" + Shop + "/api/stock_availables/" + stock_id + "?output_format=JSON"
+		type :PUT
+		parameters:Stock_Update
+	];
+	//info Update_Product_stock;
+}

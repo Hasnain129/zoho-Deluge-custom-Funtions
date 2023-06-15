@@ -1,0 +1,31 @@
+								Funtion Name : create_user_on_dashboard
+								Workflow Name : Create customer on Dashboard
+
+
+customerID = customer.get("contact_id");
+response = zoho.inventory.getRecordsByID("contacts","666479573",customerID);
+contact = response.get("contact");
+name = contact.get("first_name") + " " + contact.get("last_name");
+email = contact.get("email");
+company_name = contact.get("company_name");
+customefields = contact.get("custom_fields");
+id_category = 0;
+for each  customfield in customefields
+{
+	id = customfield.get("customfield_id");
+	if(id == "1316483000053455587")
+	{
+		id_category = customfield.get("value");
+	}
+}
+presta_id = customer.get("cf_presta_user_id");
+myMap = Map();
+myMap.put("apiKey","8ab576fc17374751ad3cb7018f1672f3");
+myMap.put("name",name);
+myMap.put("presta_id",presta_id);
+myMap.put("company_id",customerID);
+myMap.put("id_category",id_category);
+myMap.put("company_name",company_name);
+myMap.put("email",email);
+resp = postUrl("https://dashboard.blinkswag.com/createuser",myMap);
+info resp;

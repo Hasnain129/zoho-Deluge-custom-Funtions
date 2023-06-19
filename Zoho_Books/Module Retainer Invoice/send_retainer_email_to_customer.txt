@@ -1,0 +1,20 @@
+						Funtion Name : send_retainer_email_to_customer
+
+
+
+
+/*
+This is a sample function. Uncomment to execute or make changes to this function.  
+retainerInvoiceID = retainer_invoice.get("retainerinvoice_id");
+retainerInvoiceDate = retainer_invoice.get("date").toDate();
+organizationID = organization.get("organization_id");
+*/
+str = "Dear " + retainer_invoice.get("customer_name") + ",";
+// <br><br>Thanks for your business.<br><br>The down payment invoice&nbsp;%RetainerInvoiceNumber%&nbsp;is attached with this email. You can choose the easy way out and <a href="%RetainerInvoiceURL%">pay online for this invoice.</a>         <br>Here's an overview of the invoice for your reference.<br><br>Down Payment Invoice Overview:<br>Invoice # &nbsp;%RetainerInvoiceNumber%&nbsp;<br>Date :&nbsp;%RetainerInvoiceDate%&nbsp;<br>Amount :&nbsp;%Total%<br><br>It was great working with you. Looking forward to working with you again.<br><br>Regards,<br>%UserName%<br>%CompanyName%';
+sendmail
+[
+	from :zoho.adminuserid
+	to :"shahzaib@blinkswag.com"
+	subject :"Down Payment Invoice"
+	message :str
+]

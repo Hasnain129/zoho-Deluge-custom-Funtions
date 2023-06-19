@@ -1,0 +1,32 @@
+						Funtion Name : create_collection_task
+
+
+
+/*
+This is a sample function. Uncomment to execute or make changes to this function.  
+retainerInvoiceID = retainer_invoice.get("retainerinvoice_id");
+retainerInvoiceDate = retainer_invoice.get("date").toDate();
+organizationID = organization.get("organization_id");
+*/
+retainerInvoice_id = retainer_invoice.get("retainerinvoice_id");
+retainerInvoiceDate = retainer_invoice.get("date").toDate();
+organization_id = organization.get("organization_id");
+response = zoho.books.getRecordsByID("retainerinvoices",organization_id,retainerInvoice_id);
+response = response.get("retainerinvoice");
+record_name = "Call ".concat(response.get("customer_name")).concat(" for payment of ").concat(response.get("currency_symbol")).concat(response.get("total")).concat(" against ").concat(response.get("retainerinvoice_number"));
+due_date = zoho.currentdate.addBusinessDay(1);
+follow_up_date = due_date.addBusinessDay(1);
+customer = response.get("customer_id");
+project = response.get("project_id");
+status = "Not Started";
+invoic_number = response.get("retainerinvoice_number");
+info record_name.len();
+taskMap = Map();
+taskMap.put("record_name",record_name);
+taskMap.put("cf_due_date",toString(due_date,"yyyy-MM-dd"));
+taskMap.put("cf_follow_up_date",toString(follow_up_date,"yyyy-MM-dd"));
+taskMap.put("cf_customer",customer);
+taskMap.put("cf_project",project);
+taskMap.put("cf_invoice",invoic_number);
+create_task = zoho.books.createRecord("cm_collection_task",organization_id,taskMap);
+info create_task;

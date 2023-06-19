@@ -1,0 +1,24 @@
+							Funtion Name : create_notification_on_dashboard
+							Workflow Name : estimate & mockup
+
+Description : create_notification_on_dashboard
+
+
+/*
+This is a sample function. Uncomment to execute or make changes to this function.  
+estimateID = estimate.get("estimate_id");
+estimatedate = estimate.get("date").toDate();
+organizationID = organization.get("organization_id");
+*/
+customerID = estimate.get("customer_id");
+estimateNo = estimate.get("estimate_number");
+estimateID = estimate.get("estimate_id");
+notification = "New estimate has been created " + estimateNo;
+url = "https://dashboard.blinkswag.com/estimates/view/" + estimateID;
+myMap = Map();
+myMap.put("apiKey","8ab576fc17374751ad3cb7018f1672f3");
+myMap.put("notification",notification);
+myMap.put("company_id",customerID);
+myMap.put("url",url);
+resp = postUrl("https://dashboard.blinkswag.com/createnotification",myMap);
+info resp;

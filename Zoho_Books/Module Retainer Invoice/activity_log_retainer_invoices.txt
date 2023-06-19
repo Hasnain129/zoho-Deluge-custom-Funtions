@@ -1,0 +1,29 @@
+						Funtion Name : activity_log_retainer_invoices
+						Workflow Rules : Delte_Retainer_Invoices
+
+
+
+
+Rows_Det = List();
+row1 = Map();
+row1.put("Date",zoho.currentdate.getDate());
+row1.put("Time - EST",zoho.currenttime.getTime());
+row1.put("Retainer_Invoivce Number",retainer_invoice.get("retainerinvoice_number"));
+row1.put("Reference",retainer_invoice.get("reference_number"));
+row1.put("Customer",retainer_invoice.get("customer_name"));
+row1.put("Status",retainer_invoice.get("status"));
+row1.put("Deleted By",zoho.loginuser);
+Rows_Det.add(row1);
+resource_id = "lhvwf04b16d7de44a45c4990b34f11eb25387";
+rowData = Map();
+rowData.put("method","worksheet.records.add");
+rowData.put("worksheet_name","Retainer Invoice");
+rowData.put("header_row",1);
+rowData.put("json_data",Rows_Det);
+add_records = invokeurl
+[
+	url :"https://sheet.zoho.com/api/v2/" + resource_id
+	type :POST
+	parameters:rowData
+	connection:"zoho_sheet"
+];

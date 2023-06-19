@@ -1,0 +1,195 @@
+							Funtion Name : convert_estimate_to_so
+							Workflow Name : Convert Estimate To SO
+
+Description : Create Sales Order when estimate is accepted. Live (11 Jan 2023)
+
+
+try 
+{
+	estimate_id = estimate.get("estimate_id");
+	shipping_charge = estimate.get("shipping_charge");
+	organization_id = organization.get("organization_id");
+	Tax_total = estimate.get("tax_total_formatted");
+	customer_id = estimate.get("customer_id");
+	estimate_detailed = zoho.books.getRecordsByID("estimates",organization_id,estimate_id);
+	estimate_detailed = estimate_detailed.get("estimate");
+	project_id = "";
+	if(estimate_detailed.get("project") != Null)
+	{
+		project_id = estimate_detailed.get("project").get("project_id");
+	}
+	is_discount_before_tax = estimate_detailed.get("is_discount_before_tax");
+	contact_persons = estimate_detailed.get("contact_persons").toList();
+	estimate_number = estimate_detailed.get("estimate_number");
+	discount = estimate_detailed.get("discount");
+	discount_type = estimate_detailed.get("discount_type");
+	salesperson_id = estimate_detailed.get("salesperson_id");
+	estimate_line_items = estimate_detailed.get("line_items").toList();
+	updated_est_line_items = list();
+	for each  item in estimate_line_items
+	{
+		item_custom_fields = item.get("item_custom_fields").toList();
+		updated_item_custom_fields = list();
+		for each  cf in item_custom_fields
+		{
+			cf_label = cf.get("label");
+			cf_value = cf.get("value");
+			updated_cf = Map();
+			updated_cf.put("label",cf_label);
+			updated_cf.put("value",cf_value);
+			updated_item_custom_fields.add(updated_cf);
+		}
+		item.remove("item_custom_fields");
+		item.remove("line_item_id");
+		item.put("item_custom_fields",updated_item_custom_fields);
+		item.put("project_id",project_id);
+		updated_est_line_items.add(item);
+	}
+	salesorder_custom_fields = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/settings/fields?entity=salesorder&organization_id=" + organization_id
+		type :GET
+		connection:"zoho_book"
+	];
+	salesorder_custom_fields = salesorder_custom_fields.get("fields").toList();
+	estimate_custom_fields = estimate_detailed.get("custom_fields").toList();
+	updated_so_custom_fields = List();
+	for each  estimate_cf in estimate_custom_fields
+	{
+		estimate_cf_is_active = estimate_cf.get("is_active");
+		estimate_cf_dataType = estimate_cf.get("data_type");
+		estimate_cf_label = estimate_cf.get("label");
+		estimate_cf_value = estimate_cf.get("value");
+		for each  so_cf in salesorder_custom_fields
+		{
+			so_cf_is_active = so_cf.get("is_active");
+			so_cf_dataType = so_cf.get("data_type");
+			so_cf_label = so_cf.get("field_name_formatted");
+			if(estimate_cf_is_active == true && so_cf_is_active == true && estimate_cf_dataType == so_cf_dataType && estimate_cf_label == so_cf_label && !estimate_cf_value.isNull())
+			{
+				updated_cf = Map();
+				updated_cf.put("label",so_cf_label);
+				updated_cf.put("value",estimate_cf_value);
+				updated_so_custom_fields.add(updated_cf);
+			}
+		}
+	}
+	salesorder_data = Map();
+	salesorder_data.put("customer_id",customer_id);
+	salesorder_data.put("estimate_id",estimate_id);
+	salesorder_data.put("shipping_charge",shipping_charge);
+	salesorder_data.put("tax_total_formatted",Tax_total);
+	if(project_id != "")
+	{
+		Project = Map();
+		Project.put("customfield_id",1316483000007865015);
+		Project.put("value",project_id);
+		updated_so_custom_fields.add(Project);
+	}
+	if(discount_type == "entity_level")
+	{
+		salesorder_data.put("discount",discount);
+		salesorder_data.put("is_discount_before_tax",is_discount_before_tax);
+		salesorder_data.put("discount_type","entity_level");
+	}
+	else if(discount_type == "item_level")
+	{
+		salesorder_data.put("is_discount_before_tax",is_discount_before_tax);
+		salesorder_data.put("discount_type","item_level");
+	}
+	salesorder_data.put("reference_number",estimate_number);
+	salesorder_data.put("line_items",updated_est_line_items);
+	if(!salesperson_id.isNull())
+	{
+		salesorder_data.put("salesperson_id",salesperson_id);
+	}
+	if(!contact_persons.isEmpty())
+	{
+		salesorder_data.put("contact_persons",contact_persons);
+	}
+	if(!updated_so_custom_fields.isEmpty())
+	{
+		salesorder_data.put("custom_fields",updated_so_custom_fields);
+	}
+	// info salesorder_data;
+	create_salesorder = zoho.books.createRecord("salesorders",organization_id,salesorder_data);
+	info create_salesorder.get("message");
+	code = create_salesorder.get("code");
+	if(code != 0)
+	{
+		comment = Map();
+		comment.put("description","Failed to create salesorder");
+		comment_json = Map();
+		comment_json.put("JSONString",comment);
+		create_comment = invokeurl
+		[
+			url :"https://books.zoho.com/api/v3/estimates/" + estimate_id + "/comments?organization_id=" + organization_id
+			type :POST
+			parameters:comment_json
+			connection:"zoho_book"
+		];
+		info "comment" + create_comment;
+	}
+	else
+	{
+		salesorder_id = create_salesorder.get("salesorder").get("salesorder_id");
+		/////////////////// Submit Sales Order for Approval  //////////////////////////////
+		Confirmed_SO = invokeurl
+		[
+			url :"https://books.zoho.com/api/v3/salesorders/" + salesorder_id + "/submit"
+			type :POST
+			connection:"zoho_book"
+		];
+		///////////////////// Approve Sales Order //////////////////////////////
+		Approve_SO = invokeurl
+		[
+			url :"https://books.zoho.com/api/v3/salesorders/" + salesorder_id + "/approve"
+			type :POST
+			connection:"zoho_book"
+		];
+		///////////////////// Comfired/Open SalesOrder //////////////////////////////
+		Open_SO = invokeurl
+		[
+			url :"https://books.zoho.com/api/v3/salesorders/" + salesorder_id + "/status/open"
+			type :POST
+			connection:"zoho_book"
+		];
+		/////////////////////////// Update Zoho Project ///////////////////////////////
+		response = zoho.books.getRecordsByID("salesorders","666479573",salesorder_id);
+		salesorder_mp = response.get("salesorder");
+		if(salesorder_mp.get("custom_field_hash").get("cf_organization") == "Blink Signs" && project_id != "")
+		{
+			res = invokeurl
+			[
+				url :"https://books.zoho.com/api/v3/projects/" + project_id
+				type :GET
+				connection:"zoho_book"
+			];
+			zproject_id = res.get("project").get("zprojects_project_id");
+			///////////////////////////////////////////
+			update_map = Map();
+			update_map.put("UDF_CHAR23","Approved");
+			update_map.put("custom_status","1264527000033851429");
+			update_map.put("UDF_CHAR26",salesorder_mp.get("salesorder_number"));
+			///////// SO Number
+			Update_ZProject = invokeurl
+			[
+				url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + zproject_id + "/"
+				type :POST
+				parameters:update_map
+				connection:"zoho_projects"
+			];
+			info Update_ZProject;
+		}
+	}
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"shahzaib@blinkswag.com"
+		subject :"Convert Estimate to SO Failure"
+		message :"Record ID: " + estimate_id + " Root Cause: " + e
+	]
+}

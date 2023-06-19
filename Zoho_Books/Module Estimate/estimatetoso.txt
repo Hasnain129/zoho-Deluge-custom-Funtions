@@ -1,0 +1,138 @@
+								FUNTION Name : estimatetoso
+
+
+Description : Convert Accepted estimates to SO
+
+
+estimateID = estimate.get("estimate_id");
+estimatedate = estimate.get("date").toDate();
+organizationID = organization.get("organization_id");
+customerID = estimate.get("customer_id");
+estimateDetails = invokeurl
+[
+	url :"https://books.zoho.com/api/v3/estimates/" + estimateID + "?organization_id=" + organizationID
+	type :GET
+	connection:"zoho_book"
+];
+estimateDetails = estimateDetails.get("estimate");
+dis = estimateDetails.get("is_discount_before_tax");
+//info estimateDetails;
+cpList = List();
+cpList = estimateDetails.get("contact_persons").toList();
+estimate_number = estimateDetails.get("estimate_number");
+discountType = estimateDetails.get("discount_type");
+discount = estimateDetails.get("discount");
+salespersonID = estimateDetails.get("salesperson_id");
+lineItems = estimateDetails.get("line_items").toList();
+lineList = List();
+for each  find in lineItems
+{
+	lineMap = Map();
+	itemCustomFields = find.get("item_custom_fields").toList();
+	itemCF = List();
+	for each  findCF in itemCustomFields
+	{
+		itemLab = findCF.get("label");
+		itemVal = findCF.get("value");
+		iMap = Map();
+		iMap.put("label",itemLab);
+		iMap.put("value",itemVal);
+		itemCF.add(iMap);
+	}
+	find.remove("item_custom_fields");
+	find.remove("line_item_id");
+	find.put("item_custom_fields",itemCF);
+	lineList.add(find);
+}
+getSOCustomFields = invokeurl
+[
+	url :"https://books.zoho.com/api/v3/settings/fields?entity=salesorder&organization_id=" + organizationID
+	type :GET
+	connection:"zoho_book"
+];
+getSOCustomFields = getSOCustomFields.get("fields").toList();
+estimateCustomFields = estimateDetails.get("custom_fields").toList();
+cfList = List();
+for each  findEstimateCF in estimateCustomFields
+{
+	estimateCF_isActive = false;
+	estimateCF_dataType = 0;
+	estimateCF_label = 0;
+	estimateCF_value = "";
+	estimateCF_isActive = findEstimateCF.get("is_active");
+	estimateCF_dataType = findEstimateCF.get("data_type");
+	estimateCF_label = findEstimateCF.get("label");
+	estimateCF_value = findEstimateCF.get("value");
+	for each  findSOCF in getSOCustomFields
+	{
+		SOCF_isActive = false;
+		SOCF_dataType = 0;
+		SOCF_label = 0;
+		SOCF_value = "";
+		SOCF_isActive = findSOCF.get("is_active");
+		SOCF_dataType = findSOCF.get("data_type");
+		SOCF_label = findSOCF.get("field_name_formatted");
+		if(estimateCF_isActive = true && SOCF_isActive == true && estimateCF_dataType == SOCF_dataType && estimateCF_label == SOCF_label && !estimateCF_value.isNull())
+		{
+			cMap = Map();
+			cMap.put("label",SOCF_label);
+			cMap.put("value",estimateCF_value);
+			cfList.add(cMap);
+		}
+	}
+}
+json = Map();
+json.put("customer_id",customerID);
+json.put("estimate_id",estimateID);
+if(discountType == "entity_level")
+{
+	json.put("discount",discount);
+	json.put("is_discount_before_tax",dis);
+	json.put("discount_type","entity_level");
+}
+else if(discountType == "item_level")
+{
+	json.put("is_discount_before_tax",dis);
+	json.put("discount_type","item_level");
+}
+json.put("reference_number",estimate_number);
+json.put("line_items",lineList);
+if(!salespersonID.isNull())
+{
+	json.put("salesperson_id",salespersonID);
+}
+if(!cpList.isEmpty())
+{
+	json.put("contact_persons",cpList);
+}
+if(!cfList.isEmpty())
+{
+	json.put("custom_fields",cfList);
+}
+params = Map();
+params.put("JSONString",json);
+info params;
+createSO = invokeurl
+[
+	url :"https://books.zoho.com/api/v3/salesorders?organization_id=" + organizationID
+	type :POST
+	parameters:params
+	connection:"zoho_book"
+];
+info createSO.get("message");
+soCode = createSO.get("code");
+if(soCode != 0)
+{
+	cmt = Map();
+	cmt.put("description","Failed to create a salesorder");
+	cmtMap = Map();
+	cmtMap.put("JSONString",cmt);
+	comment = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/estimates/" + estimateID + "/comments?organization_id=" + organizationID
+		type :POST
+		parameters:cmtMap
+		connection:"zoho_book"
+	];
+	info "cmt==" + comment;
+}

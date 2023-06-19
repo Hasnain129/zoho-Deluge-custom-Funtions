@@ -1,0 +1,52 @@
+						Funtion Name : calculate_gross_profit_and_margin
+						Workflow Name : calculate_gross_profit_and_margin
+
+
+
+/*
+	1. Create PO from SO 
+	2. Lineitems will be cost items based on esitimate Number
+*/
+Total_Cost_Price = 0.0;
+Total_Selling_Price = 0.0;
+organization_id = organization.get("organization_id");
+organization_name = organization.get("name");
+estimate_id = estimate.get("estimate_id");
+number = estimate.get("estimate_number");
+searchParam = {"cf_estimate_number":estimate_id};
+response = zoho.books.getRecords("cm_cost_item",organization_id,searchParam,"zoho_book");
+if(response.get("module_records").size() > 0)
+{
+	records = response.get("module_records");
+	vendors = list();
+	vendorid = 0;
+	///////// Get all Vendors and remove dulicate //////
+	for each  record in records
+	{
+		if(record.get("cf_estimate_number_formatted") == number)
+		{
+			Total_Cost_Price = Total_Cost_Price + record.get("cf_cost_price");
+			Total_Selling_Price = Total_Selling_Price + record.get("cf_selling_price");
+		}
+	}
+	info "Cost_Price " + Total_Cost_Price;
+	info "Selling_Price " + Total_Selling_Price;
+	////// Update PO number on Estimate /////
+	if(Total_Selling_Price > Total_Cost_Price)
+	{
+		custom_field = List();
+		customfield_1 = Map();
+		customfield_1.put("customfield_id",1316483000170161538);
+		customfield_1.put("value",Total_Selling_Price - Total_Cost_Price);
+		custom_field.add(customfield_1);
+		customfield_2 = Map();
+		customfield_2.put("customfield_id",1316483000170161544);
+		customfield_2.put("value",((Total_Selling_Price - Total_Cost_Price) * 100) / Total_Selling_Price);
+		custom_field.add(customfield_2);
+		estimate_mp = Map();
+		estimate_mp.put("customer_id",estimate.get("customer_id"));
+		estimate_mp.put("custom_fields",custom_field);
+		response = zoho.books.updateRecord("estimates","666479573",estimate_id,estimate_mp);
+		info response;
+	}
+}

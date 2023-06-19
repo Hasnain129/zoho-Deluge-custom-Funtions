@@ -1,0 +1,316 @@
+								Funtion Name : update_zp_fields_and_create_task_on_est_status
+								Workflow Name : update_zp_fields_and_create_task_on_est_status
+
+
+
+/*
+This is a sample function. Uncomment to execute or make changes to this function.  
+estimateID = estimate.get("estimate_id");
+estimatedate = estimate.get("date").toDate();
+organizationID = organization.get("organization_id");
+*/
+////////////////////// Fetch All Required Data ////////////////////////////
+estimateID = estimate.get("estimate_id");
+organizationID = organization.get("organization_id");
+Estimate_Details = zoho.books.getRecordsByID("Estimates",organizationID,estimateID);
+Estimate_Number = Estimate_Details.get("estimate").get("estimate_number");
+Estimate_Status = Estimate_Details.get("estimate").get("status");
+Estimate_value = Estimate_Details.get("estimate").get("total");
+est_sur = Estimate_Details.get("estimate").get("custom_field_hash").get("cf_survey_service_estimate");
+shipping_charge = Estimate_Details.get("estimate").get("shipping_charge");
+////
+///////////////////////// Get Project(Project_id) from Estimate Lookup ///////////////////////
+Project_Id = Estimate_Details.get("estimate").get("project").get("project_id");
+project_Name = Estimate_Details.get("estimate").get("project").get("project_name");
+///////////////////////// Get Project from Zoho Books Project Module /////////////////////////
+Books_Project = zoho.books.getRecordsByID("projects",organizationID,Project_Id);
+///////////////////////// Get Zp_id from Zoho Books Project /////////////////////////////////
+zprojects_project_id = Books_Project.get("project").get("zprojects_project_id");
+///////////////////////////////// Fetch Project from Zoho Projects //////////////////////////
+Get_projet_details = invokeurl
+[
+	url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + zprojects_project_id + "/"
+	type :GET
+	connection:"zoho_projects"
+];
+//info Get_projet_details;
+/////////////////////////////// Get Sign Project id from Zoho Projects /////////////////////
+custom_fields = Get_projet_details.get("projects").get(0).get("custom_fields").toList();
+//info Get_projet_details;
+for each index fields in custom_fields
+{
+	if(custom_fields.get(fields).containKey("CRM Id") == true)
+	{
+		CRM_Id = custom_fields.get(fields).get("CRM Id");
+	}
+	if(custom_fields.get(fields).containKey("Estimate Status") == true)
+	{
+		Z_P_Est_Status = custom_fields.get(fields).get("Estimate Status");
+	}
+	if(custom_fields.get(fields).containKey("Survey Estimate") == true)
+	{
+		Z_P_Sur_Est = custom_fields.get(fields).get("Survey Estimate");
+	}
+}
+//////////////////////////////////////////////Updated Estimate Number,status and Amount ///////////////////////////////////////////////////////////
+Potential_Details = zoho.crm.getRecordById("Potentials",CRM_Id);
+Potential_map = Map();
+Potential_map.put("Quote_no",Estimate_Number);
+Potential_map.put("Quote_Status1",Estimate_Status);
+Potential_map.put("Amount",Estimate_value);
+response = zoho.crm.updateRecord("Potentials",CRM_Id,Potential_map);
+contact_id = Potential_Details.get("Contact_Name").get("id");
+contact_name = Potential_Details.get("Contact_Name").get("name");
+Sales_Rep = Potential_Details.get("Lead_Owner").get("id");
+//info response;
+//|| (Estimate_Status == "sent" && Z_P_Est_Status == "Accepted" && Z_P_Sur_Est == "No" && est_sur == "true")
+//////////////////////// IF Estimate Status is Sent/////////////////////////////////////////////////
+if(Estimate_Status == "sent")
+{
+	info "Quote Sent";
+	desc = Estimate_Number + "&nbsp&nbsp:" + " &nbsp Project has been marked as pending approval since the estimate has been sent. Project will be reopened once the estimate is approved.<br />";
+	Url = "<a href='https://books.zoho.com/app/666479573#/quotes/" + estimateID + "? filter_by=Status.All&per_page=25&search_criteria=%7B%22search_text%22%3A%22test%20yas%22%7D&sort_column=created_time&sort_order=D" + "&prov=yhoo&type=lgns' >View Estimate</a>";
+	if(est_sur == "true" && Z_P_Est_Status != "Accepted")
+	{
+		info "Here";
+		cfmap = Map();
+		cfmap.put("custom_status","1264527000035445362");
+		cfmap.put("description",desc + Url);
+		cfmap.put("UDF_CHAR29",Estimate_Number);
+		cfmap.put("UDF_CHAR30","Sent");
+		cfmap.put("billing_method",3);
+		cfmap.put("fixed_cost",Estimate_value);
+	}
+	if(est_sur == "false" && Z_P_Est_Status != "Accepted")
+	{
+		cfmap = Map();
+		cfmap.put("custom_status","1264527000035445362");
+		cfmap.put("description",desc + Url);
+		cfmap.put("UDF_CHAR24",Estimate_Number);
+		cfmap.put("UDF_CHAR25","Sent");
+		cfmap.put("billing_method",3);
+		cfmap.put("fixed_cost",Estimate_value);
+	}
+	update_project_custom_fields = invokeurl
+	[
+		url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + zprojects_project_id + "/"
+		type :POST
+		parameters:cfmap
+		connection:"zoho_projects"
+	];
+	// ////////////////////////////Complete task "Estimate Review" and "Estimate Approval" ///////////////////////
+	Get_task_details = invokeurl
+	[
+		url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + zprojects_project_id + "/tasks/"
+		type :GET
+		connection:"zoho_projects"
+	];
+	///info Get_task_details;
+	Task_list = Get_task_details.get("tasks");
+	for each  task in Task_list
+	{
+		if(task.get("name") == "Estimate Review" || task.get("name") == "Estimate Approval")
+		{
+			DataMap = Map();
+			DataMap.put("custom_status","1264527000001339257");
+			update_task = invokeurl
+			[
+				url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + zprojects_project_id + "/tasks/" + task.get("id") + "/"
+				type :POST
+				parameters:DataMap
+				connection:"zoho_projects"
+			];
+			info update_task;
+		}
+	}
+	////////////////Ends///
+	/////////////////////////// Check if Task is Already in Zoho CRM
+	Tasks_Details = zoho.crm.getRelatedRecords("Tasks","Deals",CRM_Id);
+	// 	info Tasks_Details;
+	for each  task in Tasks_Details
+	{
+		sub = task.get("Subject");
+		if(sub == "Call - " + contact_name + " / " + project_Name)
+		{
+			Task_Id = Tasks_Details.get(0).get("id");
+		}
+	}
+	info "Task Id " + Task_Id;
+	//info est_sur;
+	/////////////////////// Create a Call task in CRM under the associated potential and assign it to Sales Rep////////
+	if(Task_Id == null && est_sur == "false")
+	{
+		sub_desc = "Call - " + contact_name + " / " + project_Name;
+		mp = Map();
+		mp.put("Owner",Sales_Rep);
+		mp.put("Subject",sub_desc);
+		mp.put("Sales_Rep",estimate.get("salesperson_name"));
+		mp.put("$se_module","Potentials");
+		mp.put("Who_Id",contact_id);
+		mp.put("What_Id",CRM_Id);
+		mp.put("Due_Date",today);
+		mp.put("Status","Not Started");
+		mp.put("Send_Notification_Email",true);
+		createTask = zoho.crm.createRecord("Tasks",mp);
+		info createTask;
+	}
+}
+////////////////////////Estimate Status Accepted/////////////////////////////////////////////////
+if(Estimate_Status = "accepted")
+{
+	desc = Estimate_Number + "&nbsp&nbsp:" + "&nbsp Estimate has been approved.<br />";
+	Url = "<a href='https://books.zoho.com/app/666479573#/quotes/" + estimateID + "?filter_by=Status.All&per_page=25&search_criteria=%7B%22search_text%22%3A%22test%20yas%22%7D&sort_column=created_time&sort_order=D" + "&prov=yhoo&type=lgns'>View Estimate</a>";
+	if(est_sur == "true")
+	{
+		cfmap = Map();
+		cfmap.put("custom_status","1264527000033851429");
+		cfmap.put("description",desc + Url);
+		cfmap.put("UDF_CHAR29",Estimate_Number);
+		cfmap.put("UDF_CHAR30","Accepted");
+		cfmap.put("billing_method",3);
+		cfmap.put("fixed_cost",Estimate_value);
+	}
+	if(est_sur == "false")
+	{
+		cfmap = Map();
+		cfmap.put("custom_status","1264527000033851429");
+		cfmap.put("description",desc + Url);
+		cfmap.put("UDF_CHAR24",Estimate_Number);
+		cfmap.put("UDF_CHAR25","Accepted");
+		cfmap.put("billing_method",3);
+		cfmap.put("fixed_cost",Estimate_value);
+	}
+	update_project_custom_fields = invokeurl
+	[
+		url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + zprojects_project_id + "/"
+		type :POST
+		parameters:cfmap
+		connection:"zoho_projects"
+	];
+	info update_project_custom_fields;
+	Get_task_details = invokeurl
+	[
+		url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + zprojects_project_id + "/tasks/"
+		type :GET
+		connection:"zoho_projects"
+	];
+	Task_list = Get_task_details.get("tasks");
+	for each  task in Task_list
+	{
+		info "Here Loop";
+		if(task.get("name") == "Order Setup" || task.get("name") == "Order Setup Audit")
+		{
+			DataMap = Map();
+			DataMap.put("custom_status","1264527000001530175");
+			update_task3 = invokeurl
+			[
+				url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + zprojects_project_id + "/tasks/" + task.get("id") + "/"
+				type :POST
+				parameters:DataMap
+				connection:"zoho_projects"
+			];
+			info update_task3;
+		}
+	}
+	Tasks_Details = zoho.crm.getRelatedRecords("Tasks","Deals",CRM_Id);
+	// 	info Tasks_Details;
+	for each  task in Tasks_Details
+	{
+		sub = task.get("Subject");
+		if(sub == "Call - " + contact_name + " / " + project_Name)
+		{
+			Task_Id = Tasks_Details.get(0).get("id");
+			mp = Map();
+			mp.put("Status","Completed");
+			update = zoho.crm.updateRecord("Tasks",Task_Id,mp);
+			info update;
+		}
+	}
+}
+// ////////////////////////Estimate Status Accepted and Declined/////////////////////////////////////////////////
+if(Estimate_Status = "declined" && Z_P_Est_Status != "Accepted")
+{
+	desc = Estimate_Number + "&nbsp&nbsp:" + " &nbsp Estimate has been Declined.<br />";
+	Url = "<a href='https://books.zoho.com/app/666479573#/quotes/" + estimateID + "?filter_by=Status.All&per_page=25&search_criteria=%7B%22search_text%22%3A%22test%20yas%22%7D&sort_column=created_time&sort_order=D" + "&prov=yhoo&type=lgns' >View Estimate</a>";
+	if(est_sur == "true")
+	{
+		cfmap = Map();
+		cfmap.put("billing_method",3);
+		cfmap.put("fixed_cost",Estimate_value);
+		cfmap.put("UDF_CHAR29",Estimate_Number);
+		cfmap.put("UDF_CHAR30","Declined");
+		cfmap.put("custom_status","1264527000036144823");
+		cfmap.put("description",desc + input.Url);
+	}
+	if(est_sur == "false")
+	{
+		cfmap = Map();
+		cfmap.put("billing_method",3);
+		cfmap.put("fixed_cost",Estimate_value);
+		cfmap.put("UDF_CHAR24",Estimate_Number);
+		cfmap.put("UDF_CHAR25","Declined");
+		cfmap.put("custom_status","1264527000036144823");
+		cfmap.put("description",desc + input.Url);
+	}
+	update_project_custom_fields = invokeurl
+	[
+		url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + zprojects_project_id + "/"
+		type :POST
+		parameters:cfmap
+		connection:"zoho_projects"
+	];
+	Get_task_details = invokeurl
+	[
+		url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + zprojects_project_id + "/tasks/"
+		type :GET
+		connection:"zoho_projects"
+	];
+	Task_list = Get_task_details.get("tasks");
+	for each  task in Task_list
+	{
+		name = task.get("name");
+		if(name == "Estimate Review")
+		{
+			task_id = task.get("id");
+			DataMap = Map();
+			DataMap.put("custom_status","1264527000001530175");
+		}
+	}
+	update_task5 = invokeurl
+	[
+		url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + zprojects_project_id + "/tasks/" + task_id + "/"
+		type :POST
+		parameters:DataMap
+		connection:"zoho_projects"
+	];
+	info update_task5;
+	Tasks_Details = zoho.crm.getRelatedRecords("Tasks","Deals",CRM_Id);
+	// 	info Tasks_Details;
+	for each  task in Tasks_Details
+	{
+		info task;
+		sub = task.get("Subject");
+		if(sub == "Call - " + contact_name + " / " + project_Name && task.get("Status") == "Not Started")
+		{
+			info "Here";
+			Task_Id = Tasks_Details.get(0).get("id");
+		}
+	}
+	if(Task_Id == null && est_sur == "false")
+	{
+		info "here" + Task_Id;
+		sub_desc = "Call - " + contact_name + " / " + project_Name;
+		mp = Map();
+		mp.put("Owner",Sales_Rep);
+		mp.put("Subject",sub_desc);
+		mp.put("Sales_Rep",estimate.get("salesperson_name"));
+		mp.put("$se_module","Potentials");
+		mp.put("Who_Id",contact_id);
+		mp.put("What_Id",CRM_Id);
+		mp.put("Due_Date",today);
+		mp.put("Status","Not Started");
+		mp.put("Send_Notification_Email",true);
+		info mp;
+		createTask = zoho.crm.createRecord("Tasks",mp);
+	}
+}

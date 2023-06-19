@@ -1,0 +1,33 @@
+								Funtion Name : calc_sq_foot
+
+
+Description : Calculate the Square footage of the line item and update the line item rate.
+
+
+organization_id = organization.get('organization_id');
+estimate_id = estimate.get('estimate_id');
+estimateMap = Map();
+line_items = estimate.get('line_items');
+line_items_updated = List();
+for each  line_item in line_items
+{
+	rate = line_item.get('rate');
+	qty = line_item.get('quantity');
+	discount = line_item.get('discount_amount');
+	custom_fields = line_item.get('item_custom_fields');
+	for each  custom_field in custom_fields
+	{
+		if(custom_field.get('api_name') == 'cf_square_footage')
+		{
+			sq_ft = custom_field.get('value');
+			total = qty * toDecimal(sq_ft) - discount;
+			line_item.update("rate",total);
+			break;
+		}
+	}
+	line_items_updated.add(line_item);
+}
+estimateMap.put("line_items",line_items_updated);
+info estimateMap;
+response = zoho.books.updateRecord("Estimates",organization_id,estimate_id,estimateMap,"zoho_book");
+info response;

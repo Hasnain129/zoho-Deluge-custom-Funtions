@@ -1,0 +1,38 @@
+							Funtion Name : activity_log_estimate
+							Workflow Name : 
+
+
+
+Description  : It is a function to take the activity log of the Sales order to check if someone deleted the Estimate. 
+
+
+
+/*
+This is a sample function. Uncomment to execute or make changes to this function.  
+estimateID = estimate.get("estimate_id");
+estimatedate = estimate.get("date").toDate();
+organizationID = organization.get("organization_id");
+*/
+Rows_Det = List();
+row1 = Map();
+row1.put("Date",zoho.currentdate.getDate());
+row1.put("Time - EST",zoho.currenttime.getTime());
+row1.put("Estimate Number",estimate.get("estimate_number"));
+row1.put("Reference",estimate.get("reference_number"));
+row1.put("Customer",estimate.get("customer_name"));
+row1.put("Status",estimate.get("status"));
+row1.put("Deleted By",zoho.loginuser);
+Rows_Det.add(row1);
+resource_id = "lhvwf04b16d7de44a45c4990b34f11eb25387";
+rowData = Map();
+rowData.put("method","worksheet.records.add");
+rowData.put("worksheet_name","Estimates");
+rowData.put("header_row",1);
+rowData.put("json_data",Rows_Det);
+add_records = invokeurl
+[
+	url :"https://sheet.zoho.com/api/v2/" + resource_id
+	type :POST
+	parameters:rowData
+	connection:"zoho_sheet"
+];

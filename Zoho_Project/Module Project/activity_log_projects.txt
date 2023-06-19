@@ -1,7 +1,7 @@
 							Function Name : activity_log_projects 
 
-
-
+Parameter Name 		Parameter Value
+Project_id 	=	Project System ID
 
 Get_projet_details = invokeurl
 [

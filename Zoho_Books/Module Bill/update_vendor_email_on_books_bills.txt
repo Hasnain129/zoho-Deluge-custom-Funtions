@@ -1,0 +1,87 @@
+								Function Name : update_vendor_email_on_books_bills
+								Workflow Name : update_vendor_email_on_books_bills
+						
+
+
+// custom_fields = bill.get("custom_fields");
+// for each  custom_field in custom_fields
+// {
+// 	if(custom_field.get("placeholder") == "cf_memo")
+// 	{
+// 		CRM_Bill = zoho.crm.searchRecords("Create_Bills","(Name:equals:" + bill.get("reference_number") + ")");
+// 		PO_Obj = zoho.crm.getRecordById("Purchase_Orders",CRM_Bill.get(0).get("PO").get("id"));
+// 		Vendor_Obj = zoho.crm.getRecordById("Vendors",PO_Obj.get("Vendor_Name").get("id"));
+// 		Vendor_email = Vendor_Obj.get("Email");
+// 		////////////////////////////////////////////////
+// 		custom_field_Ven_Email = Map();
+// 		custom_field_Ven_Email.put("customfield_id","1316483000009669007");
+// 		custom_field_Ven_Email.put("label","Vendor Email");
+// 		custom_field_Ven_Email.put("value",Vendor_email);
+// 		custom_field = list();
+// 		custom_field.add(custom_field_Ven_Email);
+// 		Books_Bill = Map();
+// 		Books_Bill.put("bill_number",bill.get("bill_number"));
+// 		Books_Bill.put("vendor_id",bill.get("vendor_id"));
+// 		Books_Bill.put("custom_fields",custom_field);
+// 		Bill_Update = zoho.books.updateRecord("bills","666479573",bill.get("bill_id"),Books_Bill);
+// 	}
+// }
+/////////////////////////////////////////////////////////////////////
+custom_fields = bill.get("custom_fields");
+for each  custom_field in custom_fields
+{
+	if(custom_field.get("placeholder") == "cf_vendor_email")
+	{
+		Vendor_email_bill = custom_field.get("value");
+	}
+}
+info Vendor_email_bill;
+if(Vendor_email_bill == null)
+{
+	Vendor_id = bill.get("vendor_id");
+	Vendor_details = zoho.books.getRecordsByID("contacts","666479573",Vendor_id);
+	Vendor_email = Vendor_details.tomap().get("contact").get("email");
+	////////////////////////////// ADDING ACCOUNTING EMAIL TO BILL ///////////////////////////////////////
+	///////////// Getting Accounting Email ///////////////////////////
+	Contact_Person_Info = Vendor_details.get("contact").get("contact_persons");
+	for each  cont_per in Contact_Person_Info
+	{
+		Cont_designation = cont_per.get("designation");
+		if(Cont_designation == "Accounting")
+		{
+			Accounting_Email = cont_per.get("email");
+		}
+	}
+	//////////////////////////////////// -- If Accounting Email is Not Null == ///////////////////////////////////////////////
+	if(Accounting_Email != null)
+	{
+		custom_field_Ven_Email = Map();
+		custom_field_Ven_Email.put("customfield_id","1316483000009669007");
+		custom_field_Ven_Email.put("label","Vendor Email");
+		custom_field_Ven_Email.put("value",Accounting_Email);
+		custom_field = list();
+		custom_field.add(custom_field_Ven_Email);
+		Books_Bill = Map();
+		Books_Bill.put("bill_number",bill.get("bill_number"));
+		Books_Bill.put("vendor_id",bill.get("vendor_id"));
+		Books_Bill.put("custom_fields",custom_field);
+		Bill_Update = zoho.books.updateRecord("bills","666479573",bill.get("bill_id"),Books_Bill);
+		info Bill_Update;
+	}
+	//////////////////////////////////// -- If Accounting Email is Null == ///////////////////////////////////////////////
+	else
+	{
+		custom_field_Ven_Email = Map();
+		custom_field_Ven_Email.put("customfield_id","1316483000009669007");
+		custom_field_Ven_Email.put("label","Vendor Email");
+		custom_field_Ven_Email.put("value",Vendor_email);
+		custom_field = list();
+		custom_field.add(custom_field_Ven_Email);
+		Books_Bill = Map();
+		Books_Bill.put("bill_number",bill.get("bill_number"));
+		Books_Bill.put("vendor_id",bill.get("vendor_id"));
+		Books_Bill.put("custom_fields",custom_field);
+		Bill_Update = zoho.books.updateRecord("bills","666479573",bill.get("bill_id"),Books_Bill);
+		info Bill_Update;
+	}
+}

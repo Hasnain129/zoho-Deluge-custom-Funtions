@@ -1,0 +1,36 @@
+								Function Name : update_commission_module_paid_date
+
+
+
+
+/*
+This is a sample function. Uncomment to execute or make changes to this function.  
+billID = bill.get("bill_id");
+billDate = bill.get("date").toDate();
+organizationID = organization.get("organization_id");
+*/
+///////////////////////Get Bill Record
+bill = zoho.books.getRecords("bills",666479573);
+bill_status = bill.get("bills").get(0).get("status");
+info bill_status;
+bill_id = bill.get("bills").get(0).get("bill_id");
+info bill_id;
+// ////////////////////Get Commission Record//////////////////////
+Commission = zoho.books.getRecordsByID("cm_commision",666479573,1316483000170326282);
+com = zoho.books.getRecords("cm_commision",666479573);
+Paid_Date = Commission.get("module_record_hash").get("cf_so_paid_date");
+info Paid_Date;
+Record_id = com.get("module_records").get("0").get("module_record_id");
+///////////////////Current time change pattern//////////////////
+time = zoho.currenttime;
+justDate = time.getPrefix(" ").toString("yyyy-MM-dd");
+info justDate;
+//////////////////////////if Bill status is paid then Commission Paid Date add current date/////////////
+if(bill_status == "paid" && Paid_Date == "")
+{
+	///////////////Update Commission Paid Date
+	mp1 = Map();
+	mp1.put("cf_so_paid_date",justDate);
+	Update_Paid_Date = zoho.books.updateRecord("cm_commision",666479573,Record_id,mp1);
+	info Update_Paid_Date;
+}

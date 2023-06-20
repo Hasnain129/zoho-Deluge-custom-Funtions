@@ -1,0 +1,73 @@
+								Function Name : tag_bill
+								Workflow Name : Update Tag on Bills
+
+
+Funtion Description : Tagging bills with respective organization name fetched with the help of Project ID through CRM.
+
+
+
+
+Billed = invokeurl
+[
+	url :"https://books.zoho.com/api/v3/bills/" + bill.get("bill_id") + "?organization_id=666479573"
+	type :GET
+	connection:"zoho_book"
+];
+custom_fields = Billed.get("bill").get("custom_fields");
+for each  cf in custom_fields
+{
+	if(cf.get("customfield_id") == 1316483000007359087)
+	{
+		project_id = cf.get("value");
+		deal = zoho.crm.searchRecords("Deals","(Project_ID:equals:" + project_id + ")");
+		org_name = deal.get(0).get("Organization_Name");
+		info org_name;
+	}
+}
+if(org_name == null)
+{
+	templete_id = Billed.get("bill").get("template_id");
+	info templete_id;
+	if(templete_id == "1316483000000031017")
+	{
+		org_name = "Blink Signs";
+	}
+	else
+	{
+		org_name = "Blink Swag";
+	}
+}
+// //================================ Get Org Name from CRM Potential ======================//
+if(org_name != null)
+{
+	//================================ Selecting Tag (IDs) of Books WRT Org Name ======================//
+	tags_list = List();
+	tag_id = 1316483000000000335;
+	if(org_name == "Blink Signs")
+	{
+		tag_option_id = 1316483000008042003;
+	}
+	else if(org_name == "Blink Swag")
+	{
+		tag_option_id = 1316483000008042005;
+	}
+	tag_mp = Map();
+	tag_mp.put("tag_id",tag_id);
+	tag_mp.put("tag_option_id",tag_option_id);
+	tags_list.add(tag_mp);
+	//================================ Update Bill Line Items ======================//
+	li_list = List();
+	line_items = bill.get("line_items").toJSONList();
+	for each  item in line_items
+	{
+		li_mp = Map();
+		li_id = item.get("line_item_id");
+		li_mp.put("line_item_id",li_id);
+		li_mp.put("tags",tags_list);
+		li_list.add(li_mp);
+	}
+	bill_map = Map();
+	bill_map.put("line_items",li_list);
+	update_bill = zoho.books.updateRecord("Bills",organization.get("organization_id"),bill.get("bill_id"),bill_map);
+}
+

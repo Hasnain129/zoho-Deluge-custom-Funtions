@@ -1,0 +1,37 @@
+							Function Name : activity_log_bills
+							Workflow Name : Delete_Bills
+
+Function Description : It is a function to take activity log of Sales order to check if someone deleted Bills. 
+
+
+
+
+/*
+This is a sample function. Uncomment to execute or make changes to this function.  
+billID = bill.get("bill_id");
+billDate = bill.get("date").toDate();
+organizationID = organization.get("organization_id");
+*/
+Rows_Det = List();
+row1 = Map();
+row1.put("Date",zoho.currentdate.getDate());
+row1.put("Time - EST",zoho.currenttime.getTime());
+row1.put("Bill Number",bill.get("bill_number"));
+row1.put("Reference",bill.get("reference_number"));
+row1.put("Customer",bill.get("customer_name"));
+row1.put("Status",bill.get("status"));
+row1.put("Deleted By",zoho.loginuser);
+Rows_Det.add(row1);
+resource_id = "lhvwf04b16d7de44a45c4990b34f11eb25387";
+rowData = Map();
+rowData.put("method","worksheet.records.add");
+rowData.put("worksheet_name","Bill");
+rowData.put("header_row",1);
+rowData.put("json_data",Rows_Det);
+add_records = invokeurl
+[
+	url :"https://sheet.zoho.com/api/v2/" + resource_id
+	type :POST
+	parameters:rowData
+	connection:"zoho_sheet"
+];

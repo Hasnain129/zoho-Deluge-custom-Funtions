@@ -1,0 +1,32 @@
+							Funtion Name : update_ecmmrocestatus
+							Workflow Name : Update SO E-Commerce Status
+
+
+workflow Description : update the E-commerce status of SO and INV with Reff# "BS7924"
+
+
+
+//ReferenceNo = "BS7924";
+//ReferenceNo = "Wireles";
+salesorderID = salesorder.get("salesorder_id");
+reference_number = salesorder.get("reference_number");
+organizationID = organization.get("organization_id");
+//if(reference_number.subString(0,6) == ReferenceNo)
+//{
+Custom_fields = List();
+cf_e_commerce = Map();
+cf_e_commerce.put("label","E-Commerce");
+cf_e_commerce.put("value","Yes");
+Custom_fields.add(cf_e_commerce);
+//////////////////Updating Invoice custom field////////////////////////
+update_map = Map();
+update_map.put("custom_fields",Custom_fields);
+update_Sale_REC = zoho.books.updateRecord("salesorders",666479573,salesorderID,update_map);
+salesOrderDetails = zoho.books.getRecordsByID("salesorders",organizationID,salesorderID);
+invoices = salesOrderDetails.get("salesorder").get("invoices");
+for each  invoice in invoices
+{
+	inv_id = invoice.get("invoice_id");
+	Update_invoice = zoho.books.updateRecord("invoices",666479573,inv_id,update_map);
+}
+//}

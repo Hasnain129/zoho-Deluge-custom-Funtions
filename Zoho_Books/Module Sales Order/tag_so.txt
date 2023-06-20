@@ -1,0 +1,74 @@
+							Funtion Name : tag_so
+							Workflow Name : Update Tags on Sales Order
+
+workflow Description : Tagging SO with respective organization name fetched with in SO as field.
+
+
+
+custom_fields = salesorder.get("custom_fields");
+info custom_fields;
+for each  cf in custom_fields
+{
+	if(cf.get("customfield_id") == 1316483000009817051)
+	{
+		org_name = cf.get("value");
+	}
+}
+info org_name;
+//////////////////////////////////////////////////////////////////////////////
+if(org_name == "" || org_name == null)
+{
+	info "Yes";
+	Sale_Order = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/salesorders/" + salesorder.get("salesorder_id") + "?organization_id=666479573"
+		type :GET
+		connection:"zoho_book"
+	];
+	SO_details = Sale_Order.get("salesorder");
+	templete_id = SO_details.get("template_id");
+	if(templete_id == "1316483000000019003")
+	{
+		org_name = "Blink Signs";
+	}
+	else
+	{
+		org_name = "Blink Swag";
+	}
+	info org_name;
+}
+/////////////////////////////////////////////////////////////////////////////
+if(org_name != "")
+{
+	//================================ Selecting Tag (IDs) of Books WRT Org Name ======================//
+	tags_list = List();
+	tag_id = 1316483000000000335;
+	if(org_name == "Blink Signs")
+	{
+		tag_option_id = 1316483000008042003;
+	}
+	else if(org_name == "Blink Swag")
+	{
+		tag_option_id = 1316483000008042005;
+	}
+	tag_mp = Map();
+	tag_mp.put("tag_id",tag_id);
+	tag_mp.put("tag_option_id",tag_option_id);
+	tags_list.add(tag_mp);
+	//================================ Update Bill Line Items ======================//
+	li_list = List();
+	line_items = salesorder.get("line_items").toJSONList();
+	for each  item in line_items
+	{
+		li_mp = Map();
+		li_id = item.get("line_item_id");
+		li_mp.put("line_item_id",li_id);
+		li_mp.put("tags",tags_list);
+		li_list.add(li_mp);
+	}
+	info li_list;
+	salesorder_map = Map();
+	salesorder_map.put("line_items",li_list);
+	update_salesorder = zoho.books.updateRecord("Salesorders",organization.get("organization_id"),salesorder.get("salesorder_id"),salesorder_map);
+	info update_salesorder;
+}

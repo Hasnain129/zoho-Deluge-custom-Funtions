@@ -1,0 +1,59 @@
+							Funtion Name : cu_so_production_items
+							Workflow Name : Update Production Items by SO
+
+
+Funtion Description : Creates/updates Production items when a sales order is created or edited
+workflow Description : Create/Update Production Items when SO is created/updated.
+
+
+
+organization_id = organization.get("organization_id");
+so_id = salesorder.get("salesorder_id");
+status = salesorder.get("status");
+so_number = salesorder.get("salesorder_number");
+so_items = salesorder.get("line_items");
+status = salesorder.get("status");
+so_date = salesorder.get("date");
+so_user = salesorder.get("custom_field_hash").get("cf_production_manager_unformatted");
+if(so_user == null)
+{
+	so_user = '';
+}
+// info so_user;
+for each  so_item in so_items
+{
+	name = so_item.get("name");
+	qty = so_item.get("quantity");
+	item_id = so_item.get("line_item_id");
+	item_sku = so_item.get("sku");
+	dataMap = Map();
+	dataMap.put("record_name",name);
+	dataMap.put("cf_so_number",so_number);
+	dataMap.put("cf_qty",qty);
+	dataMap.put("cf_soid",item_id);
+	dataMap.put("cf_sku",item_sku);
+	dataMap.put("cf_so_date",so_date);
+	dataMap.put("cf_user",so_user);
+	// 	//checking if production item already exists
+	search_term = {"cf_soid":so_item.get("line_item_id")};
+	info search_term;
+	existing_items = zoho.books.getRecords("cm_production_control",organization_id,search_term);
+	existing_items = existing_items.get("module_records");
+	for each  existing_item in existing_items
+	{
+		record_id = existing_item.get("module_record_id");
+	}
+	if(existing_items.size() = 0)
+	{
+		info "creating new record";
+		dataMap.put("cf_status",status);
+		response = zoho.books.createRecord("cm_production_control",organization_id,dataMap);
+		info response;
+	}
+	else
+	{
+		info "updating records";
+		response = zoho.books.updateRecord("cm_production_control",organization_id,record_id,dataMap);
+		info response;
+	}
+}

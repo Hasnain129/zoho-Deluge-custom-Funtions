@@ -1,0 +1,86 @@
+							Funtion Name : update_referral_on_invoice
+
+
+
+Ref = 0;
+Referral_Fees_Total = 0;
+/////////////////////////////////////////////////////////////////////////
+Invoice = zoho.books.getRecordsByID("invoices","666479573",invoice.get("invoice_id"));
+////////////////////////////// Customer //////////////////////////////////////////////////////////////
+Customer = zoho.books.getRecordsByID("contacts","666479573",Invoice.get("invoice").get("customer_id"));
+zoho_customer = zoho.crm.getRecordById("Accounts",Customer.get("contact").get("zcrm_account_id"));
+info zoho_customer;
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+for each  invs in invoice.get("line_items")
+{
+	Items = zoho.books.getRecordsByID("items","666479573",invs.get("item_id"));
+	zoho_pro = Items.get("item").get("zcrm_product_id");
+	Products = zoho.crm.getRelatedRecords("Referral_Fees","Products",zoho_pro);
+	if(Products != {})
+	{
+		for each  pro in Products
+		{
+			///////////////////////////////// Parent Customer ////////////////////////////////////
+			try 
+			{
+				if(zoho_customer.get("Parent_Customer").get("id") == pro.get("Customer").get("id"))
+				{
+					Percent_of_sales = pro.get("Percent_of_sales");
+					Ref = Ref + Percent_of_sales.toDecimal() / 100 * invs.get("item_total").toDecimal();
+				}
+			}
+ catch (e)
+			{			}
+			////////////////////////////// Grandparent Customer ////////////////////////////////
+			try 
+			{
+				if(zoho_customer.get("Grandparent_Customer") == pro.get("Customer").get("name"))
+				{
+					Percent_of_sales = pro.get("Percent_of_sales");
+					Ref = Ref + Percent_of_sales.toDecimal() / 100 * invs.get("item_total").toDecimal();
+				}
+			}
+ catch (e)
+			{			}
+			////////////////////////////// Great Grandparent Customer ////////////////////////////////
+			try 
+			{
+				if(zoho_customer.get("Great_Grandparent_Customer") == pro.get("Customer").get("name"))
+				{
+					Percent_of_sales = pro.get("Percent_of_sales");
+					Ref = Ref + Percent_of_sales.toDecimal() / 100 * invs.get("item_total").toDecimal();
+				}
+			}
+ catch (e)
+			{			}
+		}
+	}
+}
+// ///////////////////////////////////////////// Update on Invoice //////////////////////////////////////////////////
+cf_referral_fee = Map();
+cf_referral_fee.put("label","Referral Fee");
+cf_referral_fee.put("value",Ref.round(2));
+Ref_Mp = Map();
+Ref_Mp.put("custom_fields",cf_referral_fee.toList());
+Update_Invoice = zoho.books.updateRecord("invoices","666479573",invoice.get("invoice_id"),Ref_Mp);
+// /////////////////////////////////////////// Get All invoices Against Project ID //////////////////////////////////
+searchParam = {"zcrm_potential_id":Update_Invoice.get("invoice").get("zcrm_potential_id")};
+All_Invoices = zoho.books.getRecords("invoices","666479573",searchParam);
+// // // /////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+for each  invoices in All_Invoices.get("invoices")
+{
+	if(invoices.get("status") != "void")
+	{
+		Custom_Fields = invoices.get("custom_fields");
+		for each  fields in Custom_Fields
+		{
+			if(fields.get("customfield_id") == "1316483000011178366")
+			{
+				Referral_Fees_Total = Referral_Fees_Total + fields.get("value");
+			}
+		}
+	}
+}
+Mp = Map();
+Mp.put("Referral_Fees_Total",Referral_Fees_Total);
+resp = zoho.crm.updateRecord("Deals",Invoice.get("invoice").get("zcrm_potential_id"),Mp,{"trigger":{"workflow"}});

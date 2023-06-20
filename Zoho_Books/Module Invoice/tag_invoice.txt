@@ -1,0 +1,80 @@
+							Funtion Name : tag_invoice
+							Workflow Name : Update Tag on Invoices
+
+workflow Description: Tagging invoices with respective organization name fetched  with the help of ZCRM ID on the invoice.
+
+
+invoiceded = invokeurl
+[
+	url :"https://books.zoho.com/api/v3/invoices/" + invoice.get("invoice_id") + "?organization_id=666479573"
+	type :GET
+	connection:"zoho_book"
+];
+org_name = "";
+invoiced = invoiceded.get("invoice");
+zcrm_id = ifnull(invoiced.get("zcrm_potential_id"),"");
+if(zcrm_id != "")
+{
+	info "Yes1";
+	deal = zoho.crm.getRecordById("Deals",zcrm_id);
+	org_name = deal.get("Organization_Name");
+}
+if(org_name == "")
+{
+	custom_fields = invoiced.get("custom_fields");
+	for each  fields in custom_fields
+	{
+		if(fields.get("label") == "Organization Name")
+		{
+			org_name = fields.get("value");
+		}
+	}
+}
+if(org_name == "")
+{
+	info "Yes3";
+	templete_id = invoiced.get("template_id");
+	if(templete_id == "1316483000000017001")
+	{
+		org_name = "Blink Signs";
+	}
+	else
+	{
+		org_name = "Blink Swag";
+	}
+}
+info org_name;
+if(org_name != "")
+{
+	//================================ Selecting Tag (IDs) of Books WRT Org Name ======================//
+	tags_list = List();
+	tag_id = 1316483000000000335;
+	if(org_name == "Blink Signs")
+	{
+		tag_option_id = 1316483000008042003;
+	}
+	else if(org_name == "Blink Swag")
+	{
+		tag_option_id = 1316483000008042005;
+	}
+	tag_mp = Map();
+	tag_mp.put("tag_id",tag_id);
+	tag_mp.put("tag_option_id",tag_option_id);
+	tags_list.add(tag_mp);
+	// //================================ Update Invoice Line Items ======================//
+	li_list = List();
+	line_items = invoiced.get("line_items").toJSONList();
+	for each  item in line_items
+	{
+		li_mp = Map();
+		li_id = item.get("line_item_id");
+		li_mp.put("line_item_id",li_id);
+		li_mp.put("tags",tags_list);
+		li_list.add(li_mp);
+	}
+	//info invoiced.get("invoice_id");
+	invoice_map = Map();
+	invoice_map.put("line_items",li_list);
+	update_invoice = zoho.books.updateRecord("Invoices",organization.get("organization_id"),invoiced.get("invoice_id"),invoice_map);
+	info update_invoice;
+}

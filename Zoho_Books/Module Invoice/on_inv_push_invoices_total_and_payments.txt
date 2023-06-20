@@ -1,0 +1,74 @@
+							Funtion Name : on_inv_push_invoices_total_and_payments
+
+
+
+Invoices_Total = 0;
+Paid_Invoices_Total = 0;
+Payments = 0;
+Sale_Rep_Com = 0.0;
+CRM_Project_id = invoice.get("zcrm_potential_id");
+project_details = zoho.crm.getRecordById("Deals",CRM_Project_id);
+Proj_ID = project_details.get("Project_ID");
+info Proj_ID;
+///////////////////////////////////////////////// Get Retainer Invoices Payment  ////////////////////////////////////////
+Down_payment_Invoice = zoho.crm.getRelatedRecords("Down_payment_Invoice","Deals",CRM_Project_id);
+for each  DP_data in Down_payment_Invoice
+{
+	DP_Invoice = zoho.crm.getRecordById("Down_Payment_Invoices",DP_data.get("id"));
+	Books_DP_Invoice = zoho.books.getRecordsByID("retainerinvoices","666479573",DP_Invoice.get("Retainer_Invoice_ID"));
+	if(Books_DP_Invoice.get("code") == 0)
+	{
+		if(Books_DP_Invoice.get("retainerinvoice").get("payments").size() != 0 && Books_DP_Invoice.get("invoices").size() == 0)
+		{
+			Retainer_Inv_Payments = Books_DP_Invoice.get("retainerinvoice").get("payments");
+			for each  Ret_Inv in Retainer_Inv_Payments
+			{
+				Payments = Payments + Ret_Inv.get("amount");
+			}
+		}
+	}
+}
+/////////////////////////////////////////// Get All invoices Against Project ID //////////////////////////////////
+searchParam = {"zcrm_potential_id":CRM_Project_id};
+All_Invoices = zoho.books.getRecords("invoices","666479573",searchParam);
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+for each  invoices in All_Invoices.get("invoices")
+{
+	invoice_id = invoices.get("invoice_id");
+	invoice_details = zoho.books.getRecordsByID("invoices","666479573",invoice_id);
+	Paid_Invoices_Total = Paid_Invoices_Total + ifnull(invoice_details.get("invoice").get("payment_made"),0).toDecimal();
+	if(invoices.get("status") != "void")
+	{
+		Invoices_Total = Invoices_Total + invoices.get("total");
+	}
+}
+info Invoices_Total;
+info Paid_Invoices_Total;
+//////////////// Sales Rep Commssion Calculation /////////////////////////
+try 
+{
+	if(project_details.get("Commission_Paid_Date") == "" || project_details.get("Commission_Paid_Date") == null)
+	{
+		Sales_Rep_Commission = project_details.get("Sales_Rep_Commission1").toDecimal();
+		Paid_PO_total = project_details.get("Paid_PO_Total").toDecimal();
+		Gross_Profit = (Paid_Invoices_Total - Paid_PO_total).toDecimal();
+		if(Sales_Rep_Commission > 0 && Gross_Profit > 0)
+		{
+			Sale_Rep_Com = (Sales_Rep_Commission / 100 * Gross_Profit).toDecimal().round(2);
+		}
+		else
+		{
+			Sale_Rep_Com = 0.0;
+		}
+	}
+}
+ catch (e)
+{}
+////////////////////////////////////////////////////////////////////////////
+Mp = Map();
+Mp.put("Commission",Sale_Rep_Com.toString());
+Mp.put("Invoices_Total",Invoices_Total);
+Mp.put("Paid_Invoices_Total",Paid_Invoices_Total.toString());
+Mp.put("Payment_Total",(Paid_Invoices_Total.toDecimal().round(2) + Payments.toDecimal()).toString());
+res = zoho.crm.updateRecord("Deals",CRM_Project_id,Mp,{"trigger":{"workflow"}});
+info res;

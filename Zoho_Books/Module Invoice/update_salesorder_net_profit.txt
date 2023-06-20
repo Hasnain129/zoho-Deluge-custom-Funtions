@@ -1,0 +1,79 @@
+							Funtion Name : update_salesorder_net_profit
+							Workflow Name : Update Net Profit In Sales order
+
+Function Description: Updates Net Profit field of Sales Order 
+Workflow Description: Updates Net Profit in Sales Order
+
+
+
+try 
+{
+	invoice_id = invoice.get("invoice_id");
+	organization_id = organization.get("organization_id");
+	Inv_Obj = zoho.books.getRecordsByID("invoices",organization_id,invoice_id);
+	search_invoices = {"reference_number":Inv_Obj.get("invoice").get("reference_number")};
+	all_invoices = zoho.books.getRecords("invoices",organization_id,search_invoices);
+	invoice_amount = 0.0;
+	if(all_invoices.size() > 0)
+	{
+		Invoices = all_invoices.get("invoices");
+		for each  inv in Invoices
+		{
+			current_invoice = zoho.books.getRecordsByID("invoices",organization_id,inv.get("invoice_id"));
+			//info current_invoice;
+			if(current_invoice.get("invoice").get("salesorder_id") == "" || current_invoice.get("invoice").get("invoice_id") == invoice.get("invoice_id"))
+			{
+				info current_invoice.get("invoice").get("invoice_number");
+				current_invoice = current_invoice.get("invoice");
+				so_id = current_invoice.get("salesorder_id");
+				invoice_amount = invoice_amount + current_invoice.get("total").toDecimal() - current_invoice.get("tax_total").toDecimal();
+			}
+		}
+		if(so_id != "")
+		{
+			salesorder = zoho.books.getRecordsByID("salesorders",organization_id,so_id);
+			salesorder = salesorder.get("salesorder");
+			so_custom_fields = salesorder.get("custom_fields").toList();
+			customer_id = salesorder.get("customer_id");
+			PO_total = 0.0;
+			for each  cf in so_custom_fields
+			{
+				if(cf.get("label") == "POs Total")
+				{
+					PO_total = cf.get("value");
+				}
+			}
+			if(invoice_amount > PO_total)
+			{
+				net_profit = invoice_amount - PO_total;
+				cf_net_profit = Map();
+				cf_net_profit.put("label","Net Profit");
+				cf_net_profit.put("value",net_profit);
+				cf_invoice_total = Map();
+				cf_invoice_total.put("label","Total Invoice");
+				cf_invoice_total.put("value",invoice_amount);
+				so_custom_fields.add(cf_net_profit);
+				so_custom_fields.add(cf_invoice_total);
+				data = Map();
+				data.put("customer_id",customer_id);
+				data.put("custom_fields",so_custom_fields);
+				response = zoho.books.updateRecord("salesorders",organization_id,so_id,data);
+				info so_id;
+				info response.get("message");
+				info "Total Invoice: " + invoice_amount;
+				info "Total POs Amount: " + PO_total;
+				info "Net Profit: " + net_profit;
+			}
+		}
+	}
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"shahzaib@blinkswag.com"
+		subject :" update_salesorder_net_profit" + so_id
+		message :"Record ID: " + invoice.get("invoice_number") + " Root Cause: " + e
+	]
+}

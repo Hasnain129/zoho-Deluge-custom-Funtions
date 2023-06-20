@@ -1,0 +1,194 @@
+							Funtion Name : create_motto_mortgage_monthly_invoice
+							Workflow Name : create_motto_mortgage_monthly_invoice
+
+
+
+/*
+This is a sample function. Uncomment to execute or make changes to this function.
+invoiceID = invoice.get("invoice_id");
+invoicedate = invoice.get("date").toDate();
+organizationID = organization.get("organization_id");
+*/
+//info Invoice_Details;  
+/////////////////////////////////////Getting all necessary data/////////////////////////////////////////
+organizationID = organization.get("organization_id");
+invoiceID = invoice.get("invoice_id");
+invoice_number = invoice.get("invoice_number");
+Invoice_Details = zoho.books.getRecordsByID("invoices",organizationID,invoiceID);
+Invoice_Date = Invoice_Details.get("invoice").get("date").toString("MM/dd/yyy");
+Invoice_Total = Invoice_Details.get("invoice").get("total");
+shipping_charges = Invoice_Details.get("invoice").get("shipping_charge");
+customer_name = invoice.get("customer_name");
+customer_id = invoice.get("customer_id");
+//////////////////////////////////// Check If Parent Customer is Motto Morgage /////////////////////////////
+customer_email = zoho.books.getRecordsByID("contacts","666479573",customer_id).get("contact").get("email");
+crm_contact = invokeurl
+[
+	url :"https://www.zohoapis.com/crm/v2/Contacts/search?criteria=(Email:equals:" + customer_email + ")"
+	type :GET
+	connection:"zoho_crm"
+];
+if(crm_contact.size() > 0)
+{
+	if(crm_contact.get("data").get(0).get("Parent_Customer") != "")
+	{
+		Parent_customer_id = crm_contact.get("data").get(0).get("Parent_Customer").get("id");
+		info Parent_customer_id;
+	}
+}
+// /////////////////////////////////////////Getting payment detail against invoice/////////////////////////////////
+if(Parent_customer_id == "3205780000005121061")
+{
+	payment_coop = false;
+	searchParams = Map();
+	searchParams.put("reference_number_startswith",invoice_number);
+	resp = invokeurl
+	[
+		url :"https://www.zohoapis.com/books/v3/invoices/" + invoiceID + "/payments?organization_id=666479573"
+		type :GET
+		parameters:searchParams
+		connection:"zoho_book"
+	];
+	/////////////////////////////////////////////Getting all necessray payment info////////////////////////////////
+	payment_det = resp.get("payments");
+	// info payment_det;
+	for each  payment_params in payment_det
+	{
+		reference_number = payment_params.get("reference_number");
+		payment_method = payment_params.get("payment_mode");
+		payment_amount = payment_params.get("amount");
+		// 	info payment_amount;
+		////////////////////////////////////////Checking payment method and reference number////////////////////////////	
+		if(payment_method == "COOP" && reference_number == "")
+		{
+			payment_coop = true;
+		}
+		/////////////////////////Checking if payment_method != "COOP"///////////////////////////////////////////////
+		if(payment_method != "COOP")
+		{
+			paid_via_gateway = payment_method;
+			paid_via_amount = payment_amount;
+		}
+	}
+	/////////////////////////Checking if payment_method = "COOP" and it's true then get line_items/////////////
+	if(payment_coop == true)
+	{
+		prepaid_Items = "";
+		regular_Items = "";
+		Invoice_Line_Items = Invoice_Details.get("invoice").get("line_items");
+		Rate = Invoice_Details.get("invoice").get("total");
+		prepaid_item_total = 0;
+		//////////////////////////Getting required data from line_items for description//////////////////////////
+		for each  items in Invoice_Line_Items
+		{
+			Line_item_id = items.get("item_id");
+			Item_Details = zoho.books.getRecordsByID("items",organizationID,Line_item_id);
+			category_ID = Item_Details.get("item").get("category_id");
+			// 		//category id of Nook Motto
+			/////////Checking category if it's Nook(Motto) then dividing items in two sections : Prepaid Item section and Regular Item section////////////////////////////////////////////////////////////////////////////  
+			if(category_ID == "1316483000043646783")
+			{
+				prepaid_Items = prepaid_Items + items.get("sku") + "	";
+				prepaid_Items = prepaid_Items + items.get("quantity").toNumber() + "	";
+				prepaid_Items = prepaid_Items + items.get("rate") + "\n";
+				prepaid_item_total = prepaid_item_total + items.get("item_total");
+			}
+			else
+			{
+				regular_Items = regular_Items + items.get("sku") + "	";
+				regular_Items = regular_Items + items.get("quantity").toNumber() + "	";
+				regular_Items = regular_Items + items.get("rate") + "\n";
+			}
+		}
+	}
+	//  	info "prepaid_Items:	"+ prepaid_Items;
+	//  	info "regular_Items:	"+ regular_Items;
+	////////////////////Checking discount that none of it's field get null by chance if there is null then consider discount == 0.0 ////////////////////////////////////////////////////////////////////////////////////////////////
+	Discount = ifnull(paid_via_amount,0) + ifnull(prepaid_item_total,0);
+	///////////////////Appneding all required data into description so that our line_item should look good according to requirements//////////////////////////////////////////////////////////////////////////////////////////////// 
+	description = "" + invoice_number + "\t:\t" + customer_name + "\nOrder Date\t:\t" + Invoice_Date + "\n\nPrepaid Items:\n" + prepaid_Items.replaceAll(",","") + "\n---------------------------------\n\nRegular Items:\n" + regular_Items.replaceAll(",","") + "\n---------------------------------\nPaid via " + ifnull(paid_via_gateway,"CC") + "\t$" + ifnull(paid_via_amount,"0") + "\n\n---------------------------------\nShippingCharges\t$" + ifnull(shipping_charges,"0") + "";
+	////////////////searching monthly invoice according to current month date and reference number////////?//////////////////////
+	searchParams = {"reference_number":"Monthly Invoice"};
+	Motto_invoices = zoho.books.getRecords("invoices",organizationID,searchParams);
+	if(Motto_invoices.get("invoices").size() > 0)
+	{
+		current_date = zoho.currentdate.toString("yyyy-MM-dd").left(7);
+		// 	current_date = "2023-05";
+		for each  inv in Motto_invoices.get("invoices")
+		{
+			info inv.get("date");
+			if(inv.get("date").left(7) == current_date)
+			{
+				Monthly_Invoice = inv;
+			}
+		}
+	}
+	////////////// If Found Monthly Invoice updating and appending our primary invoice in monthly invoice//////////
+	//info Monthly_Invoice;
+	if(Monthly_Invoice != null)
+	{
+		Monthly_Invoice_lineitems = zoho.books.getRecordsByID("invoices",organizationID,Monthly_Invoice.get("invoice_id")).get("invoice").get("line_items");
+		CF_list = List();
+		cf_organization = Map();
+		cf_organization.put("customfield_id",1316483000009817061);
+		cf_organization.put("value","Blink Swag");
+		CF_list.add(cf_organization);
+		cf_project_name = Map();
+		cf_project_name.put("customfield_id",1316483000010062432);
+		cf_project_name.put("value","Motto Mortgage COOP Corporate invoice");
+		CF_list.add(cf_project_name);
+		cf_e_commerce = Map();
+		cf_e_commerce.put("customfield_id",1316483000088624027);
+		cf_e_commerce.put("value","No");
+		CF_list.add(cf_e_commerce);
+		Mp = Map();
+		Mp.put("customer_id",Monthly_Invoice.get("customer_id"));
+		line_items = Map();
+		line_items.put("description",description);
+		line_items.put("discount",Discount);
+		line_items.put("tax_id",1316483000000255373);
+		line_items.put("rate",Rate);
+		line_item_list = List();
+		line_item_list.addAll(Monthly_Invoice_lineitems);
+		line_item_list.add(line_items);
+		Mp.put("custom_fields",CF_list);
+		Mp.put("line_items",line_item_list);
+		response = zoho.books.updateRecord("invoices",organizationID,Monthly_Invoice.get("invoice_id"),Mp);
+		//info response;
+	}
+	else
+	{
+		CF_list = List();
+		cf_organization = Map();
+		cf_organization.put("customfield_id",1316483000009817061);
+		cf_organization.put("value","Blink Swag");
+		CF_list.add(cf_organization);
+		cf_project_name = Map();
+		cf_project_name.put("customfield_id",1316483000010062432);
+		cf_project_name.put("value","Motto Mortgage COOP Corporate invoice");
+		CF_list.add(cf_project_name);
+		cf_e_commerce = Map();
+		cf_e_commerce.put("customfield_id",1316483000088624027);
+		cf_e_commerce.put("value","No");
+		CF_list.add(cf_e_commerce);
+		////////////////////////////If Monthly Invoice not found creating our own///////////////////////////////
+		//info Monthly_Invoice;
+		info "Here";
+		Mp = Map();
+		Mp.put("customer_id",1316483000010512838);
+		Mp.put("date",zoho.currentdate.toString("yyyy-MM-dd").left(7) + "-01");
+		Mp.put("reference_number","Monthly Invoice");
+		line_items = Map();
+		line_items.put("description",description);
+		line_items.put("discount",Discount);
+		line_items.put("rate",Rate);
+		line_items.put("tax_id",1316483000000255373);
+		items = List();
+		items.add(line_items);
+		Mp.put("custom_fields",CF_list);
+		Mp.put("line_items",items);
+		info Mp;
+		response = zoho.books.createRecord("invoices",organizationID,Mp);
+		//info response;
+	}
+}

@@ -1,0 +1,35 @@
+								Funtion Name : activity_log_invoice
+								Workflow Name : Delete_Invoice
+
+
+
+
+/*
+This is a sample function. Uncomment to execute or make changes to this function.
+invoiceID = invoice.get("invoice_id");
+invoicedate = invoice.get("date").toDate();
+organizationID = organization.get("organization_id");
+*/
+Rows_Det = List();
+row1 = Map();
+row1.put("Date",zoho.currentdate.getDate());
+row1.put("Time - EST",zoho.currenttime.getTime());
+row1.put("Invoice Number",invoice.get("invoice_number"));
+row1.put("Reference",invoice.get("reference_number"));
+row1.put("Customer",invoice.get("customer_name"));
+row1.put("Status",invoice.get("status"));
+row1.put("Deleted By",zoho.loginuser);
+Rows_Det.add(row1);
+resource_id = "lhvwf04b16d7de44a45c4990b34f11eb25387";
+rowData = Map();
+rowData.put("method","worksheet.records.add");
+rowData.put("worksheet_name","Invoice");
+rowData.put("header_row",1);
+rowData.put("json_data",Rows_Det);
+add_records = invokeurl
+[
+	url :"https://sheet.zoho.com/api/v2/" + resource_id
+	type :POST
+	parameters:rowData
+	connection:"zoho_sheet"
+];

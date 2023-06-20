@@ -1,0 +1,27 @@
+							Function Name : update_referral_fee_on_project_level_on_inv_del
+
+
+
+Ref = 0;
+Referral_Fees_Total = 0;
+// /////////////////////////////////////////// Get All invoices Against Project ID //////////////////////////////////
+searchParam = {"zcrm_potential_id":invoice.get("zcrm_potential_id")};
+All_Invoices = zoho.books.getRecords("invoices","666479573",searchParam);
+// // // /////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+for each  invoices in All_Invoices.get("invoices")
+{
+	if(invoices.get("status") != "void")
+	{
+		Custom_Fields = invoices.get("custom_fields");
+		for each  fields in Custom_Fields
+		{
+			if(fields.get("customfield_id") == "1316483000011178366")
+			{
+				Referral_Fees_Total = Referral_Fees_Total + fields.get("value");
+			}
+		}
+	}
+}
+Mp = Map();
+Mp.put("Referral_Fees_Total",Referral_Fees_Total);
+resp = zoho.crm.updateRecord("Deals",invoice.get("zcrm_potential_id"),Mp,{"trigger":{"workflow"}});

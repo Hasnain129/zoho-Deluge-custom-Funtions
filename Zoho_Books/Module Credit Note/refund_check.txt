@@ -1,0 +1,95 @@
+								Function Name : refund_check
+								Workflow Name : Send Refund eCheck from cb.io
+
+
+Workflow Description : Send eCheck from CBio when ever a credit note is created with Refund Drop down selection as (echeck)
+
+
+creditnote_details = zoho.books.getRecordsByID("Creditnotes",organization.get("organization_id"),creditnote.get("creditnote_id"));
+info creditnote_details;
+////////////////////////////////// Get Invoice Detials //////////////////////////////////
+invoice_id = creditnote_details.get("creditnote").get("invoice_id");
+invoice_details = zoho.books.getRecordsByID("Invoices",organization.get("organization_id"),invoice_id);
+invoice_number = invoice_details.get("invoice").get("invoice_number");
+custom_fields = invoice_details.get("invoice").get("custom_fields");
+info custom_fields;
+for each  cf in custom_fields
+{
+	if(cf.get("customfield_id") == "1316483000009817061" && cf.get("value") == "Blink Signs")
+	{
+		org = "Blink Signs";
+	}
+	else if(cf.get("customfield_id") == "1316483000009817061" && cf.get("value") == "Blink Swag")
+	{
+		org = "Blink Swag";
+	}
+}
+///////////////////////// Putting Organziation Name on Credit Note //////////////////////////////////
+crdt_nt_map = Map();
+customFieldLst = List();
+customField = Map();
+customField.put("label","Organization Name");
+customField.put("value",org);
+customFieldLst.add(customField);
+crdt_nt_map.put("custom_fields",customFieldLst);
+zoho.books.updateRecord("Creditnotes",organization.get("organization_id"),creditnote.get("creditnote_id"),crdt_nt_map);
+info org;
+////////////////////////////////// Proceed if Org = BlinkSigns //////////////////////////////////////
+// if(org == "Blink Signs")
+// {
+customer_id = creditnote.get("customer_id");
+customer_details = zoho.books.getRecordsByID("Contacts",organization.get("organization_id"),customer_id);
+customer_email = customer_details.get("contact").get("email");
+amount = creditnote.get("total");
+customer_name = creditnote.get("customer_name");
+Authcbio = Map();
+Authcbio.put("Authorization","54190e9928dc4cdfb026aa28a2381884:myvkxrYXBxlnbSMxBzjZcSfYLFQDwn");
+//APIKey:APISecrect
+Authcbio.put("content-type","application/json");
+//Request URL Condition
+RequestURL = "https://www.checkbook.io/v3//check/digital";
+BodyVal = Map();
+BodyVal.put("amount",amount.toDecimal());
+BodyVal.put("name",customer_name);
+BodyVal.put("recipient",customer_email);
+BodyVal.put("description","Refund against Invoice: " + invoice_number);
+respcbio = invokeurl
+[
+	url :RequestURL
+	type :POST
+	parameters:BodyVal.toString()
+	headers:Authcbio
+];
+info respcbio;
+if(respcbio.get("status") == "UNPAID" || respcbio.get("status") == "IN_PROCESS")
+{
+	JSONString = Map();
+	rfnd = Map();
+	rfnd.put("from_account_id",1316483000004635417);
+	//From account Blink Signs PNC 7803
+	rfnd.put("amount",amount.toDecimal());
+	rfnd.put("description","Refund against Invoice: " + invoice_number + " Via Credit Note: " + creditnote.get("creditnote_number") + " Organization Name: " + org);
+	rfnd.put("refund_mode","eCheck");
+	rfnd.put("reference_number",invoice_number);
+	rfnd.put("date",today);
+	JSONString.put("JSONString",rfnd);
+	cn_refund = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/creditnotes/" + creditnote.get("creditnote_id") + "/refunds?organization_id=" + organization.get("organization_id")
+		type :POST
+		parameters:JSONString
+		connection:"zoho_book"
+	];
+}
+else
+{
+	//Send error mail to "accounts.payable@blinksigns.com" with error message
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"accounts.payable@blinksigns.com"
+		subject :"Checkbook.io Service Error"
+		message :"<div>Following error response received from Checkbook.io:<br> Service Response: " + respcbio + "</div>"
+	]
+}
+//}

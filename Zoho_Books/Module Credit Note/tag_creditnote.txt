@@ -1,0 +1,53 @@
+								Function Name : tag_creditnote
+								Workflow Name : Update Tag on Creditnotes
+
+
+Workflow Description : Tagging creditnotes with respective organization name fetched with the help of CF CN.
+
+
+
+
+custom_fields = creditnote.get("custom_fields");
+info custom_fields;
+for each  cf in custom_fields
+{
+	if(cf.get("customfield_id") == 1316483000017002061)
+	{
+		org_name = cf.get("value");
+	}
+}
+info org_name;
+if(org_name != "")
+{
+	//================================ Selecting Tag (IDs) of Books WRT Org Name ======================//
+	tags_list = List();
+	tag_id = 1316483000000000335;
+	if(org_name == "Blink Signs")
+	{
+		tag_option_id = 1316483000008042003;
+	}
+	else if(org_name == "Blink Swag")
+	{
+		tag_option_id = 1316483000008042005;
+	}
+	tag_mp = Map();
+	tag_mp.put("tag_id",tag_id);
+	tag_mp.put("tag_option_id",tag_option_id);
+	tags_list.add(tag_mp);
+	//================================ Update Bill Line Items ======================//
+	li_list = List();
+	line_items = creditnote.get("line_items").toJSONList();
+	for each  item in line_items
+	{
+		li_mp = Map();
+		li_id = item.get("line_item_id");
+		li_mp.put("line_item_id",li_id);
+		li_mp.put("tags",tags_list);
+		li_list.add(li_mp);
+	}
+	info li_list;
+	creditnote_map = Map();
+	creditnote_map.put("line_items",li_list);
+	update_creditnote = zoho.books.updateRecord("Creditnotes",organization.get("organization_id"),creditnote.get("creditnote_id"),creditnote_map);
+	info update_creditnote;
+}

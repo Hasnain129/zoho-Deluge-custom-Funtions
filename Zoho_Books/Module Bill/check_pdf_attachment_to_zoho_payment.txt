@@ -1,0 +1,31 @@
+							Function Name : check_pdf_attachment_to_zoho_payment
+						
+
+Description: Please do not delete as this is work in progress!
+
+
+
+//Post Redirection HTML Content - URL is from Gmail Parsing
+DepEmailURL = invokeurl
+[
+	url :"https://link.checkbook.io/wf/click?upn=rlaw8g87cARX5tHjicFlN1K-2Bxe6tvg-2FwVEKKZOVp0F8YeUojHgBbyHFsRcCOr5oE71kVs9HmS-2FFto84Zz7qOYwYCdwHndfjOyReLxO-2BLWfXyWy-2FhsGMUq5Fl3RRy0bsfyHC4VqSTtSEg2cd2vYkZ1yDGf1JckKvj0iHFh-2BtHL8-2BUq3HUx9MBdPUJDlFpqtwg_i1H2qmWmCo2OeZzoL2KdXJHfu82ApA9FP-2FR2ASHGRXEFtokOZaPGyKEADxmm5m-2BNcjnTx5p9FaGDXZzpg-2Fr2jGE84Rh-2B2s5rhNBFSNc3Xdgbv93p-2B0WW-2FsA1YMv-2BHP33r9GKmil-2FuAc0k2LOzXa9YeR6UgB3ugvNOoudBMXAvVxCLTNJOjYr-2BEf1IeJxhnZx9gVA3-2B-2FbWbt9yQAw-2FA1Tyw2baO04LAYPav7dUIIHZP4-3D"
+	type :get
+];
+//Parse Link from HTML
+UUIDURL = DepEmailURL.getSuffix('data_smartphone_deposit_url: "').getPrefix('",').toString();
+//Get Check PDF
+CheckPDF = invokeurl
+[
+	url :UUIDURL
+	type :get
+];
+//Upload to Zoho Record
+CheckPDF.setParamName("attachment");
+UpdRec = invokeurl
+[
+	url :"https://books.zoho.com/api/v3/bills/1316483000014964619/attachment?organization_id=666479573"
+	type :POST
+	files:CheckPDF
+	connection:"zoho_book"
+];
+info UpdRec;

@@ -1,0 +1,108 @@
+							Funtion Name : send_email_to_customer_based_on_so_status
+							Workflow Name :Send Email to Customer based on SO Status
+
+Funtion Description : Sending updates to clients automatically based on Sales Order status.
+		  
+workflow Description : Under Testing
+		    
+
+
+
+SO_Obj = zoho.books.getRecordsByID("salesorders","666479573",salesorder.get("salesorder_id"));
+if(salesorder.get("custom_field_hash").containKey("cf_project") == true)
+{
+	/////////////////////////// Get all Selected Contacts for Email /////////////////////////////
+	email_res = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/salesorders/" + salesorder.get("salesorder_id") + "/email"
+		type :GET
+		connection:"zoho_book"
+	];
+	emails = "";
+	contacts_obj = email_res.get("data").get("to_contacts");
+	for each  cont in contacts_obj
+	{
+		if(cont.get("selected") == true && cont.get("email") != null)
+		{
+			emails = emails + cont.get("email") + ", ";
+		}
+	}
+	emails = emails.removeLastOccurence(",");
+	///////////////////////////////////////// Ends ////////////////////////////////////////////////
+	Customer_Name = SO_Obj.get("salesorder").get("customer_name");
+	Project_Name = salesorder.get("custom_field_hash").get("cf_project");
+	info Project_Name;
+	Project_id = salesorder.get("custom_field_hash").get("cf_project_unformatted");
+	Books_Project = zoho.books.getRecordsByID("projects","666479573",Project_id);
+	Zp_id = Books_Project.get("project").get("zprojects_project_id");
+	customer_email = SO_Obj.get("salesorder").get("contact_person_details").get(0).get("email");
+	Current_Sub_Status = SO_Obj.get("salesorder").get("current_sub_status");
+	info Current_Sub_Status;
+	Installation_date = SO_Obj.get("salesorder").get("custom_field_hash").get("cf_expected_install_date");
+	Shipping_date = SO_Obj.get("salesorder").get("shipment_date");
+	payment_terms = SO_Obj.get("salesorder").get("payment_terms_label");
+	if(Current_Sub_Status == "cs_waiting" || Current_Sub_Status == "cs_beingfu")
+	{
+		str = "<div class='container' style='width:75%;margin-left:10%'><h3 style='margin:0;margin-bottom:.0001pt;line-height:150%'></h3><h3 style='margin:0;margin-bottom:.0001pt;text-align:justify;line-height:<br>150%'><span style='font-size:16.5pt;line-height:150%;font-family:&quot;mso-fareast-theme-font:minor-latin;color:#444'><img style='max-width:100%' src='https://blinkswag.com/img/cms/BlinkSigns.jpg'></span></h3><div><span style='line-height:150%;font-family:Helvetica,sans-serif'><font color='#444444' style='' size='2'>Dear&nbsp;</font></span>" + Customer_Name + ",</div><div><span style='line-height:150%;font-family:Helvetica,sans-serif'><font color='#444444' style='' size='2'><br></font></span></div><div><span style='line-height:150%;font-family:Helvetica,sans-serif'><p style='line-height:1.38;margin-top:0;margin-bottom:0; text-align: justify;' dir='ltr'>";
+		if(payment_terms != "Direct Debit Payment")
+		{
+			str = str + "<span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'>Thank you for your quote approval.  We are very excited to work with you on this project!  We will go ahead and get started right away and provide you with updates along the way.</font></span>";
+		}
+		else
+		{
+			str = str + "<span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'>Thank you for your quote approval.  We are very excited to work with you on this project!  Please note down payment would be required for us to move forward with your project, you must have received a retainer invoice for down payment if not you'll be receiving soon. Please ignore if you've already paid the retainer invoice.</font></span>";
+		}
+		str = str + "</p><p style='line-height:1.38;margin-top:0;margin-bottom:0' dir='ltr'><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'><br></font></span></p></span><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'>Please visit your client portal to check the progress of your project at any time <b><a href='https://signs.blinkswag.com/projects/view/" + Zp_id + "'>LINK</a></b>. The client portal will provide real time updates and show the steps that have been completed and yet to be completed.  We want you to have full visibility of your project!</font></span></p><p style='line-height:1.38;margin-top:0;margin-bottom:0' dir='ltr'><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'><br></font></span></p></span><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'>If you have any questions, please contact your project manager through the portal and they will respond within 24 hours.<br><br>Thank you again!</font></span></p><p style='line-height:1.38;margin-top:0;margin-bottom:0' dir='ltr'><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'><br></font></span></p></span></div></div>";
+		sendmail
+		[
+			from :zoho.loginuserid
+			to :emails
+			subject :"Thank you for the approval! (" + Project_Name + ")"
+			message :str
+		]
+	}
+	else if(Current_Sub_Status == "cs_survey")
+	{
+		str = "<div class='container' style='width:75%;margin-left:10%'><h3 style='margin:0;margin-bottom:.0001pt;line-height:150%'></h3><h3 style='margin:0;margin-bottom:.0001pt;text-align:justify;line-height:<br>150%'><span style='font-size:16.5pt;line-height:150%;font-family:&quot;mso-fareast-theme-font:minor-latin;color:#444'><img style='max-width:100%' src='https://blinkswag.com/img/cms/BlinkSigns.jpg'></span></h3><div><span style='line-height:150%;font-family:Helvetica,sans-serif'><font color='#444444' style='' size='2'>Dear&nbsp;</font></span>" + Customer_Name + ",</div><div><span style='line-height:150%;font-family:Helvetica,sans-serif'><font color='#444444' style='' size='2'><br></font></span></div><div><span style='line-height:150%;font-family:Helvetica,sans-serif'><p style='line-height:1.38;margin-top:0;margin-bottom:0' dir='ltr'><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'>We just wanted to provide you with an update that your verification survey is scheduled. A verification survey is best practice to ensure your design files are accurate and correct prior to production.</font></span></p><p style='line-height:1.38;margin-top:0;margin-bottom:0' dir='ltr'><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'><br></font></span></p></span><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'>Please visit your client portal to check the progress of your project at any time <b><a href='https://signs.blinkswag.com/projects/view/" + Zp_id + "'>LINK</a>.</b></font></span></p><p style='line-height:1.38;margin-top:0;margin-bottom:0' dir='ltr'><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'><br></font></span></p></span><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'>Thank you!</font></span></p><p style='line-height:1.38;margin-top:0;margin-bottom:0' dir='ltr'><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'><br></font></span></p></span></div></div>";
+		sendmail
+		[
+			from :zoho.loginuserid
+			to :emails
+			subject :"Verification Survey Scheduled (" + Project_Name + ")"
+			message :str
+		]
+	}
+	else if(Current_Sub_Status == "cs_permitt")
+	{
+		str = "<div class='container' style='width:75%;margin-left:10%'><h3 style='margin:0;margin-bottom:.0001pt;line-height:150%'></h3><h3 style='margin:0;margin-bottom:.0001pt;text-align:justify;line-height:<br>150%'><span style='font-size:16.5pt;line-height:150%;font-family:&quot;mso-fareast-theme-font:minor-latin;color:#444'><img style='max-width:100%' src='https://blinkswag.com/img/cms/BlinkSigns.jpg'></span></h3><div><span style='line-height:150%;font-family:Helvetica,sans-serif'><font color='#444444' style='' size='2'>Dear&nbsp;</font></span>" + Customer_Name + ",</div><div><span style='line-height:150%;font-family:Helvetica,sans-serif'><font color='#444444' style='' size='2'><br></font></span></div><div><span style='line-height:150%;font-family:Helvetica,sans-serif'><p style='line-height:1.38;margin-top:0;margin-bottom:0' dir='ltr'><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'>Please note that we have submitted the necessary paperwork for permitting for this location.<br>We will be in touch with further updates once we hear more from the city.</font></span></p><p style='line-height:1.38;margin-top:0;margin-bottom:0' dir='ltr'><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'><br></font></span></p></span><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'>Please visit your client portal to check the progress of your project at any time <b><a href='https://signs.blinkswag.com/projects/view/" + Zp_id + "'>LINK</a>.</b></font></span></p><p style='line-height:1.38;margin-top:0;margin-bottom:0' dir='ltr'><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'><br></font></span></p></span><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'>Thank you!</font></span></p><p style='line-height:1.38;margin-top:0;margin-bottom:0' dir='ltr'><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'><br></font></span></p></span></div></div>";
+		sendmail
+		[
+			from :zoho.loginuserid
+			to :emails
+			subject :"Permitting has been submitted (" + Project_Name + ")"
+			message :str
+		]
+	}
+	else if(Current_Sub_Status == "cs_product" && Shipping_date != null)
+	{
+		str = "<div class='container' style='width:75%;margin-left:10%'><h3 style='margin:0;margin-bottom:.0001pt;line-height:150%'></h3><h3 style='margin:0;margin-bottom:.0001pt;text-align:justify;line-height:<br>150%'><span style='font-size:16.5pt;line-height:150%;font-family:&quot;mso-fareast-theme-font:minor-latin;color:#444'><img style='max-width:100%' src='https://blinkswag.com/img/cms/BlinkSigns.jpg'></span></h3><div><span style='line-height:150%;font-family:Helvetica,sans-serif'><font color='#444444' style='' size='2'>Dear&nbsp;</font></span>" + Customer_Name + ",</div><div><span style='line-height:150%;font-family:Helvetica,sans-serif'><font color='#444444' style='' size='2'><br></font></span></div><div><span style='line-height:150%;font-family:Helvetica,sans-serif'><p style='line-height:1.38;margin-top:0;margin-bottom:0' dir='ltr'><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'>Please note that we have started production on your signage.  At this time, we are expecting a tentative shipping date of <b>" + Shipping_date + "</b>.  However, please note that this timeline can change based on workload, material shortages…etc.</font></span></p><p style='line-height:1.38;margin-top:0;margin-bottom:0' dir='ltr'><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'><br></font></span></p></span><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'>Please visit your client portal to check the progress of your project at any time <b><a href='https://signs.blinkswag.com/projects/view/" + Zp_id + "'>LINK</a>.</b></font></span></p><p style='line-height:1.38;margin-top:0;margin-bottom:0' dir='ltr'><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'><br></font></span></p></span><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'>Thank you!</font></span></p><p style='line-height:1.38;margin-top:0;margin-bottom:0' dir='ltr'><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'><br></font></span></p></span></div></div>";
+		sendmail
+		[
+			from :zoho.loginuserid
+			to :emails
+			subject :"Production has started (" + Project_Name + ")"
+			message :str
+		]
+	}
+	else if(Current_Sub_Status == "cs_install" && Installation_date != null)
+	{
+		str = "<div class='container' style='width:75%;margin-left:10%'><h3 style='margin:0;margin-bottom:.0001pt;line-height:150%'></h3><h3 style='margin:0;margin-bottom:.0001pt;text-align:justify;line-height:<br>150%'><span style='font-size:16.5pt;line-height:150%;font-family:&quot;mso-fareast-theme-font:minor-latin;color:#444'><img style='max-width:100%' src='https://blinkswag.com/img/cms/BlinkSigns.jpg'></span></h3><div><span style='line-height:150%;font-family:Helvetica,sans-serif'><font color='#444444' style='' size='2'>Dear&nbsp;</font></span>" + Customer_Name + ",</div><div><span style='line-height:150%;font-family:Helvetica,sans-serif'><font color='#444444' style='' size='2'><br></font></span></div><div><span style='line-height:150%;font-family:Helvetica,sans-serif'><p style='line-height:1.38;margin-top:0;margin-bottom:0' dir='ltr'><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'>Great news! Our installation team has scheduled the installation of your signage for <b>" + Installation_date + "</b>. We'll be sure to send you pictures of the finished product once it's installed.</font></span></p><p style='line-height:1.38;margin-top:0;margin-bottom:0' dir='ltr'><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'><br></font></span></p></span><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'>You can also keep an eye on the progress of the project by visiting your client portal <b><a href='https://signs.blinkswag.com/projects/view/" + Zp_id + "'>LINK</a></b> at any time.</font></span></p><p style='line-height:1.38;margin-top:0;margin-bottom:0' dir='ltr'><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'><br></font></span></p></span><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'>Thank you for choosing us and we look forward to completing this project for you.</font></span></p><p style='line-height:1.38;margin-top:0;margin-bottom:0' dir='ltr'><span style='font-size:11pt;font-family:Arial;font-variant-numeric:normal;font-variant-east-asian:normal;vertical-align:baseline;white-space:pre-wrap'><font color='#444444'><br></font></span></p></span></div></div>";
+		sendmail
+		[
+			from :zoho.loginuserid
+			to :emails
+			subject :"Installation is scheduled (" + Project_Name + ")"
+			message :str
+		]
+	}
+}

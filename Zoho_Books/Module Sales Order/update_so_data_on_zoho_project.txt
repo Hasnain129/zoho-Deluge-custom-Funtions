@@ -1,0 +1,186 @@
+							Funtion Name : update_so_data_on_zoho_project
+							Workflow Name : Update SO Data on Zoho Project
+
+Funtion Description : 1. Update All Status on linked Zoho Project 
+		  2. On Update of Installation Date send email. (Live)
+workflow Description : 1. Update All Status on linked Zoho Project 
+		    2. On Update of Installation Date send email. (Live)
+
+
+
+
+try 
+{
+	response = zoho.books.getRecordsByID("salesorders","666479573",salesorder.get("salesorder_id"));
+	// 	info response;
+	salesorder_number = salesorder.get("salesorder_number");
+	salesorder_id = salesorder.get("salesorder_id");
+	client_in_hand_date = "";
+	if(response.get("salesorder").get("custom_field_hash").containKey("cf_client_in_hand_date_unformatted"))
+	{
+		client_in_hand_date = response.get("salesorder").get("custom_field_hash").get("cf_client_in_hand_date_unformatted").toString("MM-dd-yyyy");
+	}
+	// 	info client_in_hand_date;
+	Current_Sub_Status = response.get("salesorder").get("current_sub_status");
+	if(salesorder.get("custom_field_hash").get("cf_organization") == "Blink Signs" && salesorder.get("custom_field_hash").containKey("cf_project_unformatted") == true)
+	{
+		cf_project_id = salesorder.get("custom_field_hash").get("cf_project_unformatted");
+		res = invokeurl
+		[
+			url :"https://books.zoho.com/api/v3/projects/" + cf_project_id
+			type :GET
+			connection:"zoho_book"
+		];
+		/////////// Check if Zoho Project is Sync with Books ///////////////////////
+		if(res.get("project").containKey("zprojects_project_id"))
+		{
+			zproject_id = res.get("project").get("zprojects_project_id");
+			info zproject_id;
+			/////////// Get Last Expected Installation Date from Z_project //////// 
+			Get_proj = invokeurl
+			[
+				url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + zproject_id + "/"
+				type :GET
+				connection:"zoho_projects"
+			];
+			Expected_Install_Date = "";
+			owner_name = Get_proj.get("projects").get(0).get("owner_name");
+			zproject_name = Get_proj.get("projects").get(0).get("name");
+			Production_Manager = "";
+			Project_Manager = "";
+			updated_by = zoho.loginuser;
+			custom_fields = Get_proj.get("projects").get(0).get("custom_fields").toList();
+			for each index fields in custom_fields
+			{
+				if(custom_fields.get(fields).containKey("Expected Install Date") == true)
+				{
+					Expected_Install_Date = custom_fields.get(fields).get("Expected Install Date");
+				}
+				if(custom_fields.get(fields).containKey("Project Managers") == true)
+				{
+					Project_Manager = custom_fields.get(fields).get("Project Managers");
+				}
+				if(custom_fields.get(fields).containKey("Production Managers") == true)
+				{
+					Production_Manager = custom_fields.get(fields).get("Production Managers");
+				}
+			}
+			update_map = Map();
+			update_map.put("UDF_CHAR24",salesorder.get("reference_number"));
+			///// Estimate Number
+			///// SO Status
+			if(response.get("salesorder").get("status") == "open" && Current_Sub_Status == "open")
+			{
+				update_map.put("UDF_CHAR23","Approved");
+				update_map.put("custom_status","1264527000033851429");
+			}
+			else if(response.get("salesorder").get("status") == "void")
+			{
+				update_map.put("UDF_CHAR23","Declined");
+				update_map.put("custom_status","1264527000036144823");
+			}
+			else if(Current_Sub_Status == "cs_product" || Current_Sub_Status == "cs_orderma")
+			{
+				update_map.put("UDF_CHAR23","Production");
+				update_map.put("custom_status","1264527000034077593");
+			}
+			else if(Current_Sub_Status == "cs_permitt")
+			{
+				update_map.put("UDF_CHAR23","Permitting");
+				update_map.put("custom_status","1264527000034077591");
+			}
+			else if(Current_Sub_Status == "cs_install")
+			{
+				update_map.put("UDF_CHAR23","Installing");
+				update_map.put("custom_status","1264527000034077587");
+			}
+			else if(Current_Sub_Status == "cs_waiting" || Current_Sub_Status == "cs_beingfu")
+			{
+				info "Herte";
+				update_map.put("UDF_CHAR23","Order Setup");
+				update_map.put("custom_status","1264527000034077589");
+			}
+			else if(Current_Sub_Status == "cs_service")
+			{
+				update_map.put("UDF_CHAR23","Service");
+				update_map.put("custom_status","1264527000036143881");
+			}
+			else if(Current_Sub_Status == "cs_survey")
+			{
+				update_map.put("UDF_CHAR23","Survey");
+				update_map.put("custom_status","1264527000036143879");
+			}
+			else if(Current_Sub_Status == "cs_awaitin")
+			{
+				update_map.put("UDF_CHAR23","Awaiting Payment");
+				update_map.put("custom_status","1264527000041652469");
+			}
+			update_map.put("UDF_CHAR26",salesorder.get("salesorder_number"));
+			update_map.put("UDF_DATE7",client_in_hand_date);
+			//// SO Number
+			Update_ZProject = invokeurl
+			[
+				url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + zproject_id + "/"
+				type :POST
+				parameters:update_map
+				connection:"zoho_projects"
+			];
+		}
+		/////
+		////// Second part If Expected Installation Updated on SO then Update this filed on Z_Project and email //////////////
+		if(salesorder.get("custom_field_hash").containKey("cf_expected_install_date") == true && Expected_Install_Date == "")
+		{
+			update_mp = Map();
+			update_mp.put("UDF_DATE6",salesorder.get("custom_field_hash").get("cf_expected_install_date").replaceAll("/","-"));
+			Update_ZProject = invokeurl
+			[
+				url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + zproject_id + "/"
+				type :POST
+				parameters:update_mp
+				connection:"zoho_projects"
+			];
+		}
+		else
+		{
+			if(salesorder.get("custom_field_hash").containKey("cf_expected_install_date") == true && Expected_Install_Date != salesorder.get("custom_field_hash").get("cf_expected_install_date").replaceAll("/","-"))
+			{
+				update_mp = Map();
+				cf_expected_install_date = salesorder.get("custom_field_hash").get("cf_expected_install_date").replaceAll("/","-");
+				update_mp.put("UDF_DATE6",cf_expected_install_date);
+				Update_ZProject = invokeurl
+				[
+					url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + zproject_id + "/"
+					type :POST
+					parameters:update_mp
+					connection:"zoho_projects"
+				];
+				info Update_ZProject;
+				//////////////////////////////////////////////////////////////////////////
+				owners = "[{'Brittani Shipek':'brittani@blinksigns.com'}, {'Sharjeel':'sharjeel@blinksigns.com'}]";
+				for each  owner in owners
+				{
+					str = "<font face='arial, helvetica, sans-serif' style='color: rgb(34, 34, 34); font-size: small; background-color: rgb(255, 255, 255);'>Dear " + owner.getprefix(":").remove('"').remove("{") + ",</font><div style='color: rgb(34, 34, 34); font-family: Arial, Helvetica, sans-serif; font-size: small; background-color: rgb(255, 255, 255);'><font face='arial, helvetica, sans-serif'><br></font></div><div style='color: rgb(34, 34, 34); font-family: Arial, Helvetica, sans-serif; font-size: small; background-color: rgb(255, 255, 255);'><font face='arial, helvetica, sans-serif'><span style='color: rgb(35, 37, 40);'>Please note that expected installation date has been updated.</span><span style='color: rgb(35, 37, 40);'>&nbsp;&nbsp;</span></font></div><div style='color: rgb(34, 34, 34); font-family: Arial, Helvetica, sans-serif; font-size: small; background-color: rgb(255, 255, 255);'><font face='arial, helvetica, sans-serif'><span style='color: rgb(35, 37, 40);'>Below, you will find detailed information.</span>&nbsp;&nbsp;<br></font></div><div style='color: rgb(34, 34, 34); font-family: Arial, Helvetica, sans-serif; font-size: small; background-color: rgb(255, 255, 255);'><font face='arial, helvetica, sans-serif'><br></font></div><div style='color: rgb(34, 34, 34); font-family: Arial, Helvetica, sans-serif; font-size: small; background-color: rgb(255, 255, 255);'><font face='arial, helvetica, sans-serif'><span style='color: rgb(35, 37, 40);'>Project Name:&nbsp;<a href='https://projects.zoho.com/portal/blinksigns#dashboard/" + zproject_id + "/details'>" + zproject_name + "</a></span></font></div><div style='color: rgb(34, 34, 34); font-family: Arial, Helvetica, sans-serif; font-size: small; background-color: rgb(255, 255, 255);'><font face='arial, helvetica, sans-serif'><span style='color: rgb(35, 37, 40);'>SO Number:&nbsp;<a href='https://books.zoho.com/app/666479573#/salesorders/" + salesorder_id + "'>" + salesorder_number + "</a></span></font></div><div style='color: rgb(34, 34, 34); font-family: Arial, Helvetica, sans-serif; font-size: small; background-color: rgb(255, 255, 255);'><font face='arial, helvetica, sans-serif'><span style='color: rgb(35, 37, 40);'>Project Manager: " + Project_Manager + "</span></font></div><div style='color: rgb(34, 34, 34); font-family: Arial, Helvetica, sans-serif; font-size: small; background-color: rgb(255, 255, 255);'><font face='arial, helvetica, sans-serif'><span style='color: rgb(35, 37, 40);'>Production Manager: " + Production_Manager + "</span></font></div><div style='color: rgb(34, 34, 34); font-family: Arial, Helvetica, sans-serif; font-size: small; background-color: rgb(255, 255, 255);'><font face='arial, helvetica, sans-serif'><span style='color: rgb(35, 37, 40);'>Last Expected Install Date: " + Expected_Install_Date + "</span></font></div><div style='color: rgb(34, 34, 34); font-family: Arial, Helvetica, sans-serif; font-size: small; background-color: rgb(255, 255, 255);'><font face='arial, helvetica, sans-serif'><span style='color: rgb(35, 37, 40);'>New Expected Install Date: " + cf_expected_install_date + "</span></font></div><div style='color: rgb(34, 34, 34); font-family: Arial, Helvetica, sans-serif; font-size: small; background-color: rgb(255, 255, 255);'><font face='arial, helvetica, sans-serif'><span style='color: rgb(35, 37, 40);'>Install Date Updated By: " + user.get("name") + "</span></font></div><br><br><div style='color: rgb(34, 34, 34); font-family: Arial, Helvetica, sans-serif; font-size: small; background-color: rgb(255, 255, 255);'><font face='arial, helvetica, sans-serif'><span style='color: rgb(35, 37, 40);'></font></div><div style='color: rgb(34, 34, 34); font-family: Arial, Helvetica, sans-serif; font-size: small; background-color: rgb(255, 255, 255);'><div class='gmail-m_-7904488303736438426m_-6985587167386967489gmail-' id='gmail-m_-7904488303736438426m_-6985587167386967489gmail-magicdomid17' style='color: rgb(35, 37, 40); padding-right: 1px;'><span class='gmail-m_-7904488303736438426m_-6985587167386967489gmail-author-83YOR32PdbtC' style='padding-top: 0px; padding-bottom: 0px;'><font face='arial, helvetica, sans-serif'>Best regards,</font></span></div><div class='gmail-m_-7904488303736438426m_-6985587167386967489gmail-' id='gmail-m_-7904488303736438426m_-6985587167386967489gmail-magicdomid18' style='color: rgb(35, 37, 40); padding-right: 1px;'><span class='gmail-m_-7904488303736438426m_-6985587167386967489gmail-author-83YOR32PdbtC' style='padding-top: 0px; padding-bottom: 0px;'><font face='arial, helvetica, sans-serif'>BlinkSigns</font></span></div><div class='gmail-m_-7904488303736438426m_-6985587167386967489gmail-' id='gmail-m_-7904488303736438426m_-6985587167386967489gmail-magicdomid18' style='color: rgb(35, 37, 40); padding-right: 1px;'></div></div>";
+					/////////////////////////////////////////////////////////////////////////
+					//
+					sendmail
+					[
+						from :zoho.adminuserid
+						to :owner.getsuffix(":").remove('"').remove("}")
+						subject :" Installation Date Updated On " + zproject_name
+						message :str
+					]
+				}
+			}
+		}
+	}
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"shahzaib@blinkswag.com"
+		subject :" Update SO Data On Z_Project"
+		message :"Record ID: " + salesorder.get("salesorder_id") + " Root Cause: " + e
+	]
+}

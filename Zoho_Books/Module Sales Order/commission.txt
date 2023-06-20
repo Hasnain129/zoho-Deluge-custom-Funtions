@@ -1,0 +1,210 @@
+							Function Name : commission
+							Workflow Name : Test Commission
+
+
+
+organization_id = organization.get("organization_id");
+SO_Obj = zoho.books.getRecordsByID("salesorders",organization_id,salesorder.get("salesorder_id"));
+searchParam = {"record_name":salesorder.get("salesorder_number")};
+Search_Entry = zoho.books.getRecords("cm_commision",organization_id,searchParam,"zoho_book");
+Invoices_Total = 0;
+SOs_total = 0;
+info Search_Entry;
+//////////////////////////////////// Get Sales Rep Commission //////////////////////////////////
+if(SO_Obj.get("salesorder").get("custom_field_hash").get("cf_organization") == "Blink Signs" && !SO_Obj.get("salesorder").get("salesperson_name").isNull())
+{
+	/////////////////////// Get Sales Rep Details ///////////////////////////////////////////////
+	users = zoho.books.getRecords("users",organization_id);
+	for each  user in users.get("users")
+	{
+		if(SO_Obj.get("salesorder").get("salesperson_name") == user.get("name"))
+		{
+			sales_rep_id = user.get("user_id");
+			sales_rep = zoho.books.getRecordsByID("users",organization_id,sales_rep_id);
+			cf_commission_type = sales_rep.get("user").get("custom_field_hash").get("cf_commission_type");
+			cf_sales_rep_commission = sales_rep.get("user").get("custom_field_hash").get("cf_sales_rep_commission");
+		}
+	}
+	///////////////////////////////////////////////////////////////////////////////
+	if(SO_Obj.get("salesorder").get("status") != "draft" || SO_Obj.get("salesorder").get("status") != "void")
+	{
+		SO_Line_Items = SO_Obj.get("salesorder").get("line_items");
+		for each  SO_item in SO_Line_Items
+		{
+			SOs_total = SOs_total + SO_item.get("item_total");
+		}
+	}
+	info "SOs Total :" + SOs_total.round(2);
+	/////////////////////////////////////////////////////////////////////////////////
+	if(Search_Entry.get("module_records").size() == 0)
+	{
+		Mp = Map();
+		Mp.put("record_name",salesorder.get("salesorder_number"));
+		Mp.put("cf_so_order_date",salesorder.get("date"));
+		//Mp.put("cf_so_paid_date",zoho.currenttime.getPrefix(" ").toString("yyyy-MM-dd"));
+		Mp.put("cf_salesperson",sales_rep_id);
+		Mp.put("cf_commission",cf_sales_rep_commission.remove("%"));
+		Mp.put("cf_status","Unpaid");
+		Mp.put("cf_project_name",SO_Obj.get("salesorder").get("custom_field_hash").get("cf_project_unformatted"));
+		Mp.put("cf_customer_name",salesorder.get("customer_id"));
+		Mp.put("cf_total_project_value",SOs_total);
+		Mp.put("cf_total_pos_cost",0);
+		Mp.put("cf_project_gross_profit",0);
+		Mp.put("cf_gross_margin",0);
+		Mp.put("cf_commission_amount",0);
+		res = zoho.books.createRecord("cm_commision",organization_id,Mp);
+		info res;
+	}
+	else
+	{
+		record_id = Search_Entry.get("module_records").get(0).get("module_record_id");
+		// 		///////////////////////////// Get Total of Sales Orders & Purchase Orders  ///////////////////////////////////////// 
+		// 		All_Invoices = SO_Obj.get("salesorder").get("invoices");
+		// 		for each  inv in All_Invoices
+		// 		{
+		// 			if(inv.get("status") != "draft" || inv.get("status") != "void")
+		// 			{
+		// 				Invoice_Obj = zoho.books.getRecordsByID("invoices",organization_id,inv.get("invoice_id"));
+		// 				line_items = Invoice_Obj.get("invoice").get("line_items");
+		// 				for each  item in line_items
+		// 				{
+		// 					if(item.get("item_type") == "inventory")
+		// 					{
+		// 						Invoices_Total = Invoices_Total + item.get("item_total");
+		// 					}
+		// 				}
+		// 			}
+		// 		}
+		// 		info "Total Invoices :" + Invoices_Total.round(2);
+		//////////////////////// Get Total of Purschase Orders //////////////////////////////////////////
+		searchParam = {"reference_number":SO_Obj.get("salesorder").get("salesorder_number")};
+		PO_Obj = zoho.books.getRecords("purchaseorders",organization_id,searchParam,"zoho_book");
+		info PO_Obj;
+		POs_totals = 0.0;
+		Bills_totals = 0.0;
+		if(PO_Obj.size() > 0)
+		{
+			for each  PO_data in PO_Obj.get("purchaseorders")
+			{
+				if(PO_data.get("status") != "draft" && PO_data.get("status") != "cancelled")
+				{
+					POs_totals = POs_totals + PO_data.get("total");
+					// 					Purchase_order = zoho.books.getRecordsByID("purchaseorders",organization_id,PO_data.get("purchaseorder_id"));
+					// 					Bills = Purchase_order.get("purchaseorder").get("bills");
+					// 					if(Bills.size() > 0)
+					// 					{
+					// 						for each  Bill in Bills
+					// 						{
+					// 							if(Bill.get("status") != "void" && Bill.get("status") != "draft")
+					// 							{
+					// 								Bills_totals = Bills_totals + Bill.get("total");
+					// 							}
+					// 						}
+					// 					}
+				}
+			}
+		}
+		info "Total POs :" + POs_totals.round(2);
+		///////////////////////////// All Calculation /////////////////////////////////////////////
+		if(SOs_total > 0 && POs_totals > 0)
+		{
+			Gross_Profit = SOs_total.toDecimal() - POs_totals.toDecimal();
+			Actual_Gross_Margin = (Gross_Profit * 100) / SOs_total.toDecimal();
+			if(cf_sales_rep_commission.remove("%").toDecimal() > 0 && Gross_Profit > 0)
+			{
+				Sale_Rep_Commission = cf_sales_rep_commission.remove("%").toDecimal() / 100 * Gross_Profit;
+			}
+			info "Sales Rep Com :" + Sale_Rep_Commission.round(2);
+			//////////////////////////// Create Entry In Commission Module /////////////////////////
+			Mp = Map();
+			Mp.put("cf_total_project_value",SOs_total);
+			Mp.put("cf_total_pos_cost",POs_totals);
+			Mp.put("cf_project_gross_profit",Gross_Profit.toDecimal().round(2));
+			Mp.put("cf_gross_margin",Actual_Gross_Margin.toDecimal().round(2));
+			Mp.put("cf_commission_amount",Sale_Rep_Commission.toDecimal().round(2));
+			res = zoho.books.updateRecord("cm_commision",organization_id,record_id,Mp);
+			info "update" + res;
+		}
+	}
+}
+// ////////////////////////////////// New Strategy /////////////////////////////////////////////
+// organization_id = organization.get("organization_id");
+// SO_Obj = zoho.books.getRecordsByID("salesorders",organization_id,salesorder.get("salesorder_id"));
+// searchParam = {"record_name":salesorder.get("salesorder_number")};
+// Search_Entry = zoho.books.getRecords("cm_commision",organization_id,searchParam,"zoho_book");
+// Sale_Rep_Commission = 0;
+// //info SO_Obj;
+// ///////////////////////////////// Find out the Sales Rep & Commission ///////////////////////////////////
+// users = zoho.books.getRecords("users",organization_id);
+// for each  user in users.get("users")
+// {
+// 	if(SO_Obj.get("salesorder").get("salesperson_name") == user.get("name"))
+// 	{
+// 		sales_rep_id = user.get("user_id");
+// 		sales_rep = zoho.books.getRecordsByID("users",organization_id,sales_rep_id);
+// 		cf_commission_type = sales_rep.get("user").get("custom_field_hash").get("cf_commission_type");
+// 		cf_sales_rep_commission = sales_rep.get("user").get("custom_field_hash").get("cf_sales_rep_commission");
+// 	}
+// }
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// if(SO_Obj.get("salesorder").get("custom_field_hash").get("cf_organization") == "Blink Signs" && !sales_rep_id.isNull())
+// {
+// 	if(Search_Entry.get("module_records").size() == 0)
+// 	{
+// 		Mp = Map();
+// 		Mp.put("record_name",salesorder.get("salesorder_number"));
+// 		Mp.put("cf_so_order_date",salesorder.get("date"));
+// 		Mp.put("cf_so_paid_date",zoho.currenttime.getPrefix(" ").toString("yyyy-MM-dd"));
+// 		Mp.put("cf_salesperson",sales_rep_id);
+// 		Mp.put("cf_commission",cf_sales_rep_commission.remove("%"));
+// 		Mp.put("cf_status","Unpaid");
+// 		Mp.put("cf_project_name",SO_Obj.get("salesorder").get("custom_field_hash").get("cf_project_unformatted"));
+// 		Mp.put("cf_customer_name",salesorder.get("customer_id"));
+// 		Mp.put("cf_total_project_value",salesorder.get("total"));
+// 		Mp.put("cf_total_pos_cost",0);
+// 		Mp.put("cf_project_gross_profit",0);
+// 		Mp.put("cf_project_gross_margin",0);
+// 		Mp.put("cf_commission_amount",0);
+// 		res = zoho.books.createRecord("cm_commision",organization_id,Mp);
+// 		info res;
+// 	}
+// 	else
+// 	{
+// 		record_id = Search_Entry.get("module_records").get(0).get("module_record_id");
+// 		info record_id;
+// 		if(SO_Obj.get("salesorder").get("status") == "void")
+// 		{
+// 			Mp = Map();
+// 			Mp.put("cf_status","Void");
+// 			res = zoho.books.updateRecord("cm_commision",organization_id,record_id,Mp);
+// 			info "Void" + res;
+// 		}
+// 		else
+// 		{
+// 			if(SO_Obj.get("salesorder").get("custom_field_hash").contains("cf_pos_total"))
+// 			{
+// 				total_pos_cost = SO_Obj.get("salesorder").get("custom_field_hash").get("cf_pos_total").remove('$').remove(',').toDecimal();
+// 			}
+// 			if(SO_Obj.get("salesorder").get("custom_field_hash").contains("cf_gross_profit"))
+// 			{
+// 				gross_profit = SO_Obj.get("salesorder").get("custom_field_hash").get("cf_gross_profit").remove('$').remove(',').toDecimal();
+// 			}
+// 			if(SO_Obj.get("salesorder").get("custom_field_hash").contains("cf_net_profit"))
+// 			{
+// 				gross_margin = SO_Obj.get("salesorder").get("custom_field_hash").get("cf_net_profit").remove('$').remove(',').toDecimal();
+// 			}
+// 			if(cf_sales_rep_commission.remove("%").toDecimal() > 0 && gross_margin > 0)
+// 			{
+// 				Sale_Rep_Commission = cf_sales_rep_commission.remove("%").toDecimal() / 100 * gross_margin;
+// 			}
+// 			Mp = Map();
+// 			Mp.put("cf_total_project_value",salesorder.get("total"));
+// 			Mp.put("cf_total_pos_cost",ifnull(total_pos_cost,0));
+// 			Mp.put("cf_project_gross_profit",ifnull(gross_profit,0));
+// 			Mp.put("cf_project_gross_margin",ifnull(gross_margin,0));
+// 			Mp.put("cf_commission_amount",ifnull(Sale_Rep_Commission.round(2),0));
+// 			res = zoho.books.updateRecord("cm_commision",organization_id,record_id,Mp);
+// 			info res;
+// 		}
+// 	}
+// }

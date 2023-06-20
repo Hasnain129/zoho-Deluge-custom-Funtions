@@ -1,0 +1,179 @@
+							Function Name : push_bills_product_type_into_project
+
+
+
+response = "";
+Bill_Status = "";
+Total_Material_Paid = 0;
+Total_Labor_Paid = 0;
+Total_Shipping_Paid = 0;
+Total_Material = 0;
+Total_Labor = 0;
+Total_Shipping = 0;
+data_list = List();
+Mp = Map();
+//////////////////////////
+Custom_fields = bill.get("custom_fields");
+for each  cus_fields in Custom_fields
+{
+	if(cus_fields.get("customfield_id") == "1316483000007359087")
+	{
+		Books_Project_ID = cus_fields.get("value");
+		response = zoho.crm.searchRecords("Deals","(Project_ID:equals:" + Books_Project_ID + ")");
+		PO_Objs = zoho.crm.getRelatedRecords("Purchase_Orders","Deals",response.get("0").get("id"));
+		for each  PO_data in PO_Objs
+		{
+			Payment_Paid = 0;
+			Generated_Bill_Amount = 0;
+			/////////////////////////// Empty Paid Bills Amount on PO /////////////////////////////////
+			Empty_mp = Map();
+			Empty_mp.put("Paid_Amount",0);
+			Empty_mp.put("Bill_Amount",0);
+			zoho.crm.updateRecord("Purchase_Orders",PO_data.get("id"),Empty_mp);
+			//////////////////////////////////////////////////////////////////////////////////////////
+			PO_Bills = zoho.crm.getRelatedRecords("Bills","Purchase_Orders",PO_data.get("id"));
+			for each  data in PO_Bills
+			{
+				if(data.get("Books_Bill_ID") != null)
+				{
+					Bills = zoho.books.getRecordsByID("bills","666479573",data.get("Books_Bill_ID"));
+					for each  Bill in Bills.toJSONList()
+					{
+						line_items = Bill.get("bill").get("line_items");
+						for each  items in line_items
+						{
+							Item = zoho.books.getRecordsByID("items","666479573",items.get("item_id"));
+							Zoho_Item = zoho.crm.getRecordById("Products",Item.get("item").get("zcrm_product_id"));
+							if(Zoho_Item.get("Labor_or_Material") == "Material" && Bill.get("bill").get("status") == "paid")
+							{
+								Total_Material_Paid = Total_Material_Paid + items.get("item_total");
+								Mp.put("Material_Paid_Bills_Total",Total_Material_Paid);
+							}
+							else
+							{
+								Mp.put("Material_Paid_Bills_Total",Total_Material_Paid);
+							}
+							if(Zoho_Item.get("Labor_or_Material") == "Material" && Bill.get("bill").get("status") == "open")
+							{
+								Total_Material = Total_Material + items.get("item_total");
+								Mp.put("Material_Open_Bills_Total",Total_Material);
+							}
+							else
+							{
+								Mp.put("Material_Open_Bills_Total",Total_Material);
+							}
+							//////////////////////////////////////////////////////////////////////////////////////////////
+							if(Zoho_Item.get("Labor_or_Material") == "Labor" && Bill.get("bill").get("status") == "paid")
+							{
+								Total_Labor_Paid = Total_Labor_Paid + items.get("item_total");
+								Mp.put("Labor_Paid_Bills_Total",Total_Labor_Paid);
+							}
+							else
+							{
+								Mp.put("Labor_Paid_Bills_Total",Total_Labor_Paid);
+							}
+							if(Zoho_Item.get("Labor_or_Material") == "Labor" && Bill.get("bill").get("status") == "open")
+							{
+								Total_Labor = Total_Labor + items.get("item_total");
+								Mp.put("Labor_Open_Bills_Total",Total_Labor);
+							}
+							else
+							{
+								Mp.put("Labor_Open_Bills_Total",Total_Labor);
+							}
+							//////////////////////////////////////////////////////////////////////////////////////////////
+							if(Zoho_Item.get("Labor_or_Material") == "Shipping" && Bill.get("bill").get("status") == "paid")
+							{
+								Total_Shipping_Paid = Total_Shipping_Paid + items.get("item_total");
+								Mp.put("Labor_Paid_Bills_Total",Total_Shipping_Paid);
+							}
+							else
+							{
+								Mp.put("Labor_Paid_Bills_Total",Total_Shipping_Paid);
+							}
+							if(Zoho_Item.get("Labor_or_Material") == "Shipping" && Bill.get("bill").get("status") == "open")
+							{
+								Total_Shipping = Total_Shipping + items.get("item_total");
+								Mp.put("Labor_Open_Bills_Total",Total_Shipping);
+							}
+							else
+							{
+								Mp.put("Labor_Open_Bills_Total",Total_Shipping);
+							}
+						}
+					}
+					/////////////////////////// Update Bill Status on Create Bill On CRM /////////////////////
+					Bill_Status = Bill.get("bill").get("status");
+					if(Bill.get("bill").get("payment_made") == 0)
+					{
+						mp = Map();
+						mp.put("Status","Bill Generated");
+						mp.put("Paid_Amount","0");
+						update_bill = zoho.crm.updateRecord("Create_Bills",data.get("id"),mp,{"trigger":{"workflow"}});
+					}
+					else if(Bill.get("bill").get("payment_made") > 0)
+					{
+						mp = Map();
+						//mp.put("Status","Paid");
+						mp.put("Paid_Amount",Bill.get("bill").get("payment_made"));
+						res = zoho.crm.updateRecord("Create_Bills",data.get("id"),mp,{"trigger":{"workflow"}});
+						Payment_Paid = Payment_Paid + Bill.get("bill").get("payment_made");
+						Generated_Bill_Amount = Generated_Bill_Amount + Bill.get("bill").get("total");
+					}
+					else if(Bill.get("bill").get("status") == "partially_paid")
+					{
+						mp = Map();
+						//mp.put("Status","Partially Paid");
+						mp.put("Paid_Amount",Bill.get("bill").get("payment_made"));
+						res = zoho.crm.updateRecord("Create_Bills",data.get("id"),mp,{"trigger":{"workflow"}});
+						Payment_Paid = Payment_Paid + Bill.get("bill").get("payment_made");
+						Generated_Bill_Amount = Generated_Bill_Amount + Bill.get("bill").get("total");
+					}
+					if(Bill.get("bill").get("status") == "open")
+					{
+						info "Here";
+						mp = Map();
+						mp.put("Status","Bill Generated");
+						mp.put("Paid_Amount","0");
+						update_bill = zoho.crm.updateRecord("Create_Bills",data.get("id"),mp,{"trigger":{"workflow"}});
+						Generated_Bill_Amount = Generated_Bill_Amount + Bill.get("bill").get("total");
+					}
+					if(Bill.get("bill").get("status") == "draft")
+					{
+						mp = Map();
+						mp.put("Status","Draft");
+						mp.put("Paid_Amount","0");
+						update_bill = zoho.crm.updateRecord("Create_Bills",data.get("id"),mp,{"trigger":{"workflow"}});
+						Generated_Bill_Amount = Generated_Bill_Amount + Bill.get("bill").get("total");
+						info Generated_Bill_Amount;
+					}
+					if(Bill.get("bill").get("status") == "void")
+					{
+						mp = Map();
+						mp.put("Status","Void");
+						mp.put("Paid_Amount","0");
+						update_bill = zoho.crm.updateRecord("Create_Bills",data.get("id"),mp,{"trigger":{"workflow"}});
+						// 						mp4 = Map();
+						// 						mp4.put("Bill_Amount",PO_data.get("Bill_Amount") - Bill.get("bill").get("total"));
+						// 						res = zoho.crm.updateRecord("Purchase_Orders",PO_data.get("id"),mp4,{"trigger":{"workflow"}});
+					}
+					if(Bill.get("bill").get("status") == "overdue")
+					{
+						mp = Map();
+						mp.put("Status","Over due");
+						mp.put("Paid_Amount","0");
+						update_bill = zoho.crm.updateRecord("Create_Bills",data.get("id"),mp,{"trigger":{"workflow"}});
+						Generated_Bill_Amount = Generated_Bill_Amount + Bill.get("bill").get("total");
+					}
+					//////////////////////////////// Update Paid Bill Amount on PO ///////////////////////// 
+					mp3 = Map();
+					mp3.put("Bill_Amount",Generated_Bill_Amount);
+					mp3.put("Paid_Amount",Payment_Paid);
+					res = zoho.crm.updateRecord("Purchase_Orders",PO_data.get("id"),mp3,{"trigger":{"workflow"}});
+					/////////////////////////////////////////////////////////////////////////////////////////
+				}
+			}
+		}
+	}
+}
+zoho.crm.updateRecord("Deals",response.get(0).get("id"),Mp,{"trigger":{"workflow"}});

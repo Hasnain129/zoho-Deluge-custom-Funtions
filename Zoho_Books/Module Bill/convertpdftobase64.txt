@@ -1,0 +1,35 @@
+								Function Name : convertpdftobase64
+							
+
+
+/*
+checknum = "503556";
+micrenc = zoho.encryption.base64Encode("ttf.72.000000." + zoho.encryption.base64Encode("c" + checknum + "c a041000124a") + ",.0");
+micrimg = "http://txt.static.1001fonts.net/txt/" + micrenc + ",,/micr-encoding.regular.png";
+info micrimg;
+*/
+/*
+sample_file = invokeurl
+[
+	url :"https://books.zoho.com/api/v3/reports/billdetails?accept=pdf&filter_by=BillDate.CustomDate&from_date=2019-01-01&to_date=2019-12-18&rule=%7B%22columns%22%3A%5B%7B%22index%22%3A1%2C%22field%22%3A%22due_date%22%2C%22value%22%3A%222019-11-18%22%2C%22comparator%22%3A%22equal%22%2C%22group%22%3A%22bill%22%7D%2C%7B%22index%22%3A2%2C%22field%22%3A%22custom_field_1316483000011313103%22%2C%22value%22%3A%22eCheck%22%2C%22comparator%22%3A%22equal%22%2C%22group%22%3A%22bill%22%7D%2C%7B%22index%22%3A3%2C%22field%22%3A%22bcy_balance%22%2C%22value%22%3A%220%22%2C%22comparator%22%3A%22greater_than%22%2C%22group%22%3A%22bill%22%7D%2C%7B%22index%22%3A4%2C%22field%22%3A%22vendor_name%22%2C%22value%22%3A%22Test+API+Check%22%2C%22comparator%22%3A%22equal%22%2C%22group%22%3A%22bill%22%7D%5D%2C%22criteria_string%22%3A%22(+(+(+(+(+(+(+(+1+)+)+)+)+)+AND+2+)+AND+3+)+AND+4+)%22%7D&select_columns=%5B%7B%22group%22%3A%22bill%22%2C%22field%22%3A%22date%22%7D%2C%7B%22group%22%3A%22bill%22%2C%22field%22%3A%22due_date%22%7D%2C%7B%22group%22%3A%22bill%22%2C%22field%22%3A%22bill_number%22%7D%2C%7B%22group%22%3A%22bill%22%2C%22field%22%3A%22bcy_total%22%7D%2C%7B%22group%22%3A%22bill%22%2C%22field%22%3A%22bcy_balance%22%7D%2C%7B%22group%22%3A%22bill%22%2C%22field%22%3A%22custom_field_1316483000011738091%22%7D%2C%7B%22group%22%3A%22bill%22%2C%22field%22%3A%22custom_field_1316483000009669015%22%7D%5D&organization_id=666479573"
+	type :GET
+	connection:"zoho_books"
+];
+// Encode the file content
+response = zoho.encryption.base64Encode(sample_file);
+info sample_file;
+info response;
+sss = sample_file.tofile("file.pdf");
+info sss;
+*/
+text = '<html><head><style>div {  width: 300px;  height: 100px;  background-color: yellow;  border: 1px solid black;} div#myDiv {  -ms-transform: rotate(20deg); /* IE 9 */  -webkit-transform: rotate(20deg); /* Safari prior 9.0 */  transform: rotate(20deg); /* Standard syntax */}</style></head><body><h1>The rotate() Method</h1><p>The rotate() method rotates an element clockwise or counter-clockwise.</p><div>This a normal div element.</div></body></html>';
+att = text.tofile("file.pdf");
+sendmail
+[
+	from :zoho.adminuserid
+	to :"zohaib.akhund@basecampdata.com"
+	subject :"test"
+	message :"test"
+	Attachments :file:att
+]
+//info file;

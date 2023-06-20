@@ -1,0 +1,70 @@
+								Funtion Name : update_dpi_received
+								Workflow Name : Update DPI Payment Received
+
+Workflow Description : Update DPI module when payment is received with "Yes"
+
+
+
+//-----------------------------------------------------
+// Get details from Customer Payments module
+customerID = customer_payment.get("customer_id");
+retainer_invoiceID = customer_payment.get("retainerinvoice_id");
+paymentID = customer_payment.get("payment_id");
+//------------------------------------------------
+// Get Retainer invoice details
+if(!retainer_invoiceID.isNull())
+{
+	retainerinvoices = zoho.books.getRecordsByID("retainerinvoices","666479573",retainer_invoiceID);
+	resp = retainerinvoices.get("retainerinvoice").toMap();
+	invoice_Number = resp.get("retainerinvoice_number");
+	//------------------------------------------------------
+	// Get Dwon Payment Invoice ID from CRM and get Quote ID
+	search = zoho.crm.searchRecords("Down_Payment_Invoices","((Name:equals:" + invoice_Number + "))");
+	for each  w in search
+	{
+		DPI_id = ifnull(w.get("id"),"");
+	}
+	DPI_details = zoho.crm.getRecordById("Down_Payment_Invoices",DPI_id);
+	//-------------------------------------------------------------------------------------
+	// Update Paid field on DPI Module
+	mp11 = Map();
+	mp11.put("Paid","Paid");
+	update_DPI = zoho.crm.updateRecord("Down_Payment_Invoices",DPI_id,mp11,{"trigger":{"workflow"}});
+	salesOrder = DPI_details.get("Sales_Order");
+	if(salesOrder != null)
+	{
+		salesOrderID = salesOrder.get("id");
+		soDetails = zoho.crm.getRecordById("Sales_Orders",salesOrderID);
+		invoiceID = soDetails.get("Invoice_ID");
+		if(invoiceID != null)
+		{
+			////////////////////////////// Fetching Retainer Invoice ////////////////////////////////////
+			ret_invoice_total = resp.get("total");
+			///////////////////////////// Apply Retainer Invoice to created Invoice //////////////
+			retInvoiceData = Map();
+			retInvoiceData.put("invoice_id",invoiceID);
+			retInvoiceData.put("amount_applied",ret_invoice_total);
+			invoice_Payment = Map();
+			invoice_Payment.put("invoice_payments",{retInvoiceData});
+			JsonString2 = Map();
+			JsonString2.put("JSONString",invoice_Payment);
+			resp_inv1 = invokeurl
+			[
+				url :"https://books.zoho.com/api/v3/retainerinvoices/" + retainer_invoiceID + "/invoices?organization_id=666479573"
+				type :POST
+				parameters:JsonString2
+				connection:"zoho_book"
+			];
+			info resp_inv1;
+		}
+	}
+	/////////////////////////////////////////////////update payment Retainer Invoice Number//////////////////
+	mp = Map();
+	mp.put("reference_number",invoice_Number);
+	update = zoho.books.updateRecord("customerpayments","666479573",paymentID,mp);
+	info update;
+}
+else
+{
+	info "Retainer Invoice is null";
+}

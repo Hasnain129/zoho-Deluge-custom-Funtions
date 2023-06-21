@@ -1,0 +1,100 @@
+								Function Name : update_selling_price
+								Workflow Name : Update Selling Price v2
+
+
+Funtion Description : Calculates and updates the selling price of the cost item when margins are added or updated.
+Workflow Description : Updates selling price when the margin is changed in both cost item and in the estimate. 
+
+
+
+
+/*
+	Calculates and updates the selling price of the cost item when margins are added or updated.
+	Function			= Update Selling Price
+	Module 				= Custom Module ('Cost Items')
+	Author 				= Muhammad Furqan 
+	Company 			= Blinksigns | Blinkswag | Blinkglobal
+	Zoho APP 			= Zoho Books.
+	Next Update			= When User mannually clear margin field
+							calculate and update margin from Selling.
+*/
+/*
+This is a sample function. Uncomment to execute or make changes to this function.
+entityID = cm_cost_item.get("module_record_id");
+organizationID = organization.get("organization_id");
+*/
+record_id = cm_cost_item.get("module_record_id");
+cost_price = cm_cost_item.get("cf_cost_price");
+selling_price = cm_cost_item.get("cf_selling_price");
+margin = cm_cost_item.get("cf_margin");
+estimate_line_item = cm_cost_item.get("cf_est_line_item");
+product_id = cm_cost_item.get("cf_inventory_product_name");
+estimate_id = cm_cost_item.get("cf_estimate_number");
+qty = cm_cost_item.get("cf_qty");
+organization_name = cm_cost_item.get("cf_organization");
+organization_id = organization.get("organization_id");
+updatedata = Map();
+// estimate_array = zoho.books.getRecordsByID("estimates",organization_id,estimate_id);
+estimate_array = zoho.books.getRecordsByID("estimates",organization_id,estimate_id);
+estimate_status = estimate_array.get("estimate").get("status");
+if(estimate_status == "draft")
+{
+	if(!margin.isNull())
+	{
+		// Selling Price = cost / (100-margin) * 100
+		temp_selling_price = cost_price / (100 - margin) * 100;
+		updatedata.put("cf_selling_price",temp_selling_price);
+		updatedata.put("cf_cost_price",cost_price);
+		updatedata.put("record_name",cm_cost_item.get("record_name"));
+		if(estimate_id.len() != 0 && estimate_line_item.len() == 0)
+		{
+			estimate = estimate_array.get("estimate");
+			line_items = estimate.get("line_items");
+			mapVar = Map();
+			updated_values = Map();
+			mapVar.put("item_id",product_id);
+			mapVar.put("rate",temp_selling_price);
+			mapVar.put("cost_item_id",cm_cost_item.get("module_record_id"));
+			mapVar.put("cf_organization_name",organization_name);
+			mapVar.put("quantity",qty);
+			line_items.add(mapVar);
+			updated_values.put("line_items",line_items);
+			response = zoho.books.updateRecord("estimates",organization_id,estimate_id,updated_values);
+			response_line_items = response.get("estimate").get("line_items");
+			line_item_id = response_line_items.get(response_line_items.size() - 1).get("line_item_id");
+			updatedata.put("cf_est_line_item",line_item_id);
+		}
+		if(estimate_id.len() != 0 && estimate_line_item.len() != 0)
+		{
+			estimate_array = zoho.books.getRecordsByID("estimates",organization_id,estimate_id);
+			estimate = estimate_array.get("estimate");
+			line_items = estimate.get("line_items");
+			line_items_updated = List();
+			updated_values = Map();
+			for each  li in line_items
+			{
+				if(li.get("line_item_id") == estimate_line_item)
+				{
+					li.update("item_id",product_id);
+					li.update("rate",temp_selling_price);
+					li.update("cost_item_id",cm_cost_item.get("module_record_id"));
+					li.update("cf_organization_name",organization_name);
+					li.update("quantity",qty);
+					line_items_updated.add(li);
+				}
+				else
+				{
+					line_items_updated.add(li);
+				}
+			}
+			updated_values.put("line_items",line_items_updated);
+			response = zoho.books.updateRecord("estimates",organization_id,estimate_id,updated_values);
+		}
+	}
+	response_cost_item = zoho.books.updateRecord("cm_cost_item",organization_id,record_id,updatedata);
+	info response_cost_item;
+}
+else
+{
+	info "Estimate is not draft";
+}

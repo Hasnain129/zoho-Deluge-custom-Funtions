@@ -1,0 +1,51 @@
+								Function Name : update_bill_status_on_payment
+								Workflow Name : Update CRM Bill Status
+
+
+
+// try 
+// {
+Bills_data = vendor_payment.get("bills").toList().get("0");
+Bill_No = Bills_data.get("bill_number");
+info Bill_No;
+Bill_id = Bills_data.get("bill_id");
+info Bill_id;
+Bill_info = zoho.books.getRecordsByID("bills","666479573",Bill_id);
+Bill_details = Bill_info.get("bill");
+Bill_status = Bill_details.get("status");
+Payment_made = Bill_details.get("payment_made");
+////////////////////// Fetch CRM Bill //////////////////
+// 	response = zoho.crm.searchRecords("Create_Bills","(Name:equals:" + Bill_No + ")");
+// 	info response.size();
+// 	if(!response.isEmpty())
+// 	{
+// 		info "Yes";
+// 		CRM_Bill_id = response.get("0").get("id");
+// 		if(Payment_made > 0)
+// 		{
+// 			if(Bill_status == "paid")
+// 			{
+// 				Status = "Paid";
+// 			}
+// 			else
+// 			{
+// 				Status = "Partially Paid";
+// 			}
+// 			mp_bill = Map();
+// 			mp_bill.put("Status",Status);
+// 			mp_bill.put("Paid_Amount",Payment_made);
+// 			update_bill = zoho.crm.updateRecord("Create_Bills",CRM_Bill_id,mp_bill,{"trigger":{"workflow"}});
+// 			info update_bill;
+//	}
+//}
+// }
+// catch (e)
+// {
+// 	sendmail
+// 	[
+// 		from :zoho.adminuserid
+// 		to :"shahzaib@blinkswag.com"
+// 		subject :" Update Bill Status On Payment"
+// 		message :"Record ID: " + vendor_payment.get("payment_id") + " Root Cause: " + e
+// 	]
+// }

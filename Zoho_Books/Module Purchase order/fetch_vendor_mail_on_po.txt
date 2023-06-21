@@ -1,0 +1,34 @@
+								Function Name : fetch_vendor_mail_on_po
+								Workflow Name : Fetch_Vendor_Email_on_PO
+
+
+
+info purchaseorder;
+/*
+This is a sample function. Uncomment to execute or make changes to this function.
+purchaseorderID = purchaseorder.get("purchaseorder_id");
+purchaseorderdate = purchaseorder.get("date").toDate();
+organizationID = organization.get("organization_id");
+*/
+//############################################Created by Rana Yasir###############################################//
+organizationID = organization.get("organization_id");
+purchaseorderID = purchaseorder.get("purchaseorder_id");
+PO_Details = zoho.books.getRecordsByID("purchaseorders",organizationID,purchaseorderID);
+Vendor_Id = PO_Details.get("purchaseorder").get("vendor_id");
+Vendor_Details = zoho.books.getRecordsByID("contacts",organizationID,Vendor_Id);
+Vendor_Email = Vendor_Details.get("contact").get("email");
+PO_Lineitems = PO_Details.get("purchaseorder").get("line_items");
+//  info PO_Lineitems;
+//############################################Custom Field Details for Vendor Email###############################################// 
+Vendor_mp = Map();
+Vendor_mp.put("customfield_id","1316483000175903835");
+Vendor_mp.put("value",Vendor_Email);
+Venodr_list = List();
+Venodr_list.add(Vendor_mp);
+//############################################Map for updating PO ################################################################// 
+mp = Map();
+mp.put("vendor_id",Vendor_Id);
+mp.put("custom_fields",Venodr_list);
+mp.put("line_items",PO_Lineitems);
+response = zoho.books.updateRecord("purchaseorders",organizationID,purchaseorderID,mp);
+info response;

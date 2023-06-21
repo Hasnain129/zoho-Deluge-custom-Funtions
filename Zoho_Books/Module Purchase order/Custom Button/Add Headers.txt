@@ -1,0 +1,57 @@
+
+/////////////////////////////////////////////////////////////////////////////////
+//Estimate_number = purchaseorder.get("custom_field_hash").toJSONList().get(0).get("cf_estimate_number");
+
+
+////////////////////////////Created by Hasnain///////////////////////////////////
+
+
+Msg = Map();
+if(purchaseorder.get("custom_field_hash").toJSONList().get(0).get("cf_estimate_number") == null)
+{
+	vendor_id = purchaseorder.get("vendor_id");
+	SO_number = purchaseorder.get("reference_number");
+	searchParam = {"salesorder_number":SO_number};
+	salesorder = zoho.books.getRecords("salesorders","666479573",searchParam);
+	salesorderID = salesorder.get("salesorders").get("0").get("salesorder_id");
+	Estimate_number = salesorder.get("salesorders").get("0").get("reference_number");
+	sales_order = zoho.books.getRecordsByID("salesorders","666479573",salesorderID);
+	contact_persons = sales_order.get("salesorder").get("contact_persons");
+	Sales_peron = Map();
+	PO_line_items = purchaseorder.get("line_items").toJSONList();
+	line_items = List();
+	so_line_item = sales_order.get("salesorder").get("line_items");
+	for each index item in so_line_item
+	{
+		Item_Obj = zoho.books.getRecordsByID("items","666479573",so_line_item.get(item).get("item_id")).get("item");
+		Mp = Map();
+		Mp.put("header_id",so_line_item.get(item).get("header_id"));
+		Mp.put("line_item_id",PO_line_items.get(item).get("line_item_id"));
+		Mp.put("account_id",so_line_item.get(item).get("account_id"));
+		Mp.put("name",so_line_item.get(item).get("name"));
+		Mp.put("description",so_line_item.get(item).get("description"));
+		Mp.put("warehouse_id",so_line_item.get(item).get("warehouse_id"));
+		Mp.put("rate",Item_Obj.get("purchase_rate"));
+		Mp.put("quantity",so_line_item.get(item).get("quantity"));
+		line_items.add(Mp);
+	}
+	valuesdat = Map();
+	valuesdat.put("vendor_id",vendor_id);
+	valuesdat.put("line_items",line_items);
+	JsonString = Map();
+	JsonString.put("JSONString",valuesdat);
+	updatePurchaseOrderBooks = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/purchaseorders/" + purchaseorder.get("purchaseorder_id") + "?organization_id=666479573"
+		type :PUT
+		parameters:JsonString
+		connection:"zoho_book"
+	];
+	info updatePurchaseOrderBooks.get("message");
+	Msg.put("message","Purchase Order Line Items has been updated.");
+}
+else
+{
+	Msg.put("message","Sorry! Header can not be added because Cost item has been found in Purchase Order.");
+}
+return Msg;

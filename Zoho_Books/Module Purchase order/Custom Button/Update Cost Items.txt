@@ -1,0 +1,80 @@
+
+organization_id = organization.get("organization_id");
+estimate_id = estimate.get("estimate_id");
+cutomer_id = estimate.get("customer_id");
+estimate_line_items = estimate.get("line_items");
+////////////
+//////////// Call all cost items against line items of estimate ////////////////
+for each  item in estimate_line_items
+{
+	searchParam = {"cf_est_line_item":item.get("line_item_id")};
+	response = zoho.books.getRecords("cm_cost_item",organization_id,searchParam,"zoho_book");
+	/////////////////// if cost item Not Found against line item just create it ///////////////
+	if(response.get("module_records").size() <= 0)
+	{
+		mapVar = Map();
+		mapVar.put("record_name",item.get("name"));
+		//mapVar.put("cf_organization",item.get("cf_organization_name"));
+		mapVar.put("cf_user",user.get("user_id"));
+		mapVar.put("cf_inventory_product_name",item.get("item_id"));
+		mapVar.put("cf_margin",0);
+		mapVar.put("cf_cost_price",0);
+		mapVar.put("cf_selling_price",item.get("rate"));
+		mapVar.put("cf_qty",item.get("quantity"));
+		mapVar.put("cf_estimate_number",estimate_id);
+		mapVar.put("cf_customer_name",cutomer_id);
+		mapVar.put("cf_est_line_item",item.get("line_item_id"));
+		response = zoho.books.createRecord("cm_cost_item",organization_id,mapVar);
+		info response;
+	}
+	else
+	{
+		/////////////////// 1.If cost item Found against Line Item ////////////
+		/////////////////// 2.Update selling price and update margin of Cost Item ///////////////
+		Estimate_item_selling_price = item.get("rate");
+		Cost_item_id = response.get("module_records").get(0).get("module_record_id");
+		Cost_item_name = response.get("module_records").get(0).get("record_name");
+		Cost_item_selling_price = response.get("module_records").get(0).get("cf_selling_price");
+		Cost_item_cost_price = response.get("module_records").get(0).get("cf_cost_price");
+		if(Estimate_item_selling_price != Cost_item_selling_price)
+		{
+			mapVar = Map();
+			mapVar.put("record_name",Cost_item_name);
+			mapVar.put("cf_cost_price",Cost_item_cost_price);
+			mapVar.put("cf_selling_price",Estimate_item_selling_price);
+			if(Cost_item_cost_price > 0)
+			{
+				Margin_Cal = 100 * (Estimate_item_selling_price - Cost_item_cost_price) / Estimate_item_selling_price;
+				mapVar.put("cf_margin",Margin_Cal.round(3));
+			}
+			update_cost_item = zoho.books.updateRecord("cm_cost_item",organization_id,Cost_item_id,mapVar);
+			info update_cost_item;
+		}
+	}
+}
+//////////////////////// Search and Delete Item which has been replaced //////////////////
+searchParam = {"cf_estimate_number":estimate.get("estimate_id")};
+response = zoho.books.getRecords("cm_cost_item",organization_id,searchParam,"zoho_book");
+cost_line_items = response.get("module_records");
+lis = List();
+for each  cost_item in cost_line_items
+{
+	item_exists = false;
+	for each  estimate_item in estimate_line_items
+	{
+		if(cost_item.containValue(estimate_item.get("line_item_id")))
+		{
+			item_exists = true;
+		}
+	}
+	if(!item_exists)
+	{
+		Delete_cost_item = invokeurl
+		[
+			url :"https://books.zoho.com/api/v3/cm_cost_item/" + cost_item.get("module_record_id")
+			type :DELETE
+			connection:"zoho_book"
+		];
+	}
+}
+return "";

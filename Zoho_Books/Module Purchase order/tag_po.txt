@@ -1,0 +1,100 @@
+								Function Name : tag_po
+								Workflow Name : Update Tags on Purchase Order
+
+
+Wokrflow Description : Tagging PO with respective organization name fetched with in SO as field.
+
+
+
+// /////////////////////////Get SO ID by So Number from PO ////////////////////////
+custom_fields = purchaseorder.get("custom_fields");
+if(custom_fields.size() > 0)
+{
+	for each  cf in custom_fields
+	{
+		if(cf.get("customfield_id") == 1316483000016883361)
+		{
+			so_no = ifnull(cf.get("value"),"");
+		}
+	}
+}
+// // /////////////////////// Fetch Info from SO and Org Name form SO ////////////////////////
+if(so_no != "")
+{
+	searchParam = {"salesorder_number":"" + so_no + ""};
+	if(searchParam.get("salesorder_number") != "Enter Sales Order Numbers")
+	{
+		so_id = zoho.books.getRecords("Salesorders",organization.get("organization_id"),searchParam).get("salesorders").get(0).get("salesorder_id");
+		so_details = zoho.books.getRecordsByID("Salesorders",organization.get("organization_id"),so_id).get("salesorder");
+		info so_details;
+		custom_fields = so_details.get("custom_fields");
+		info custom_fields;
+		if(custom_fields.size() > 0)
+		{
+			for each  cf in custom_fields
+			{
+				if(cf.get("customfield_id") == 1316483000009817051)
+				{
+					org_name = cf.get("value");
+				}
+			}
+		}
+	}
+}
+// 	//////////////////////////////////////////////////////////////////////////////
+if(org_name == "" || org_name == null)
+{
+	info "Yes";
+	Purchase_Order = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/purchaseorders/" + purchaseorder.get("purchaseorder_id") + "?organization_id=666479573"
+		type :GET
+		connection:"zoho_book"
+	];
+	PO_details = Purchase_Order.get("purchaseorder");
+	templete_id = PO_details.get("template_id");
+	info templete_id;
+	if(templete_id == "1316483000000017007")
+	{
+		org_name = "Blink Signs";
+	}
+	else
+	{
+		org_name = "Blink Swag";
+	}
+	info org_name;
+}
+if(org_name != "")
+{
+	//================================ Selecting Tag (IDs) of Books WRT Org Name ======================//
+	tags_list = List();
+	tag_id = 1316483000000000335;
+	if(org_name == "Blink Signs")
+	{
+		tag_option_id = 1316483000008042003;
+	}
+	else if(org_name == "Blink Swag")
+	{
+		tag_option_id = 1316483000008042005;
+	}
+	tag_mp = Map();
+	tag_mp.put("tag_id",tag_id);
+	tag_mp.put("tag_option_id",tag_option_id);
+	tags_list.add(tag_mp);
+	//================================ Update Bill Line Items ======================//
+	li_list = List();
+	line_items = purchaseorder.get("line_items").toJSONList();
+	for each  item in line_items
+	{
+		li_mp = Map();
+		li_id = item.get("line_item_id");
+		li_mp.put("line_item_id",li_id);
+		li_mp.put("tags",tags_list);
+		li_list.add(li_mp);
+	}
+	info li_list;
+	purchaseorder_map = Map();
+	purchaseorder_map.put("line_items",li_list);
+	update_purchaseorder = zoho.books.updateRecord("Purchaseorders",organization.get("organization_id"),purchaseorder.get("purchaseorder_id"),purchaseorder_map);
+	info update_purchaseorder;
+}

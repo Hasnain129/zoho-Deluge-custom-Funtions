@@ -1,0 +1,63 @@
+								Funtion Name : add_customer_address
+
+
+if(purchaseorder.get("delivery_customer_name") == "Test Abdullah Company")
+{
+	purchaseorder_obj = zoho.books.getRecordsByID("purchaseorders","666479573",purchaseorder.get("purchaseorder_id"));
+	Customer_id = purchaseorder.get("delivery_customer_id");
+	Customer = zoho.books.getRecordsByID("contacts","666479573",purchaseorder.get("delivery_customer_id"));
+	additional_address_id = Customer.get("contact").get("shipping_address").get("address_id");
+	vendor = zoho.books.getRecordsByID("contacts","666479573",purchaseorder.get("vendor_id"));
+	shipping_address = vendor.get("contact").get("shipping_address");
+	Additional_add = Map();
+	Additional_add.put("attention",shipping_address.get("attention"));
+	Additional_add.put("address",shipping_address.get("address"));
+	Additional_add.put("street2",shipping_address.get("street2"));
+	Additional_add.put("city",shipping_address.get("city"));
+	Additional_add.put("state",shipping_address.get("state"));
+	Additional_add.put("zip",shipping_address.get("zip"));
+	Additional_add.put("country",shipping_address.get("country"));
+	Additional_add.put("fax",shipping_address.get("fax"));
+	Additional_add.put("phone",shipping_address.get("phone"));
+	JSONString = Map();
+	JSONString.put("JSONString",Additional_add);
+	update = invokeurl
+	[
+		url :"https://www.zohoapis.com/books/v3/contacts/" + Customer_id + "/address/" + additional_address_id + "?organization_id=666479573"
+		type :PUT
+		parameters:JSONString
+		connection:"zoho_book"
+	];
+	info update;
+	//////////////////////////// Update Customer on PO ///////////////////////////
+	//info Customer_id;
+	mp = Map();
+	mp.put("vendor_id",purchaseorder.get("vendor_id"));
+	//mp.put("delivery_customer_id",Customer_id);
+	//mp.put("delivery_customer_address_id",additional_address_id);
+	mp.put("line_items",purchaseorder.get("line_items"));
+	info mp;
+	response = zoho.books.updateRecord("purchaseorders","666479573",purchaseorder.get("purchaseorder_id"),mp);
+	info "PO Update : " + response.get("message");
+	/////////////////////////////////////////////////////////////////////////////////
+	Additional_add = Map();
+	Additional_add.put("attention","");
+	Additional_add.put("address","");
+	Additional_add.put("street2","");
+	Additional_add.put("city","");
+	Additional_add.put("state","");
+	Additional_add.put("zip","");
+	Additional_add.put("country","U.S.A");
+	Additional_add.put("fax","");
+	Additional_add.put("phone","");
+	JSONString = Map();
+	JSONString.put("JSONString",Additional_add);
+	Empty_Addr = invokeurl
+	[
+		url :"https://www.zohoapis.com/books/v3/contacts/" + Customer_id + "/address/" + additional_address_id + "?organization_id=666479573"
+		type :PUT
+		parameters:JSONString
+		connection:"zoho_book"
+	];
+	info "Empty_Addr " + Empty_Addr;
+}

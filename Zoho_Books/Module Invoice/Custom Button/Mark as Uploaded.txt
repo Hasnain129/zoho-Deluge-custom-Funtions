@@ -1,0 +1,34 @@
+
+InvoiceID = invoice.get("invoice_id");
+/////////////////////////////// Updating the Check mark ///////////////////////////////////
+cf_list = List();
+cf_check = Map();
+cf_check.put("label","Uploaded On Portal");
+cf_check.put("value",true);
+cf_list.add(cf_check);
+///////////////////////////////////// Updating Invoice ///////////////////////////////////
+Invoice_Data = Map();
+Invoice_Data.put("custom_fields",cf_list);
+JsonString = Map();
+JsonString.put("JSONString",Invoice_Data);
+Invoice = invokeurl
+[
+	url :"https://books.zoho.com/api/v3/invoices/" + InvoiceID + "?organization_id=666479573"
+	type :PUT
+	parameters:JsonString
+	connection:"zoho_book"
+];
+//info Invoice;
+///////////////////////////////// Mark Invoice as Sent ///////////////////////////////////
+Invoice_status = invokeurl
+[
+	url :"https://books.zoho.com/api/v3/invoices/" + InvoiceID + "/status/sent?organization_id=666479573"
+	type :POST
+	connection:"zoho_book"
+];
+//info Invoice_status;
+/////////////////////////////////////////////////////////////////////////////////////////
+resultMap = Map();
+resultMap.put("message","Invoice Marked as Sent and Uploaded on Portal");
+resultMap.put("code",0);
+return resultMap;

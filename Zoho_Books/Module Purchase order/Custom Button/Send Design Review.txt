@@ -1,0 +1,78 @@
+
+number = estimate.get("estimate_number");
+estimate_id = estimate.get("estimate_id");
+estimate_details = zoho.books.getRecordsByID("estimates",organization.get("organization_id"),estimate.get("estimate_id"));
+estimate_details = estimate_details.get("estimate");
+contact_persons = estimate_details.get("contact_persons");
+contact_persons_details = estimate_details.get("contact_persons_details");
+email_subject = "Design Review";
+if(estimate_details.get("custom_field_hash").containKey("cf_project_id_unformatted") && estimate_details.containKey("project"))
+{
+	email_subject = email_subject + " (Project " + estimate_details.get("custom_field_hash").get("cf_project_id_unformatted") + ") " + estimate_details.get("project").get("project_name");
+}
+// info estimate_details.get("status");
+domain = "";
+if(estimate_details.get("custom_field_hash").get("cf_organization_name").contains("Blink Signs"))
+{
+	domain = domain + "signs.blinkswag.com";
+}
+else
+{
+	domain = domain + "dashboard.blinkswag.com";
+}
+estimate_link = "https://" + domain + "/review/view/" + estimate.get("estimate_id");
+info "Email Subject: " + email_subject;
+for each  contact in contact_persons
+{
+	for each  detail in contact_persons_details
+	{
+		if(contact == detail.get("contact_person_id"))
+		{
+			contact_email = detail.get("email");
+			contact_name = detail.get("first_name") + " " + detail.get("last_name");
+			email_message = "<p>Dear " + contact_name + "</p>";
+			if(estimate_details.containKey("project"))
+			{
+				email_message = email_message + "<p> Your design for Project <strong>" + estimate_details.get("project").get("project_name") + "</strong> is ready! You can view it <strong><a href ='" + estimate_link + "'>on your dashboard</a></strong>, where you can either approve it or request changes. If you have any questions, let us know!</p>";
+			}
+			else
+			{
+				email_message = email_message + "<p> Your design is ready! You can view it <strong><a href ='" + estimate_link + "'>on your dashboard</a></strong>, where you can either approve it or request changes. If you have any questions, let us know!</p>";
+			}
+			email_message = email_message + "<p>After you approve your design we will send you a formal estimate for your review.</p><p>If you have additional questions, we are here to help!</p><p>Cheers!</p>";
+			if(estimate_details.get("custom_field_hash").get("cf_organization_name").contains("Blink Signs"))
+			{
+				email_message = email_message + "<p></p><p>The Blink Signs Team</p>";
+			}
+			else
+			{
+				email_message = email_message + "<p></p><p>The Blink Swag Team</p>";
+			}
+			info "Email To Address: " + contact_email;
+			info "Email To Name: " + contact_name;
+			info "Email Message: " + email_message;
+			sendmail
+			[
+				from :zoho.loginuserid
+				to :contact_email + ",f.rajput@blinkswag.com"
+				subject :email_subject
+				message :email_message
+			]
+		}
+	}
+}
+if(estimate_details.get("status") != "pending_approval")
+{
+	response_url = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/estimates/" + estimate_id + "/submit?organization_id=" + organization.get("organization_id")
+		type :POST
+		connection:"zoho_book"
+	];
+	info response_url;
+}
+resultMap = Map();
+resultMap.put("message","Design Review link " + estimate_link + " has been sent to all selected contacts");
+resultMap.put("code",0);
+// 0 - Success ; Other than 0 will consider as failure
+return resultMap;

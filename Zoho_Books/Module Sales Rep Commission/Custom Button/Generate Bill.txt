@@ -1,0 +1,44 @@
+
+organization_id = organization.get("organization_id");
+project_name = cm_commision.get("cf_project_name_formatted");
+project_id = cm_commision.get("cf_project_name_formatted").getSuffixIgnoreCase("/").getSuffixIgnoreCase("/");
+Comm_Amount = cm_commision.get("cf_commission_amount");
+/////////////////////////////create Bill/////////////////////////////////////////// 
+///////////////////////////////////////////Custome Field Sales_person///////////////////////////////////////////////
+custom_fields = List();
+sale_map = Map();
+sale_map.put("customfield_id","1316483000166656250");
+sale_map.put("value","1316483000022487222");
+custom_fields.add(sale_map);
+cf_project_name = Map();
+cf_project_name.put("customfield_id","1316483000007359057");
+cf_project_name.put("value",project_name);
+custom_fields.add(cf_project_name);
+cf_project_id = Map();
+cf_project_id.put("customfield_id","1316483000007359087");
+cf_project_id.put("value",project_id);
+custom_fields.add(cf_project_id);
+/////////////////////////////////////////End//////////////////
+//////////////////////////////////////custom field line Items////////////////////////////////
+mp1 = Map();
+mp1.put("account_id",1316483000004444620);
+mp1.put("description","Commission");
+mp1.put("rate",Comm_Amount);
+line_item = list();
+line_item.add(mp1);
+////////////////////////////////////////////////END//////////////////////////////////////////////
+////////////////////////////////////////////////Main Map to Create Bill ////////////////////////////////////////////
+mp = Map();
+mp.put("vendor_id","1316483000016919304");
+mp.put("custom_fields",custom_fields);
+mp.put("line_items",line_item);
+mp.put("bill_number",cm_commision.get("record_name"));
+mp.put("date",today);
+mp.put("reference_number",cm_commision.get("record_name"));
+createBill = zoho.books.createRecord("bills","666479573",mp);
+info createBill;
+resultMap = Map();
+resultMap.put("message",createBill.get("message"));
+resultMap.put("code",0);
+// 0 - Success ; Other than 0 will consider as failure
+return resultMap;

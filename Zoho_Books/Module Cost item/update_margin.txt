@@ -1,0 +1,116 @@
+								Function Name : update_margin
+								Workflow Name : update_margin_v2
+
+
+Funtion Description : Calculate and updates the margin in the cost item when the selling price is updated.
+Workflow Description : Calculates and updates margin when selling prices is edited.
+
+
+
+
+/*
+    Calculate and updates the margin in the cost item when the selling price is updated.
+	Function		= Update Margin
+    Module 			= Custom Module ('Cost Items')
+	Author 			= Muhammad Furqan 
+	Company 		= Blinksigns | Blinkswag | Blinkglobal
+	Zoho APP 		= Zoho Books.
+	Next Update 	= if user manually clear Selling Price Field
+					  calculate and update selling price from Margin
+*/
+/*
+This is a sample function. Uncomment to execute or make changes to this function.
+entityID = cm_cost_item.get("module_record_id");
+organizationID = organization.get("organization_id");
+*/
+try 
+{
+	record_id = cm_cost_item.get("module_record_id");
+	cost_price = cm_cost_item.get("cf_cost_price");
+	selling_price = cm_cost_item.get("cf_selling_price");
+	margin = cm_cost_item.get("cf_margin");
+	estimate_line_item = cm_cost_item.get("cf_est_line_item");
+	product_id = cm_cost_item.get("cf_inventory_product_name");
+	estimate_id = cm_cost_item.get("cf_estimate_number");
+	info estimate_id;
+	qty = cm_cost_item.get("cf_qty");
+	organization_name = cm_cost_item.get("cf_organization");
+	organization_id = organization.get("organization_id");
+	updatedata = Map();
+	estimate_array = zoho.books.getRecordsByID("estimates",organization_id,estimate_id);
+	estimate_status = estimate_array.get("estimate").get("status");
+	if(estimate_status == "draft")
+	{
+		if(selling_price > cost_price)
+		{
+			// margin = 100 * (selling_price - cost_price) / selling_price;
+			temp_margin = 100 * (selling_price - cost_price) / selling_price;
+			updatedata.put("cf_margin",temp_margin);
+			updatedata.put("cf_cost_price",cost_price);
+			updatedata.put("record_name",cm_cost_item.get("record_name"));
+			info "estimate_id " + estimate_id;
+			info "estimate_line_item " + estimate_line_item;
+			if(estimate_id.length() > 0 && estimate_line_item == null)
+			{
+				estimate = estimate_array.get("estimate");
+				line_items = estimate.get("line_items");
+				mapVar = Map();
+				updated_values = Map();
+				mapVar.put("item_id",product_id);
+				mapVar.put("rate",selling_price);
+				mapVar.put("cost_item_id",cm_cost_item.get("module_record_id"));
+				mapVar.put("cf_organization_name",organization_name);
+				mapVar.put("quantity",qty);
+				line_items.add(mapVar);
+				updated_values.put("line_items",line_items);
+				response = zoho.books.updateRecord("estimates",organization_id,estimate_id,updated_values);
+				info response;
+				response_line_items = response.get("estimate").get("line_items");
+				line_item_id = response_line_items.get(response_line_items.size() - 1).get("line_item_id");
+				updatedata.put("cf_est_line_item",line_item_id);
+			}
+		}
+		if(estimate_id.length() > 0 && estimate_line_item == null)
+		{
+			estimate_array = zoho.books.getRecordsByID("estimates",organization_id,estimate_id);
+			estimate = estimate_array.get("estimate");
+			line_items = estimate.get("line_items");
+			line_items_updated = List();
+			for each  li in line_items
+			{
+				if(li.get("line_item_id") == estimate_line_item)
+				{
+					li.update("item_id",product_id);
+					li.update("rate",selling_price);
+					li.update("cost_item_id",cm_cost_item.get("module_record_id"));
+					li.update("cf_organization_name",organization_name);
+					li.update("quantity",qty);
+					line_items_updated.add(li);
+				}
+				else
+				{
+					line_items_updated.add(li);
+				}
+			}
+			updated_values = Map();
+			updated_values.put("line_items",line_items_updated);
+			response = zoho.books.updateRecord("estimates",organization_id,estimate_id,updated_values);
+		}
+		response_cost_item = zoho.books.updateRecord("cm_cost_item",organization_id,record_id,updatedata);
+		info response_cost_item;
+	}
+	else
+	{
+		info "estimate is not draft";
+	}
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"shahzaib@blinkswag.com"
+		subject :" update_margin"
+		message :"Module: cost items --> Record ID: " + cm_cost_item.get("module_record_id") + " Root Cause: " + e
+	]
+}

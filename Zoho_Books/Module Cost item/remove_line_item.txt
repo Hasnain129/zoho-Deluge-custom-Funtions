@@ -1,0 +1,38 @@
+								Function Name : remove_line_item
+
+Function Description : Removes Line item From Estimate
+
+
+
+
+item_id = cm_cost_item.get("cf_est_line_item");
+estimate_id = cm_cost_item.get("cf_estimate_number");
+is_void = cm_cost_item.get("cf_mark_as_void");
+organization_id = organization.get("organization_id");
+estimate_array = zoho.books.getRecordsByID("estimates",organization_id,estimate_id);
+estimate = estimate_array.get("estimate");
+line_items = estimate.get("line_items");
+info line_items.size();
+updated_line_items = List();
+values = Map();
+if(cm_cost_item.get("cf_status") == "Cancelled")
+{
+	// 	for each line_item in line_items
+	//     {
+	// 		if ( line_item.get("line_item_id") != item_id )
+	// 		{
+	// 			updated_line_items.add( line_item );	
+	// 		}
+	//     }
+	// 	values.put("line_items", updated_line_items);
+	// 	response = zoho.books.updateRecord("estimates",organization_id,estimate_id,values);
+	info cm_cost_item.get("cf_status");
+}
+else
+{
+	info "It is not void";
+}
+// check if cost_item_is void
+// fetch all line items from estimate
+// remove the related line item from estimate's line items
+// updated estimate

@@ -1,0 +1,39 @@
+
+//This is a sample function. It will display the record name.
+productId = cm_cost_item.get("cf_inventory_product_name");
+sellingPrice = cm_cost_item.get("cf_selling_price");
+customerID = cm_cost_item.get("cf_customer_name");
+estimateID = cm_cost_item.get("cf_estimate_number");
+qty = cm_cost_item.get("cf_qty");
+organization_name = cm_cost_item.get("cf_organization");
+if(estimateID.len() != 0)
+{
+	estimate_array = zoho.books.getRecordsByID("estimates","666479573",estimateID);
+	estimate = estimate_array.get("estimate");
+	line_items = estimate.get("line_items");
+	mapVar = Map();
+	mapVar.put("item_id",productId);
+	mapVar.put("rate",sellingPrice);
+	mapVar.put("cf_organization_name",organization_name);
+	mapVar.put("quantity",qty);
+	line_items.add(mapVar);
+	values = Map();
+	values.put("customer_id",customerID);
+	values.put("line_items",line_items);
+	response = zoho.books.updateRecord("estimates","666479573",estimateID,values);
+}
+else
+{
+	listVar = List();
+	mapVar = Map();
+	mapVar.put("item_id",productId);
+	mapVar.put("cf_organization_name",organization_name);
+	mapVar.put("rate",sellingPrice);
+	mapVar.put("quantity",qty);
+	listVar.add(mapVar);
+	values = Map();
+	values.put("customer_id",customerID);
+	values.put("line_items",listVar);
+	response = zoho.books.createRecord("estimates","666479573",values);
+}
+return response;

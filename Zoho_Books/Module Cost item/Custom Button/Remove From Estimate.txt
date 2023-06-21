@@ -1,0 +1,42 @@
+
+recordName = cm_cost_item.get("record_name");
+record_id = cm_cost_item.get("module_record_id");
+item_id = cm_cost_item.get("cf_est_line_item");
+organization_id = organization.get("organization_id");
+estimate_id = cm_cost_item.get("cf_estimate_number");
+if(estimate_id != "")
+{
+	estimate_number = cm_cost_item.get("cf_estimate_number_formatted");
+	estimate_array = zoho.books.getRecordsByID("estimates",organization_id,estimate_id);
+	estimate = estimate_array.get("estimate");
+	line_items = estimate.get("line_items");
+	updated_line_items = List();
+	updated_cm = Map();
+	values = Map();
+	for each  line_item in line_items
+	{
+		if(line_item.get("line_item_id") != item_id)
+		{
+			updated_line_items.add(line_item);
+		}
+	}
+	values.put("line_items",updated_line_items);
+	response = zoho.books.updateRecord("estimates",organization_id,estimate_id,values);
+	updated_cm.put("cf_cost_price",cm_cost_item.get("cf_cost_price"));
+	updated_cm.put("record_name",cm_cost_item.get("record_name"));
+	updated_cm.put("cf_est_line_item","");
+	updated_cm.put("cf_estimate_number","");
+	response_cm = zoho.books.updateRecord("cm_cost_item",organization_id,record_id,updated_cm);
+	resultMap = Map();
+	resultMap.put("message","Cost Item " + recordName + " has been removed from estimate " + estimate_number);
+	resultMap.put("code",0);
+	// 0 - Success ; Other than 0 will consider as failure
+	return resultMap;
+}
+else
+{
+	resultMap = Map();
+	resultMap.put("message","Item is not in any Estimate.");
+	resultMap.put("code",1);
+	return resultMap;
+}

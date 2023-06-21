@@ -1,0 +1,106 @@
+								Function Name : update_pos_total_amount
+								Workflow Name : Update Gross Profit in SO
+
+Function Description : Update the total amount of all pos of a sales order
+Workflow Description : Update Gross Profit in SO when a Purchase order is updated.
+
+
+
+/*
+This is a sample function. Uncomment to execute or make changes to this function.
+purchaseorderID = purchaseorder.get("purchaseorder_id");
+purchaseorderdate = purchaseorder.get("date").toDate();
+organizationID = organization.get("organization_id");
+*/
+purchaseorder_id = purchaseorder.get("purchaseorder_id");
+organization_id = organization.get("organization_id");
+saleorder_number = purchaseorder.get("reference_number");
+search_so = {"salesorder_number":saleorder_number};
+search_po = {"reference_number":saleorder_number};
+salesorders = zoho.books.getRecords('salesorders',organization_id,search_so);
+all_pos = zoho.books.getRecords('purchaseorders',organization_id,search_po);
+SOs = salesorders.get("salesorders");
+for each  so in SOs
+{
+	if(so.get("status") != "draft" || so.get("status") != "void")
+	{
+		so_id = so.get("salesorder_id");
+	}
+}
+salesorder = zoho.books.getRecordsByID("salesorders",organization_id,so_id);
+salesorder = salesorder.get("salesorder");
+custom_fields = salesorder.get("custom_fields").toList();
+customer_id = salesorder.get("customer_id");
+so_amount = salesorder.get("sub_total");
+PO_total = 0.0;
+POs = all_pos.get("purchaseorders");
+for each  po in POs
+{
+	if(po.get("status") != "cancelled" || po.get("status") != "draft")
+	{
+		PO_total = PO_total + po.get("total");
+	}
+}
+info "POs Total: " + PO_total;
+gross_profit = so_amount - PO_total;
+info "Gross Profit: " + gross_profit;
+cf_po_total = Map();
+cf_po_total.put("label","POs Total");
+cf_po_total.put("value",PO_total);
+cf_gross_profit = Map();
+cf_gross_profit.put("label","Gross Profit");
+cf_gross_profit.put("value",gross_profit);
+custom_fields.add(cf_po_total);
+custom_fields.add(cf_gross_profit);
+data = Map();
+data.put("customer_id",customer_id);
+data.put("custom_fields",custom_fields);
+response = zoho.books.updateRecord("salesorders",organization_id,so_id,data);
+info "Sales Order " + saleorder_number + " updated";
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+//SO_Obj = zoho.books.getRecordsByID("salesorders",organization_id,salesorder.get("salesorder_id"));
+searchParam = {"record_name":salesorder.get("salesorder_number")};
+Search_Entry = zoho.books.getRecords("cm_commision",organization_id,searchParam,"zoho_book");
+SOs_total = 0;
+//info Search_Entry;
+info salesorder;
+////////////////////////////////// Get Sales Rep Commission //////////////////////////////////
+if(salesorder.get("custom_field_hash").get("cf_organization") == "Blink Signs" && !salesorder.get("salesperson_name").isNull())
+{
+	/////////////////////// Get Sales Rep Details ///////////////////////////////////////////////
+	users = zoho.books.getRecords("users",organization_id);
+	for each  user in users.get("users")
+	{
+		if(salesorder.get("salesperson_name") == user.get("name"))
+		{
+			sales_rep_id = user.get("user_id");
+			sales_rep = zoho.books.getRecordsByID("users",organization_id,sales_rep_id);
+			cf_commission_type = sales_rep.get("user").get("custom_field_hash").get("cf_commission_type");
+			cf_sales_rep_commission = sales_rep.get("user").get("custom_field_hash").get("cf_sales_rep_commission");
+		}
+	}
+	/////////////////////////////////////////////////////////////////////////////////
+	if(Search_Entry.get("module_records").size() > 0)
+	{
+		record_id = Search_Entry.get("module_records").get(0).get("module_record_id");
+		///////////////////////////// All Calculation /////////////////////////////////////////////
+		if(so_amount > 0 && PO_total > 0)
+		{
+			Actual_Gross_Margin = (gross_profit * 100) / so_amount.toDecimal();
+			if(cf_sales_rep_commission.remove("%").toDecimal() > 0 && gross_profit > 0)
+			{
+				Sale_Rep_Commission = cf_sales_rep_commission.remove("%").toDecimal() / 100 * gross_profit;
+			}
+			info "Sales Rep Com :" + Sale_Rep_Commission.round(2);
+			//////////////////////////// Create Entry In Commission Module /////////////////////////
+			Mp = Map();
+			Mp.put("cf_total_project_value",so_amount);
+			Mp.put("cf_total_pos_cost",PO_total);
+			Mp.put("cf_project_gross_profit",gross_profit.toDecimal().round(2));
+			Mp.put("cf_gross_margin",Actual_Gross_Margin.toDecimal().round(2));
+			Mp.put("cf_commission_amount",Sale_Rep_Commission.toDecimal().round(2));
+			res = zoho.books.updateRecord("cm_commision",organization_id,record_id,Mp);
+			info "update" + res;
+		}
+	}
+}

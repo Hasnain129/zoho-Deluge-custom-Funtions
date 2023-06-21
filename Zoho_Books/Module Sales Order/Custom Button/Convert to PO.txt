@@ -1,0 +1,159 @@
+
+/*
+	1. Create PO from SO 
+	2. Lineitems will be cost items based on esitimate Number
+*/
+//Testing
+msg = Map();
+organization_id = organization.get("organization_id");
+organization_name = ifnull(salesorder.get("custom_field_hash").get("cf_organization"),"");
+PO_reference = salesorder.get("salesorder_number");
+PO_Date = salesorder.get("date");
+Project_id = ifnull(salesorder.get("custom_field_hash").get("cf_project_unformatted"),"");
+CRM_Owner = salesorder.get("salesperson_id");
+purchaseorder_number = "";
+// ////////////
+// //////////// Fetch all cost items against line items of estimate ////////////////
+if(salesorder.get("reference_number").contains("EST"))
+{
+	//// As Estiamte is not lookup field so we are going to call Estimate by itself and get ID/////
+	searchParam = {"estimate_number":salesorder.get("reference_number")};
+	estimates = zoho.books.getRecords("estimates",organization_id,searchParam,"zoho_book");
+	estimate_id = estimates.get("estimates").get(0).get("estimate_id");
+	number = estimates.get("estimates").get(0).get("estimate_number");
+	searchParam = {"cf_estimate_number":number};
+	exists = zoho.books.getRecords("PurchaseOrders","666479573",searchParam);
+	info exists;
+	if(exists.get("purchaseorders").isEmpty())
+	{
+		searchParam = {"cf_estimate_number":estimate_id};
+		response = zoho.books.getRecords("cm_cost_item",organization_id,searchParam,"zoho_book");
+		//info response;
+		records = response.get("module_records");
+		vendors = list();
+		vendorid = 0;
+		///////// Get all Vendors and remove dulicate //////
+		for each  record in records
+		{
+			if(record.get("cf_estimate_number_formatted") == number)
+			{
+				if(vendors.contains(record.get("cf_vendor")) == false)
+				{
+					if(!record.get("cf_vendor").isNull())
+					{
+						vendors.add(record.get("cf_vendor"));
+					}
+				}
+			}
+		}
+		if(vendors.size() > 0)
+		{
+			///// Get all costitems against vendors and create a PO //// 
+			for each  vendor in vendors
+			{
+				/////////////////////////////////////////////update Customer shipping address in customer module///////////////////////////////
+				vendor_obj = zoho.books.getRecordsByID("contacts","666479573",vendor);
+				info vendor_obj;
+				shipping_address = vendor_obj.get("contact").get("shipping_address");
+				Additional_add = Map();
+				Additional_add.put("attention",shipping_address.get("attention"));
+				Additional_add.put("address",shipping_address.get("address"));
+				Additional_add.put("street2",shipping_address.get("street2"));
+				Additional_add.put("city",shipping_address.get("city"));
+				Additional_add.put("state",shipping_address.get("state"));
+				Additional_add.put("zip",shipping_address.get("zip"));
+				Additional_add.put("country",shipping_address.get("country"));
+				Additional_add.put("fax",shipping_address.get("fax"));
+				Additional_add.put("phone",shipping_address.get("phone"));
+				JSONString = Map();
+				JSONString.put("JSONString",Additional_add);
+				update = invokeurl
+				[
+					url :"https://www.zohoapis.com/books/v3/contacts/1316483000008420124/address/1316483000008420128?organization_id=666479573"
+					type :PUT
+					parameters:JSONString
+					connection:"zoho_book"
+				];
+				/////////////////////////////////////////////////////create Purchase order///////////////////////////////////////////////////
+				line_items = List();
+				for each  record in records
+				{
+					if(record.get("cf_estimate_number_formatted") == number && record.get("cf_vendor") == vendor)
+					{
+						mapVar = Map();
+						mapVar.put("item_id",record.get("cf_inventory_product_name"));
+						mapVar.put("rate",record.get("cf_cost_price"));
+						mapVar.put("quantity",record.get("cf_qty"));
+						line_items.add(mapVar);
+					}
+				}
+				valuesdat = Map();
+				custom_fields_list = List();
+				estimate_number = Map();
+				cf_organization = Map();
+				Project = Map();
+				estimate_number.put("customfield_id",1316483000066274973);
+				estimate_number.put("value",number);
+				custom_fields_list.add(estimate_number);
+				cf_organization.put("customfield_id",1316483000082095207);
+				cf_organization.put("value",organization_name);
+				custom_fields_list.add(cf_organization);
+				Project.put("customfield_id",1316483000007865031);
+				Project.put("value",Project_id);
+				custom_fields_list.add(Project);
+				valuesdat.put("vendor_id",vendor);
+				valuesdat.put("delivery_customer_id","1316483000008420124");
+				valuesdat.put("delivery_customer_address_id","1316483000008420128");
+				valuesdat.put("delivery_customer_name","#N/A");
+				valuesdat.put("crm_owner_id","1316483000022186108");
+				valuesdat.put("reference_number",PO_reference);
+				valuesdat.put("status","Draft");
+				valuesdat.put("line_items",line_items);
+				valuesdat.put("custom_fields",custom_fields_list);
+				JSONString = Map();
+				JSONString.put("JSONString",valuesdat);
+				purchaseOrderBooks = invokeurl
+				[
+					url :" https://books.zoho.com/api/v3/purchaseorders?organization_id=666479573"
+					type :POST
+					parameters:JSONString
+					connection:"zoho_book"
+				];
+				////////////////////////////////////////////////////////////////////// END /////////////////////////////////////////////////////////////
+				if(purchaseOrderBooks.get("code") == "120104")
+				{
+					msg.put("message",purchaseOrderBooks.get("message"));
+				}
+				else
+				{
+					info purchaseOrderBooks;
+					purchaseorder = purchaseOrderBooks.get("purchaseorder");
+					purchaseorder_number = purchaseorder_number + purchaseorder.get("purchaseorder_number") + ", ";
+					msg.put("message",purchaseorder_number.remove(",") + " has been created against this " + salesorder.get("salesorder_number") + ".");
+				}
+			}
+			////// Update PO number on Estimate /////
+			custom_field = List();
+			po_numbers = Map();
+			po_numbers.put("customfield_id",1316483000066382293);
+			po_numbers.put("value",purchaseorder_number);
+			custom_field.add(po_numbers);
+			updatedata = Map();
+			updatedata.put("custom_fields",custom_field);
+			response = zoho.books.updateRecord("estimates","666479573",estimate_id,updatedata);
+		}
+		else
+		{
+			msg.put("message","Please select vendor in all Cost Items.");
+		}
+	}
+	else
+	{
+		msg.put("message",exists.get("purchaseorders").get(0).get("purchaseorder_number") + " is already created against this Sales Order.");
+	}
+}
+else
+{
+	msg = "Estimate not found in Reference";
+}
+return msg;

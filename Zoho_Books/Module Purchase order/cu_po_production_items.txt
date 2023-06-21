@@ -1,0 +1,84 @@
+								Function Name : cu_po_production_items
+								Workflow Name : Update Production Items By PO
+
+Function Description : Creates/updates Production items when a purchase order is created or edited
+Workflow Description : Create/Update Production Items when PO is created/Updated
+
+
+
+
+/*
+    Creates or updates Production items in Production Control Module When a Purchase Order is created or updated.
+	Function		=  create / update production items By Purchase Order.
+    Affected Module = Custom Module ('Production Items')
+	Author 			= Muhammad Furqan 
+	Company 		= Blinksigns | Blinkswag | Blinkglobal
+	Zoho APP 		= Zoho Books.
+	Next Update 	= 
+*/
+organization_id = organization.get("organization_id");
+po_id = purchaseorder.get("purchaseorder_id");
+po_number = purchaseorder.get("purchaseorder_number");
+so_number = purchaseorder.get("reference_number");
+if(so_number == "" || !so_number.contains("SO-"))
+{
+	info "SO not found";
+	return;
+}
+due_date = purchaseorder.get("expected_delivery_date");
+if(due_date == "")
+{
+	due_date = purchaseorder.get("delivery_date");
+}
+po_items = purchaseorder.get("line_items");
+cf_hash = purchaseorder.get("custom_field_hash");
+po_status = cf_hash.get("cf_status");
+// Getting all production items of SO number given as refrence number
+search_term = {"cf_so_number":so_number};
+so_search = {"salesorder_number":so_number};
+salesorders = zoho.books.getRecords("salesorders",organization_id,so_search);
+salesorders = salesorders.get("salesorders");
+for each  so in salesorders
+{
+	so_date = so.get("date");
+}
+search_response = zoho.books.getRecords("cm_production_control",organization_id,search_term);
+production_items = search_response.get("module_records");
+updated_items = List();
+for each  po_item in po_items
+{
+	for each  production_item in production_items
+	{
+		if(po_item.get("sku") == production_item.get("cf_sku"))
+		{
+			info "updating Production item:  " + production_item.get("record_name");
+			updateMap = Map();
+			updateMap.put("record_name",production_item.get("record_name"));
+			updateMap.put("cf_po",po_number);
+			updateMap.put("cf_due_date",due_date);
+			updateMap.put("cf_so_date",so_date);
+			updateMap.put("cf_status",po_status);
+			updateMap.put("cf_poid",po_item.get('line_item_id'));
+			response = zoho.books.updateRecord("cm_production_control",organization_id,production_item.get("module_record_id"),updateMap);
+			updated_items.add(po_item);
+		}
+	}
+}
+for each  po_item in po_items
+{
+	if(!updated_items.contains(po_item))
+	{
+		info "creating Production item:  " + po_item.get("name");
+		updateMap = Map();
+		updateMap.put("record_name",po_item.get("name"));
+		updateMap.put("cf_sku",po_item.get('sku'));
+		updateMap.put("cf_qty",po_item.get("quantity"));
+		updateMap.put("cf_status",po_status);
+		updateMap.put("cf_po",po_number);
+		updateMap.put("cf_so_number",so_number);
+		updateMap.put("cf_due_date",due_date);
+		updateMap.put("cf_so_date",so_date);
+		updateMap.put("cf_poid",po_item.get('line_item_id'));
+		response = zoho.books.createRecord("cm_production_control",organization_id,updateMap);
+	}
+}

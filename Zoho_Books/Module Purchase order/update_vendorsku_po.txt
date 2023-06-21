@@ -1,0 +1,40 @@
+								Function Name : update_vendorsku_po
+								Workflow Name : Update Vendor SKU on PO
+
+
+
+
+
+purchaseorderID = purchaseorder.get("purchaseorder_id");
+PO_data = zoho.books.getRecordsByID("purchaseorders","666479573",purchaseorderID);
+Line_items = PO_data.get("purchaseorder").get("line_items");
+Product_list = List();
+for each  data in Line_items
+{
+	Line_id = data.get("line_item_id");
+	Item_id = data.get("item_id");
+	item_details = zoho.books.getRecordsByID("items","666479573",Item_id);
+	Customer_fields_data = item_details.get("item").get("custom_fields");
+	for each  cf_Data in Customer_fields_data
+	{
+		if(cf_Data.get("label") == "Vendor SKU")
+		{
+			Vendor_SKU = cf_Data.get("value");
+		}
+	}
+	info Vendor_SKU;
+	cf_list = List();
+	cf_vendorsku = Map();
+	cf_vendorsku.put("label","Vendor SKU");
+	cf_vendorsku.put("value",Vendor_SKU);
+	cf_list.add(cf_vendorsku);
+	/////////////////////////////////////////////////
+	Line_item = Map();
+	Line_item.put("line_item_id",Line_id);
+	Line_item.put("item_custom_fields",cf_list);
+	Product_list.add(Line_item);
+}
+mp_PO = Map();
+mp_PO.put("line_items",Product_list);
+Update_PO = zoho.books.updateRecord("purchaseorders","666479573",purchaseorderID,mp_PO);
+info Update_PO;

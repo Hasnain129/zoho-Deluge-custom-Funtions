@@ -1,0 +1,68 @@
+
+
+
+msg = Map();
+//This is a sample function. It will display the estimate number.
+number = estimate.get("estimate_number");
+searchParam = {"cf_estimate_number":number};
+exists = zoho.books.getRecords("PurchaseOrders","666479573",searchParam);
+vendors = list();
+estimateID = estimate.get("estimate_id");
+purchaseorder_number = "";
+if(exists.get("purchaseorders").isEmpty())
+{
+	data = zoho.books.getRecords("cm_cost_item","666479573");
+	vendorid = 0;
+	records = data.get("module_records");
+	for each  record in records
+	{
+		if(record.get("cf_estimate_number_formatted") == number)
+		{
+			if(vendors.contains(record.get("cf_vendor")) == false)
+			{
+				vendors.add(record.get("cf_vendor"));
+			}
+		}
+	}
+	for each  vendor in vendors
+	{
+		line_items = List();
+		for each  record in records
+		{
+			if(record.get("cf_estimate_number_formatted") == number && record.get("cf_vendor") == vendor)
+			{
+				mapVar = Map();
+				mapVar.put("item_id",record.get("cf_inventory_product_name"));
+				mapVar.put("rate",record.get("cf_cost_price"));
+				mapVar.put("quantity",record.get("cf_qty"));
+				line_items.add(mapVar);
+			}
+		}
+		valuesdat = Map();
+		list_estimate = List();
+		estimate_number = Map();
+		estimate_number.put("customfield_id",1316483000066274973);
+		estimate_number.put("value",number);
+		list_estimate.add(estimate_number);
+		valuesdat.put("vendor_id",vendor);
+		valuesdat.put("line_items",line_items);
+		valuesdat.put("custom_fields",list_estimate);
+		response = zoho.books.createRecord("PurchaseOrders","666479573",valuesdat);
+		purchaseorder = response.get("purchaseorder");
+		purchaseorder_number = purchaseorder_number + purchaseorder.get("purchaseorder_number") + ", ";
+	}
+	custom_field = List();
+	po_numbers = Map();
+	po_numbers.put("customfield_id",1316483000066382293);
+	po_numbers.put("value",purchaseorder_number);
+	custom_field.add(po_numbers);
+	updatedata = Map();
+	updatedata.put("custom_fields",custom_field);
+	response = zoho.books.updateRecord("estimates","666479573",estimateID,updatedata);
+	return response;
+}
+else
+{
+	msg.put("message",exists.get("purchaseorders").get(0).get("purchaseorder_number") + " is already created against this Sales Order.");
+}
+return msg;

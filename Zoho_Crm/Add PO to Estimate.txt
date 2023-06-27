@@ -1,0 +1,119 @@
+try 
+{
+	rep = List();
+	rep = PO_id.replaceall("|||",",",true);
+	estimate_list = List();
+	all_ready_rec = List();
+	Design_Data = zoho.crm.getRecordById("Designs",Design_ID.toLong());
+	for each  data in Design_Data.get("Subform_2")
+	{
+		vendor2 = data.get("Vendor");
+		//vendorInfo = zoho.crm.getRecordById("Vendors",data.get("Vendor").get("id"));
+		//if(vendorInfo.get("Vendor_Status") != "Blacklisted")
+		//{  }
+		cost2 = data.get("Cost");
+		Markup = data.get("Markup");
+		Quantity = data.get("Qty1");
+		existing_product = data.get("Product");
+		product_category = data.get("Categorize_Product");
+		Desc2 = data.get("Description");
+		map1 = Map();
+		map1.put("Vendor",vendor2);
+		map1.put("Product",existing_product);
+		map1.put("Categorize_Product",product_category);
+		map1.put("Description",Desc2);
+		map1.put("Cost",cost2);
+		map1.put("Markup",Markup);
+		map1.put("Qty1",Quantity);
+		estimate_list.add(map1);
+		all_ready_rec.add(map1);
+	}
+	estimate_list2 = List();
+	for each  po_id in rep
+	{
+		Po_obj = zoho.crm.getRecordById("Purchase_Orders",po_id.toLong());
+		//info Po_obj;
+		Vendor = Po_obj.get("Vendor_Name");
+		Product_Details = Po_obj.get("Product_Details");
+		for each  products in Product_Details
+		{
+			//info products;
+			product_id = products.get("product").get("id");
+			Prod_description = products.get("product_description");
+			Unit_Price = products.get("list_price");
+			Quantity = products.get("quantity");
+			////////////////// Checking Categorize Product ////////////////////
+			product_obj = zoho.crm.getRecordById("Products",product_id);
+			category_product = product_obj.get("Categorize_Product");
+			if(category_product != null)
+			{
+				category_product_id = category_product;
+			}
+			else
+			{
+				category_product_id = product_id;
+			}
+			servicemap = Map();
+			servicemap.put("Vendor",Vendor);
+			servicemap.put("Product",product_id);
+			servicemap.put("Categorize_Product",category_product_id);
+			servicemap.put("Description",Prod_description);
+			servicemap.put("Cost",Unit_Price);
+			servicemap.put("Qty1",Quantity);
+			servicemap.put("Markup",30);
+			estimate_list.add(servicemap);
+		}
+	}
+	estimate_list2.add(estimate_list);
+	UpdateDesign = Map();
+	UpdateDesign.put("Subform_2",estimate_list2.get(0));
+	Design_Resp = zoho.crm.updateRecord("Designs",Design_ID.toLong(),UpdateDesign);
+	// //-------------------------------------------------------------
+	// // Calculate tax on taxable products only and update the tax field
+	resp = zoho.crm.getRecordById("Designs",Design_ID.toLong());
+	Proj_id = resp.get("Project").get("id");
+	subinfo = resp.get("Subform_2");
+	// //------------------------------------------
+	// // Get tax amount if any from Project
+	Proj_details = zoho.crm.getRecordById("Deals",Proj_id);
+	tax = Proj_details.get("Tax");
+	// //-----------------------------------------
+	// // Get estimate scope of work form and calculate tax
+	tax_total = 0;
+	Cost_total = 0;
+	for each  rec in subinfo
+	{
+		product_id = rec.get("Product").get("id");
+		line_total = rec.get("Line_Total");
+		Cost = rec.get("Cost");
+		Qty = rec.get("Qty1");
+		if(Cost != null)
+		{
+			product_details = zoho.crm.getRecordById("Products",product_id);
+			if(product_details.get("Taxable") == true)
+			{
+				tax_total = tax_total + line_total * tax / 100;
+			}
+			if(product_details.get("Cost_Based_Product") == "Yes")
+			{
+				Cost_total = Cost_total + Cost * Qty;
+			}
+		}
+	}
+	tax_total_1 = tax_total.round(5);
+	mp = Map();
+	mp.put("Tax",tax_total_1);
+	mp.put("Cost_Total",Cost_total);
+	update_design = zoho.crm.updateRecord("Designs",Design_ID.toLong(),mp);
+	openUrl("https://crm.zoho.com/crm/org666155072/tab/CustomModule32/" + Design_ID + "/edit","parent window");
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Create_Quote / CRM Button Designs"
+		message :"ID: " + Design_ID + " Root Cause: " + e
+	]
+}
+return "Estimate Added Successfully";

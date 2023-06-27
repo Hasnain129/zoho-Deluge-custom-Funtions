@@ -1,0 +1,5 @@
+Proj_obj = zoho.crm.getRecordById("Deals",Proj_id);
+Organization_Name = Proj_obj.get("Organization_Name");
+mp = Map();
+mp.put("Organization_Name",Organization_Name);
+zoho.crm.updateRecord("Landlord_Criteria_Form",LL_Criteria_id,mp);

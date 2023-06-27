@@ -1,0 +1,20 @@
+try 
+{
+	wrec = zoho.crm.searchRecords("Requests_for_quote","((Name:equals:" + newvalue + "))");
+	for each  w in wrec
+	{
+		wid = ifnull(w.get("id"),"");
+	}
+	mp = Map();
+	mp.put("RFQ",wid);
+	update = zoho.crm.updateRecord("POs_Completed",PO_Comp_id,mp);
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update RFQ Name lookup from Single line Field. / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000009905616\" >Workflow</a>  " + "ID: " + PO_Comp_id + " Root Cause: " + e
+	]
+}

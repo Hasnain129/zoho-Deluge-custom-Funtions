@@ -1,0 +1,33 @@
+//-------------------------------------
+// Get Invoice total from zoho books against a deal
+authtokens = "af908161b079b35a056e260f5142b0a7";
+organizationID = "666479573";
+Booksinvoices = getUrl("https://books.zoho.com/api/v3/invoices?organization_id=" + organizationID + "&authtoken=" + authtokens + "&zcrm_potential_id=" + deal_id + "");
+invoice_Info = Booksinvoices.get("invoices");
+Invoice_total = 0;
+PO_total = 0;
+for each  data in invoice_Info
+{
+	if(data.get("status") != "void")
+	{
+		Invoice_id = data.get("invoice_id");
+		//info Invoice_id;
+		inv_amount = data.get("total");
+		Invoice_total = Invoice_total + inv_amount;
+	}
+}
+//--------------------------------------------------
+// Get Total of POs against a deal
+PO_details = zoho.crm.getRelatedRecords("Purchase_Orders","Deals",deal_id.tolong());
+for each  resp in PO_details
+{
+	if(resp.get("Status") != "Voided")
+	{
+		PO_amount = resp.get("Grand_Total");
+		PO_total = PO_total + PO_amount;
+	}
+}
+mp = Map();
+mp.put("Invoices_Total",Invoice_total);
+mp.put("POs_Total",PO_total);
+update = zoho.crm.updateRecord("Deals",deal_id.tolong(),mp);

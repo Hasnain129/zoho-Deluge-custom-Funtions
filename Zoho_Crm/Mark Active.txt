@@ -1,0 +1,58 @@
+try 
+{
+	rep = List();
+	rep = step_id.replaceall("|||",",",true);
+	steps_id = List();
+	for each  data in rep
+	{
+		sign_project_obj = zoho.crm.getRelatedRecords("Workflow_Step","Deals",sign_project_id.toLong());
+		for each  data2 in sign_project_obj
+		{
+			if(data2.get("Completed_Steps").get("id") == data.toLong())
+			{
+				steps_id.add(data2.get("id"));
+			}
+		}
+	}
+	info steps_id;
+	for each  Step_proj_id in steps_id
+	{
+		step_proj_details = zoho.crm.getRecordById("Sign_Projects_X_Step",Step_proj_id.toLong());
+		start_date = ifnull(step_proj_details.get("Actual_Start_Date"),"");
+		if(start_date == "")
+		{
+			mp1 = Map();
+			mp1.put("Status","Active");
+			mp1.put("Actual_Start_Date",zoho.currentdate);
+			mp1.put("Next_Contact_Date",zoho.currentdate);
+			mp1.put("Completed_Date","");
+			mp1.put("Cancelled_Date","");
+			mp1.put("Step_Activated_Manually",true);
+			update = zoho.crm.updateRecord("Sign_Projects_X_Step",Step_proj_id.tolong(),mp1);
+		}
+		else if(start_date != "")
+		{
+			mp2 = Map();
+			mp2.put("Status","Active");
+			mp2.put("Completed_Date","");
+			mp2.put("Cancelled_Date","");
+			update = zoho.crm.updateRecord("Sign_Projects_X_Step",Step_proj_id.tolong(),mp2);
+		}
+	}
+	///////////////////// This is used only to trigger workflows of Sign Project ///////////////////
+	Status_empty = Map();
+	Status_empty.put("Status","");
+	zoho.crm.updateRecord("Deals",sign_project_id.toLong(),Status_empty,{"trigger":{"workflow"}});
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	openUrl("https://crm.zoho.com/crm/org666155072/tab/Potentials/" + sign_project_id,"parent window");
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Mark Active / CRM Button Sign Project"
+		message :"ID: " + sign_project_id + " Root Cause: " + e
+	]
+}
+return "This step has been marked as ACTIVE.";

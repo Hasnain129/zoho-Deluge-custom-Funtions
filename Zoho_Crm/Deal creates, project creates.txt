@@ -1,0 +1,37 @@
+try 
+{
+	mp1 = Map();
+	resp = invokeurl
+	[
+		url :"https://projectsapi.zoho.com/restapi/portals/"
+		type :GET
+		parameters:mp1
+		connection:"projects_and_crm_integration"
+	];
+	portallist = resp.getJSON("portals").toJSONList();
+	for each  rec in portallist
+	{
+		id = rec.getJSON("id");
+	}
+	mp = Map();
+	mp.put("name",ProjName);
+	mp.put("template_id",1264527000000113117);
+	mp.put("start_date",today.toString("MM-dd-yyyy"));
+	mp.put("end_date",today.addDay(1).toString("MM-dd-yyyy"));
+	create = invokeurl
+	[
+		url :"https://projectsapi.zoho.com/restapi/portal/" + id + "/projects/"
+		type :POST
+		parameters:mp
+		connection:"projects_and_crm_integration"
+	];
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.loginuserid
+		to :"erp@blinksigns.com"
+		subject :"Deal creates, project creates / CRM"
+		message :"Project Name: " + ProjName + " Root Cause: " + e
+	]
+}

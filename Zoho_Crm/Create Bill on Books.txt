@@ -1,0 +1,814 @@
+try 
+{
+	rep = List();
+	rep = Bill_id.replaceall("|||",",",true);
+	messages = "";
+	for each  data in rep
+	{
+		bill_details = zoho.crm.getRecordById("Create_Bills",data);
+		if(bill_details.get("Paid_Amount") > 0 && bill_details.get("Status") == "Paid")
+		{
+			messages = "Paid Bill cannot be regenerated on Zoho Books.";
+		}
+		else
+		{
+			Books_Bill_ID = bill_details.get("Books_Bill_ID");
+			//info Books_Bill_ID;
+			if(Books_Bill_ID == null)
+			{
+				CRM_Bill_no = bill_details.get("Name");
+				PO_Id = bill_details.get("PO").get("id");
+				Bill_number = bill_details.get("Name");
+				Method = bill_details.get("Method_of_bill_creation");
+				split = bill_details.get("How_would_you_like_to_split_the_PO");
+				/////////////////////// Get Purchase order details ///////////////////////////////////
+				/////////////////////// Get Purchase order details ///////////////////////////////////
+				// 			PO_obj = zoho.crm.getRecordById("Purchase_Orders",PO_Id);
+				PO_Details = invokeurl
+				[
+					url :"https://www.zohoapis.com/crm/v2.1/Purchase_Orders/" + PO_Id
+					type :GET
+					connection:"zoho_crm"
+				];
+				info PO_Details;
+				/////////////
+				PO_obj = PO_Details.get("data").get(0);
+				Organization_name = PO_obj.get("Organization_Name");
+				project_id = PO_obj.get("Project").get("id");
+				vendor_Name = PO_obj.get("Vendor_Name").get("name").trim();
+				vendor_ID = PO_obj.get("Vendor_Name").get("id");
+				PO_autono = PO_obj.get("PO_ID");
+				Vendor_Inv_No = ifnull(PO_obj.get("PO_Invoice"),"");
+				Generated_bill_amount = ifnull(PO_obj.get("Bill_Amount"),"");
+				Valid_till = PO_obj.get("Due_Date");
+				Tax_N = PO_obj.get("Tax_N");
+				///////////////////////// Vendor Details ////////////////////////
+				Vendor_details = zoho.crm.getRecordById("Vendors",vendor_ID);
+				Vendor_email = Vendor_details.get("Email");
+				//////////////////// GET Vendor ACCOUNTING Contact EMAIL ////////////////////////
+				Vendor_contacts = zoho.crm.getRelatedRecords("Contacts","Vendors",vendor_ID);
+				if(!Vendor_contacts.isempty())
+				{
+					for each  cont_per in Vendor_contacts
+					{
+						Cont_designation = cont_per.get("Position");
+						if(Cont_designation == "Accounting")
+						{
+							Accounting_Email = cont_per.get("Email");
+						}
+					}
+				}
+				///////////////////////////////////////////////////
+				if(Accounting_Email == null)
+				{
+					Vendor_email = Vendor_email;
+				}
+				else
+				{
+					Vendor_email = Accounting_Email;
+				}
+				//////////////////////////////////////////////////////////////
+				searchParam = {"zcrm_account_id":vendor_ID};
+				BooksVendor = zoho.books.getRecords("contacts","666479573",searchParam);
+				Vendor_Info = BooksVendor.get("contacts").get(0);
+				contact_ID = Vendor_Info.get("contact_id");
+				//////////////// Get details from projects //////////////////////////////////
+				Proj_details = zoho.crm.getRecordById("Deals",project_id);
+				Project_name = Proj_details.get("Deal_Name");
+				booksProjectID = Proj_details.get("Zoho_Books_Project_ID");
+				Proj_ID = Proj_details.get("Project_ID");
+				//Invoice_date = Proj_details.get("Invoice_Date");
+				////////////////// Custom Fields ////////////////////////////
+				custom_field = list();
+				custom_field_projname = Map();
+				custom_field_projname.put("customfield_id","1316483000007359057");
+				custom_field_projname.put("placeholder","cf_project_name");
+				custom_field_projname.put("value",Project_name);
+				custom_field.add(custom_field_projname);
+				////////////////////////////////////////////////////////
+				custom_field_projID = Map();
+				custom_field_projID.put("customfield_id","1316483000007359087");
+				custom_field_projID.put("placeholder","cf_project_id");
+				custom_field_projID.put("value",Proj_ID);
+				custom_field.add(custom_field_projID);
+				////////////////////////////////////////////////////
+				custom_field_Ven_Email = Map();
+				custom_field_Ven_Email.put("customfield_id","1316483000009669007");
+				custom_field_Ven_Email.put("label","Vendor Email");
+				custom_field_Ven_Email.put("value",Vendor_email);
+				custom_field.add(custom_field_Ven_Email);
+				////////////////////////////////////////////////////////
+				custom_field_Memo = Map();
+				custom_field_Memo.put("customfield_id","1316483000009669015");
+				custom_field_Memo.put("label","Memo");
+				custom_field_Memo.put("value",PO_autono);
+				custom_field.add(custom_field_Memo);
+				////////////////////////////////////////////////////////
+				custom_field_VendorINV = Map();
+				custom_field_VendorINV.put("customfield_id","1316483000011738091");
+				custom_field_VendorINV.put("label","Vendor Invoice #");
+				custom_field_VendorINV.put("value",Vendor_Inv_No);
+				custom_field.add(custom_field_VendorINV);
+				//////////////////Get Net terms based on condition///////////////////////////////
+				if(Method == "Full")
+				{
+					Terms = PO_obj.get("Terms");
+				}
+				else if(Method == "Partly")
+				{
+					Terms = bill_details.get("Payment_Terms");
+				}
+				//////////////////// Get payment terms based on terms for bill creation ////////////////////	
+				if(Terms == "Direct Debit Payment")
+				{
+					Payment_terms = "0";
+				}
+				else if(Terms == "Net 15")
+				{
+					Payment_terms = "15";
+				}
+				else if(Terms == "Net 30")
+				{
+					Payment_terms = "30";
+				}
+				else if(Terms == "Net 45")
+				{
+					Payment_terms = "45";
+				}
+				else if(Terms == "Net 60")
+				{
+					Payment_terms = "60";
+				}
+				/////////////////////// Template Selection ////////////////////
+				if(Organization_name == "Blink Signs")
+				{
+					Template_id = "1316483000000031017";
+				}
+				else if(Organization_name == "Blink Swag")
+				{
+					Template_id = "1316483000009790359";
+				}
+				else if(Organization_name == "Blink Sourcing")
+				{
+					Template_id = "1316483000017238444";
+				}
+				////////////////////////////////////////////////////////////////
+				productList = List();
+				// 			Product_List_obj = PO_obj.get("Product_Details").tojsonlist();
+				Product_List_obj = PO_obj.get("Purchase_Items").tojsonlist();
+				info Method;
+				if(Method == "Full")
+				{
+					Total_Discount = 0;
+					for each  product in Product_List_obj
+					{
+						product_ID = product.get("Product_Name").get("id");
+						productName = product.get("Product_Name").get("name");
+						Products_obj = zoho.crm.getRecordById("Products",product.get("Product_Name").get("id"));
+						product_quantity = product.get("Quantity");
+						product_rate = product.get("List_Price");
+						Discount = ifnull(product.get("Discount"),0);
+						if(product.get("Description") != null)
+						{
+							product_Desc = product.get("Description").substring(0.5999);
+						}
+						searchParam = {"zcrm_product_id":product_ID};
+						BooksItems = zoho.books.getRecords("items","666479573",searchParam);
+						item_Info = BooksItems.get("items").get(0);
+						item_id = item_Info.get("item_id");
+						item_type = item_Info.get("item_type");
+						item_name = item_Info.get("item_name");
+						if(item_type == "sales")
+						{
+							updateItem = Map();
+							updateItem.put("item_type","sales_and_purchases");
+							updateItem.put("purchase_account_id","1316483000000034003");
+							Update_Data = zoho.books.updateRecord("items","666479573",item_id,updateItem);
+							item_id = Update_Data.get("item").get("item_id");
+							info Update_Data;
+						}
+						info item_type;
+						item = Map();
+						if(item_type == "inventory")
+						{
+							item.put("item_id",item_id);
+							item.put("description",product_Desc);
+							item.put("account_id","1316483000000034001");
+						}
+						else
+						{
+							item.put("item_id",item_id);
+							item.put("description",product_Desc);
+							//////////////////////////////// Checking for Account /////////////
+							val_lm = ifnull(Products_obj.get("Labor_or_Material"),"");
+							if(val_lm == "Material")
+							{
+								item.put("account_id","1316483000015965363");
+							}
+							else if(val_lm == "Labor")
+							{
+								item.put("account_id","1316483000015965369");
+							}
+							else if(val_lm == "Shipping")
+							{
+								item.put("account_id","1316483000015965381");
+							}
+							else if(val_lm == "Licenses & Permits")
+							{
+								item.put("account_id","1316483000015965375");
+							}
+							else
+							{
+								item.put("account_id","1316483000000062009");
+							}
+						}
+						item.put("rate",product_rate);
+						item.put("quantity",product_quantity);
+						//item.put("discount",Discount);
+						Total_Discount = Total_Discount + Discount;
+						productList.add(item);
+					}
+					Books_Bill = Map();
+					Books_Bill.put("vendor_id",contact_ID);
+					Books_Bill.put("bill_number",Bill_number);
+					Books_Bill.put("reference_number",CRM_Bill_no);
+					Books_Bill.put("date",zoho.currentdate);
+					Books_Bill.put("payment_terms",Payment_terms);
+					Books_Bill.put("payment_terms_label",Terms);
+					Books_Bill.put("custom_fields",custom_field);
+					Books_Bill.put("line_items",productList);
+					Books_Bill.put("template_id",Template_id);
+					Books_Bill.put("adjustment_description","Tax");
+					// 				Books_Bill.put("adjustment",Tax);
+					Books_Bill.put("adjustment",Tax_N);
+					Books_Bill.put("discount",Total_Discount);
+					Books_Bill.put("discount_account_id",1316483000040033045);
+					Books_Bill.put("discount_type","entity_level");
+					//Books_Bill.put("reason",". Bill is created by: '" + zoho.loginuser + "'");
+					Bill_Create = zoho.books.createRecord("bills","666479573",Books_Bill);
+					info Bill_Create;
+					Created_Bill_ID = Bill_Create.get("bill").get("bill_id");
+					///////////////////// Get Bill details ///////////////////////////////////////////////
+					if(Created_Bill_ID != "")
+					{
+						info "inside loop";
+						////////////////////////////// Add Comment /////////////////////////////////////
+						com_mp = Map();
+						com_mp.put("description","Bill: " + Bill_number + " is created by: '" + zoho.loginuser + "'");
+						info "Bill description : " + com_mp;
+						comment_mp = Map();
+						comment_mp.put("JSONString",com_mp);
+						Bill_comment = invokeurl
+						[
+							url :"https://books.zoho.com/api/v3/bills/" + Created_Bill_ID + "/comments?organization_id=666479573"
+							type :POST
+							parameters:comment_mp
+							connection:"zoho_books"
+						];
+						info "Comment Added: " + Bill_comment;
+						///////////////////////////////////////////////////////////////////////////
+						Createdbill_details = zoho.books.getRecordsByID("bills","666479573",Created_Bill_ID);
+						resp = Createdbill_details.get("bill").tomap();
+						//invoice_date = resp.get("date");
+						Bill_total = resp.get("total");
+						if(Generated_bill_amount == null)
+						{
+							Generated_bill_amount = 0;
+						}
+						Generated_bill_amount1 = Generated_bill_amount + Bill_total;
+						///////////////////////////// Updating Bill Status and ID on CRM ///////////////////////////////////////////////
+						mp4 = Map();
+						mp4.put("Status","Bill Generated");
+						mp4.put("Books_Bill_ID",Created_Bill_ID);
+						update_bill = zoho.crm.updateRecord("Create_Bills",data.tolong(),mp4);
+						////////////////////// Checking Other related Bills with the PO /////////////////////////
+						mp5 = Map();
+						mp5.put("Bill_Amount",Generated_bill_amount1.round(2));
+						update_PO = zoho.crm.updateRecord("Purchase_Orders",PO_Id.tolong(),mp5);
+					}
+					messages = "Bill is created on Zoho Books";
+					openurl("https://books.zoho.com/app#/bills/" + Created_Bill_ID + "","popup window","height=800,width=1000");
+				}
+				/////////// If method is partly and by line items /////////////////////////////
+				if(Method == "Partly")
+				{
+					info split;
+					/////////////////////////// by Line Item /////////////////////////////////////////////////
+					if(split == "By line item")
+					{
+						Items_no = bill_details.get("Line_items").tolist();
+						Lar_Item = Items_no.largest();
+						Product_Details = PO_obj.get("Purchase_Items").tolist();
+						////////////////////////////////////////////////
+						itemlist = List();
+						if(Lar_Item <= Product_Details.size().tolong())
+						{
+							for each  data2 in Items_no
+							{
+								item_count = data2 - 1;
+								itemlist.add(item_count);
+							}
+							distinct = itemlist.distinct();
+							//info distinct;
+							Subtotal = PO_obj.get("Sub_Total").round(3);
+							Tax_1 = 0;
+							Total_Discount = 0;
+							productList = List();
+							for each  data3 in distinct
+							{
+								shortlisted_prod = Product_Details.get(data3);
+								product_ID = shortlisted_prod.get("Product_Name").get("id");
+								Products_obj = zoho.crm.getRecordById("Products",product_ID.tolong());
+								productName = shortlisted_prod.get("Product_Name").tomap().get("name");
+								product_quantity = shortlisted_prod.get("Quantity");
+								product_rate = shortlisted_prod.get("List_Price");
+								Discount = ifnull(shortlisted_prod.get("Discount"),0);
+								if(shortlisted_prod.get("product_description") != null)
+								{
+									product_Desc = shortlisted_prod.get("Description").substring(0.5999);
+								}
+								searchParam = {"zcrm_product_id":product_ID};
+								BooksItems = zoho.books.getRecords("items","666479573",searchParam);
+								item_Info = BooksItems.get("items").get(0);
+								item_id = item_Info.get("item_id");
+								item_type = item_Info.get("item_type");
+								item_name = item_Info.get("item_name");
+								if(item_type == "sales")
+								{
+									updateItem = Map();
+									updateItem.put("item_type","sales_and_purchases");
+									updateItem.put("purchase_account_id","1316483000000034003");
+									Update_Data = zoho.books.updateRecord("items","666479573",item_id,updateItem);
+									item_id = Update_Data.get("item").get("item_id");
+								}
+								item = Map();
+								if(item_type == "inventory")
+								{
+									item.put("item_id",item_id);
+									item.put("description",product_Desc);
+									item.put("account_id","1316483000000034001");
+								}
+								else
+								{
+									item.put("item_id",item_id);
+									item.put("description",product_Desc);
+									/////////////////// Checking for Account ///////////////
+									val_lm = ifnull(Products_obj.get("Labor_or_Material"),"");
+									if(val_lm == "Material")
+									{
+										item.put("account_id","1316483000015965363");
+									}
+									else if(val_lm == "Labor")
+									{
+										item.put("account_id","1316483000015965369");
+									}
+									else if(val_lm == "Shipping")
+									{
+										item.put("account_id","1316483000015965381");
+									}
+									else if(val_lm == "Licenses & Permits")
+									{
+										item.put("account_id","1316483000015965375");
+									}
+									else
+									{
+										item.put("account_id","1316483000000062009");
+									}
+								}
+								item.put("rate",product_rate);
+								item.put("quantity",product_quantity);
+								Total_Discount = Total_Discount + Discount;
+								productList.add(item);
+								////////////// Calculating Tax //////////
+								net_total = shortlisted_prod.get("net_total");
+								line_item_perc = net_total / Subtotal;
+								// 							Tax_A = Tax * line_item_perc;
+								Tax_A = Tax_N * line_item_perc;
+								Tax_1 = Tax_1 + Tax_A;
+							}
+						}
+						else
+						{
+							messages = "Please select correct Item no in " + bill_details.get("Name");
+						}
+					}
+					///////////////////////// By Percentage ///////////////////////////////////////////////////////
+					else if(split == "By %")
+					{
+						percentage = bill_details.get("to_pay").round(3);
+						info percentage;
+						info Tax_N;
+						// 			Tax_1 = Tax * percentage / 100;
+						if(Tax_N != null)
+						{
+							Tax_1 = Tax_N * percentage / 100;
+						}
+						else
+						{
+							Tax_1 = 0;
+						}
+						Total_Discount = 0;
+						for each  product in Product_List_obj
+						{
+							product_ID = product.get("Product_Name").get("id");
+							Products_obj = zoho.crm.getRecordById("Products",product.get("Product_Name").get("id"));
+							product_quantity = product.get("Quantity");
+							product_rate = product.get("List_Price");
+							Discount = ifnull(product.get("Discount"),0);
+							if(product.get("Description") != null)
+							{
+								product_Desc = product.get("Description").substring(0.5999);
+							}
+							info product_ID;
+							searchParam = {"zcrm_product_id":product_ID};
+							BooksItems = zoho.books.getRecords("items","666479573",searchParam);
+							info BooksItems;
+							item_Info = BooksItems.get("items").get(0);
+							//info "item info : " + item_Info;
+							item_id = item_Info.get("item_id");
+							item_type = item_Info.get("item_type");
+							item_name = item_Info.get("item_name");
+							if(item_type == "sales")
+							{
+								updateItem = Map();
+								updateItem.put("item_type","sales_and_purchases");
+								updateItem.put("purchase_account_id","1316483000000034003");
+								Update_Data = zoho.books.updateRecord("items","666479573",item_id,updateItem);
+								item_id = Update_Data.get("item").get("item_id");
+							}
+							product_rate_byPercen = product_rate * percentage / 100;
+							Discount_byPercen = Discount * percentage / 100;
+							product_descrip_byPercen = percentage + "% of this item's total amount";
+							item = Map();
+							if(item_type == "inventory")
+							{
+								item.put("item_id",item_id);
+								item.put("description",product_Desc);
+								item.put("account_id","1316483000000034001");
+							}
+							else
+							{
+								item.put("item_id",item_id);
+								item.put("description",product_descrip_byPercen);
+								////////////////////// Checking for Account /////////////
+								val_lm = ifnull(Products_obj.get("Labor_or_Material"),"");
+								if(val_lm == "Material")
+								{
+									item.put("account_id","1316483000015965363");
+								}
+								else if(val_lm == "Labor")
+								{
+									item.put("account_id","1316483000015965369");
+								}
+								else if(val_lm == "Shipping")
+								{
+									item.put("account_id","1316483000015965381");
+								}
+								else if(val_lm == "Licenses & Permits")
+								{
+									item.put("account_id","1316483000015965375");
+								}
+								else
+								{
+									item.put("account_id","1316483000000062009");
+								}
+							}
+							item.put("rate",product_rate_byPercen);
+							item.put("quantity",product_quantity);
+							Total_Discount = Total_Discount + Discount_byPercen;
+							productList.add(item);
+							/////////////////////////////	By Amounnt /////////////////////////////////////////////
+						}
+					}
+					else if(split == "By amount")
+					{
+						Final_Amount = bill_details.get("Amount").round(5) * 100;
+						Grand_total = PO_obj.get("Grand_Total").round(5);
+						percentage = Final_Amount / Grand_total;
+						// 					Tax_1 = Tax * percentage / 100;
+						Tax_1 = Tax_N * percentage / 100;
+						Total_Discount = 0;
+						for each  product in Product_List_obj
+						{
+							product_ID = product.get("Product_Name").get("id");
+							Products_obj = zoho.crm.getRecordById("Products",product.get("Product_Name").get("id"));
+							product_quantity = product.get("Quantity");
+							product_rate = product.get("List_Price");
+							Discount = ifnull(product.get("Discount"),0);
+							if(product.get("Description") != null)
+							{
+								product_Desc = product.get("Description").substring(0.5999);
+							}
+							searchParam = {"zcrm_product_id":product_ID};
+							BooksItems = zoho.books.getRecords("items","666479573",searchParam);
+							item_Info = BooksItems.get("items").get(0);
+							item_id = item_Info.get("item_id");
+							item_type = item_Info.get("item_type");
+							item_name = item_Info.get("item_name");
+							if(item_type == "sales")
+							{
+								updateItem = Map();
+								updateItem.put("item_type","sales_and_purchases");
+								updateItem.put("purchase_account_id","1316483000000034003");
+								Update_Data = zoho.books.updateRecord("items","666479573",item_id,updateItem);
+								item_id = Update_Data.get("item").get("item_id");
+							}
+							product_rate_byAmount = product_rate * percentage / 100;
+							Discount_byPercen = Discount * percentage / 100;
+							product_descrip_byAmount = percentage.round(3) + "% of this item's total amount";
+							item = Map();
+							if(item_type == "inventory")
+							{
+								item.put("item_id",item_id);
+								item.put("description",product_Desc);
+								item.put("account_id","1316483000000034001");
+							}
+							else
+							{
+								item.put("item_id",item_id);
+								item.put("description",product_descrip_byAmount);
+								////////////////  Checking for Accounts /////////////////
+								val_lm = ifnull(Products_obj.get("Labor_or_Material"),"");
+								if(val_lm == "Material")
+								{
+									item.put("account_id","1316483000015965363");
+								}
+								else if(val_lm == "Labor")
+								{
+									item.put("account_id","1316483000015965369");
+								}
+								else if(val_lm == "Shipping")
+								{
+									item.put("account_id","1316483000015965381");
+								}
+								else if(val_lm == "Licenses & Permits")
+								{
+									item.put("account_id","1316483000015965375");
+								}
+								else
+								{
+									item.put("account_id","1316483000000062009");
+								}
+							}
+							item.put("rate",product_rate_byAmount);
+							item.put("quantity",product_quantity);
+							Total_Discount = Total_Discount + Discount_byPercen;
+							productList.add(item);
+						}
+					}
+					///////////// Create Bill in Zoho Books/////////////////////////////
+					Books_Bill = Map();
+					Books_Bill.put("vendor_id",contact_ID);
+					Books_Bill.put("bill_number",Bill_number);
+					Books_Bill.put("reference_number",CRM_Bill_no);
+					Books_Bill.put("date",zoho.currentdate);
+					Books_Bill.put("payment_terms",Payment_terms);
+					Books_Bill.put("payment_terms_label",Terms);
+					Books_Bill.put("custom_fields",custom_field);
+					Books_Bill.put("line_items",productList);
+					Books_Bill.put("template_id",Template_id);
+					Books_Bill.put("adjustment_description","Tax");
+					Books_Bill.put("adjustment",Tax_1);
+					Books_Bill.put("discount",Total_Discount);
+					Books_Bill.put("discount_account_id",1316483000040033045);
+					Books_Bill.put("discount_type","entity_level");
+					//Books_Bill.put("reason",". Bill is created by: '" + zoho.loginuser + "'");
+					Bill_Create = zoho.books.createRecord("bills","666479573",Books_Bill);
+					info Bill_Create;
+					if(productList != {})
+					{
+						Created_Bill_ID = Bill_Create.get("bill").get("bill_id");
+						////////////////// Get Bill details  ///////////////////////
+						if(Created_Bill_ID != "")
+						{
+							////////////////////////////// Add Comment /////////////////////////////////////
+							com_mp = Map();
+							com_mp.put("description","Bill: " + Bill_number + " is created by: '" + zoho.loginuser + "'");
+							comment_mp = Map();
+							comment_mp.put("JSONString",com_mp);
+							Bill_comment = invokeurl
+							[
+								url :"https://books.zoho.com/api/v3/bills/" + Created_Bill_ID + "/comments?organization_id=666479573"
+								type :POST
+								parameters:comment_mp
+								connection:"zoho_books"
+							];
+							info "Comment Added: " + Bill_comment;
+							///////////////////////////////////////////////////////////////////////////////////						
+							Createdbill_details = zoho.books.getRecordsByID("bills","666479573",Created_Bill_ID);
+							resp = Createdbill_details.get("bill").tomap();
+							//invoice_date = resp.get("date");
+							Bill_total = resp.get("total");
+							if(Generated_bill_amount == null)
+							{
+								Generated_bill_amount = 0;
+							}
+							Generated_bill_amount1 = Generated_bill_amount + Bill_total;
+							///////////////////////////////////////////////////////////////////////
+							mp4 = Map();
+							mp4.put("Status","Bill Generated");
+							mp4.put("Books_Bill_ID",Created_Bill_ID);
+							update_bill = zoho.crm.updateRecord("Create_Bills",data.tolong(),mp4);
+							//info update_bill;
+							//////////////////////////////////////////////////////////////////////////
+							mp5 = Map();
+							mp5.put("Bill_Amount",Generated_bill_amount1.round(2));
+							update_PO = zoho.crm.updateRecord("Purchase_Orders",PO_Id.tolong(),mp5);
+						}
+						messages = "Bill is created on Zoho Books";
+						openurl("https://books.zoho.com/app#/bills/" + Created_Bill_ID + "","popup window","height=800,width=1000");
+					}
+				}
+				////////////////////////////////////////////////////////////////////////
+				// 			//////////////////// Update All Bills Date///////////////////////////////
+				// 			searchParam = {"cf_project_id":Proj_ID};
+				// 			Bills = zoho.books.getRecords("bills","666479573",searchParam);
+				// 			for each  data in Bills.get("bills")
+				// 			{
+				// 				due_date = data.get("due_date");
+				// 				mp = Map();
+				// 				mp.put("date",Invoice_date);
+				// 				mp.put("due_date",due_date);
+				// 				update_Bills = zoho.books.updateRecord("bills","666479573",data.get("bill_id"),mp);
+				// 			}
+				///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+				//////////////////////////////////////////////////////////////////////Inventory Adjustment ///////////////////////////////////////////////////////
+				//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+				productsLst = List();
+				for each  product in Product_List_obj
+				{
+					product_ID = product.get("Product_Name").get("id");
+					Products_obj = zoho.crm.getRecordById("Products",product.get("Product_Name").get("id"));
+					product_quantity = product.get("Quantity");
+					searchParam = {"zcrm_product_id":product_ID};
+					BooksItems = zoho.books.getRecords("items","666479573",searchParam);
+					item_Info = BooksItems.get("items").get(0);
+					item_id = item_Info.get("item_id");
+					alreadyExist = false;
+					if(item_Info.get("item_type") == "inventory")
+					{
+						for each  prod in productsLst
+						{
+							if(prod.get("item_id") == item_id)
+							{
+								prod.update("item_qty",prod.get("item_qty") + product_quantity);
+								alreadyExist = true;
+							}
+						}
+						if(alreadyExist == false)
+						{
+							itemMP = Map();
+							itemMP.put("item_id",item_id);
+							itemMP.put("item_qty",product_quantity);
+							productsLst.add(itemMP);
+						}
+					}
+				}
+				/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+				//////////////////////////////////////Fetch Bills Items Quantity//////////////////////////////////////////////////////////
+				PONumber = PO_autono;
+				searchBillParam = {"cf_memo":PONumber};
+				fetchBills = zoho.books.getRecords("bills","666479573",searchBillParam);
+				allBills = fetchBills.get("bills");
+				booksLineItems = List();
+				for each  bill in allBills
+				{
+					//info bill.get("bill_id");
+					bill1 = zoho.books.getRecordsByID("bills","666479573",bill.get("bill_id"));
+					lineItems = bill1.get("bill").get("line_items");
+					for each  lineItem in lineItems
+					{
+						itemID = lineItem.get("item_id");
+						qty = lineItem.get("quantity");
+						alreadyExist = false;
+						if(lineItem.get("item_type") == "inventory")
+						{
+							for each  prod in booksLineItems
+							{
+								if(prod.get("item_id") == itemID)
+								{
+									prod.update("item_qty",prod.get("item_qty") + qty);
+									alreadyExist = true;
+								}
+							}
+							if(alreadyExist == false)
+							{
+								mp = Map();
+								mp.put("item_id",itemID);
+								mp.put("item_qty",qty);
+								booksLineItems.add(mp);
+							}
+						}
+					}
+				}
+				/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+				createInventoryAdjustment = false;
+				lintemsList = List();
+				for each  lineItemDetail in productsLst
+				{
+					lineItemID = lineItemDetail.get("item_id");
+					ItemQuantity = lineItemDetail.get("item_qty");
+					PONumber = PO_autono;
+					extraQuantity = 0;
+					for each  bill in booksLineItems
+					{
+						if(bill.get("item_id") == lineItemID)
+						{
+							extraQuantity = extraQuantity + bill.get("item_qty");
+						}
+					}
+					/////////////////////////Search Inventory Adjustment//////////////
+					searchParam = {"reference_number":PONumber};
+					inventroryAdjustments = zoho.inventory.getRecords("inventoryadjustments","666479573",searchParam);
+					inventroryAdjustment = inventroryAdjustments.get("inventory_adjustments");
+					totalInvAdjustment = inventroryAdjustment.size();
+					countTotalAdj = 0;
+					for each  inventoryAdjustment in inventroryAdjustment
+					{
+						inventoryAdjustmentData = zoho.inventory.getRecordsByID("inventoryadjustments","666479573",inventoryAdjustment.get("inventory_adjustment_id"));
+						itemInvlst = inventoryAdjustmentData.get("inventory_adjustment").get("line_items");
+						for each  lineItem in itemInvlst
+						{
+							if(lineItem.get("item_id") == lineItemID)
+							{
+								quantity = lineItem.get("quantity_adjusted");
+								if(quantity - quantity == 0.0)
+								{
+									quantity = -1 * quantity;
+									countTotalAdj = countTotalAdj + quantity;
+								}
+							}
+						}
+					}
+					info "item " + lineItemID + "  quantity" + countTotalAdj;
+					addLIneItem = false;
+					info "item rem " + extraQuantity + " products adjusted " + ItemQuantity;
+					extraQuantity = extraQuantity - ItemQuantity;
+					info "item rem " + extraQuantity + " adventory adjusted " + countTotalAdj;
+					extraQuantity = extraQuantity - countTotalAdj;
+					info "extra quantity " + extraQuantity;
+					/////////////////////////////////////////////
+					if(extraQuantity == 0)
+					{
+						info "no need to be created";
+					}
+					else if(extraQuantity > 0)
+					{
+						addLIneItem = true;
+					}
+					info "extra quantity " + extraQuantity;
+					if(addLIneItem == true)
+					{
+						createInventoryAdjustment = true;
+						lineItems = Map();
+						lineItems.put("item_id",lineItemID);
+						if(extraQuantity > 0)
+						{
+							lineItems.put("quantity_adjusted","-" + extraQuantity);
+						}
+						// 						else
+						// 						{
+						// 							extraQuantity = -1 * extraQuantity;
+						// 							lineItems.put("quantity_adjusted",extraQuantity);
+						// 						}
+						lintemsList.add(lineItems);
+						info lintemsList;
+					}
+				}
+				//////////////////////Create Inventory Adjustment/////////////////////
+				if(createInventoryAdjustment == true)
+				{
+					///////////////////Create Inventory Adjustment///////////////////
+					invMP = Map();
+					invMP.put("adjustment_type","quantity");
+					invMP.put("date",zoho.currentdate);
+					invMP.put("reason","Inventory Adjustment");
+					invMP.put("description","PO: " + PONumber + ", Bill No: " + CRM_Bill_no + " Items Inventory Adjustment");
+					invMP.put("line_items",lintemsList);
+					invMP.put("reference_number",PONumber);
+					invNMP = Map();
+					invNMP.put("JSONString",invMP);
+					info invNMP;
+					createInventoryAdjustment = zoho.inventory.createRecord("inventoryadjustments","666479573",invMP);
+					info createInventoryAdjustment;
+				}
+			}
+			else
+			{
+				messages = "Bill is already created on Zoho Books";
+			}
+		}
+	}
+	//////////////////////////////////////////////////////////////////////
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Create Bill on Books / Purchase Orders / Button / CRM"
+		message :"ID: " + Bill_id + " Root Cause: " + e + " Created Bill Data:" + Bill_Create
+	]
+}
+return messages;

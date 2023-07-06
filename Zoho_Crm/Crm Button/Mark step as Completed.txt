@@ -1,0 +1,102 @@
+try 
+{
+	rep = List();
+	rep = step_id.replaceall("|||",",",true);
+	steps_id = List();
+	for each  data in rep
+	{
+		sign_project_obj = zoho.crm.getRelatedRecords("Workflow_Step","Deals",Sign_Pro_id.toLong());
+		if(!sign_project_obj.isEmpty())
+		{
+			if(sign_project_obj.get(0) != null)
+			{
+				if(sign_project_obj.get(0).get("message") == null)
+				{
+					for each  data2 in sign_project_obj
+					{
+						if(data2.get("Completed_Steps").get("id") == data.toLong())
+						{
+							steps_id.add(data2.get("id"));
+						}
+					}
+				}
+			}
+		}
+	}
+	for each  Step_proj_id in steps_id
+	{
+		step_proj_details = zoho.crm.getRecordById("Sign_Projects_X_Step",Step_proj_id.toLong());
+		Completed_date = ifnull(step_proj_details.get("Completed_Date"),"");
+		Step_id = ifnull(step_proj_details.get("Completed_Steps"),"").get("id");
+		Step_details = zoho.crm.getRecordById("Step",Step_id);
+		Days_to_complete = ifnull(Step_details,"").get("Days_to_complete");
+		Actual_Start_Date = ifnull(step_proj_details.get("Actual_Start_Date"),"");
+		Next_Contact_Date = step_proj_details.get("Next_Contact_Date");
+		//-----------------------------------------------------
+		// update the step completed date
+		today_date = zoho.currentdate;
+		if(Actual_Start_Date != "")
+		{
+			A = Actual_Start_Date.addDay(0);
+		}
+		else
+		{
+			A = today_date.addDay(0);
+		}
+		B = today_date.addDay(0);
+		/////////////////Calculating difference in business days ////////////////////////
+		////////////////total_days will store the value of numbers of days between start date and end date.
+		total_days = days360(A,B) + 1;
+		counter = leftpad("1",total_days).replaceAll(" ","1,").toList();
+		//////////////Here counter will generate a list like {1,1,1,1,1,1} with number of 1's based on value returned in total_days.
+		week_ends = 0;
+		date_counter = A;
+		for each index n in counter
+		{
+			/////////////////Use getDayOfWeek() to identify if it is a weekday or weekend. 
+			if(date_counter.getDayOfWeek() == 1 || date_counter.getDayOfWeek() == 7)
+			{
+				week_ends = week_ends + 1;
+			}
+			/////////////Now add one day for the next loop
+			date_counter = date_counter.addDay(1);
+		}
+		Completed_days = total_days - week_ends;
+		info Completed_days;
+		info Days_to_complete;
+		/////////////////////////////////// Calculate overdue days
+		Overdue_days = Completed_days - Days_to_complete;
+		info Overdue_days;
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		mp = Map();
+		if(Next_Contact_Date == "")
+		{
+			mp.put("Next_Contact_Date",today_date);
+		}
+		mp.put("Completed_Date",today_date);
+		mp.put("Cancelled_Date","");
+		mp.put("Status","Completed");
+		mp.put("Completed_Days",Completed_days);
+		mp.put("Overdue_Day","0");
+		mp.put("Overdue_Range","0");
+		update = zoho.crm.updateRecord("Sign_Projects_X_Step",Step_proj_id.tolong(),mp);
+		message_out = "This step has been marked as completed.";
+		// 	///////////////////////////////////////////////////////////////////////////////////////////////
+	}
+	///////////////////// This is used only to trigger workflows of Sign Project ///////////////////
+	Status_empty = Map();
+	Status_empty.put("Status","");
+	zoho.crm.updateRecord("Deals",Sign_Pro_id.toLong(),Status_empty,{"trigger":{"workflow"}});
+	///////////////////////////////////////////////////////////////////////////////////////
+	openUrl("https://crm.zoho.com/crm/org666155072/tab/Potentials/" + Sign_Pro_id,"parent window");
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Mark step as Completed / CRM Button Sign Project"
+		message :"ID: " + Sign_Pro_id + " Root Cause: " + e
+	]
+}
+return message_out;

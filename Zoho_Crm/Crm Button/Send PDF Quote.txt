@@ -1,0 +1,67 @@
+try 
+{
+	PDF_Generator = zoho.crm.getRelatedRecords("Client_Facing_Quote","Quotes",Quote_ID);
+	Quote = zoho.crm.getRecordById("Quotes",Quote_ID.toLong());
+	if(PDF_Generator != {})
+	{
+		Sign_Project = zoho.crm.getRecordById("Deals",PDF_Generator.get(0).get("Sign_Project_Name").get("id").toLong());
+		if(Quote.get("Account_Name").get("id") == Sign_Project.get("Account_Name").get("id"))
+		{
+			Customer_id = Quote.get("Account_Name").get("id");
+			Customer_contacts = zoho.crm.getRelatedRecords("Contacts","Accounts",Customer_id);
+			info Customer_contacts;
+			Customer_Secondary_contacts = zoho.crm.getRelatedRecords("Contacts139","Accounts",Customer_id);
+			info Customer_Secondary_contacts;
+			contact_id = Quote.get("Contact_Name").get("id");
+			Match_contact = 0;
+			/////////////////// Checking Main Contacts ///////////////////
+			for each  contact in Customer_contacts
+			{
+				if(contact.get("id") == contact_id)
+				{
+					Match_contact = Match_contact + 1;
+				}
+			}
+			///////////// Checking Secondary Contacts /////////////
+			for each  sec_contact in Customer_Secondary_contacts
+			{
+				if(sec_contact.get("Linking_Customers").get("id") == contact_id)
+				{
+					Match_contact = Match_contact + 1;
+				}
+			}
+			info Match_contact;
+			if(Match_contact > 0)
+			{
+				for each  data in PDF_Generator
+				{
+					PDF_Gen_ID = data.get("id");
+				}
+				openUrl("https://crm.zoho.com/crm/org666155072/Template.do?step=previewPop&entityId=" + PDF_Gen_ID + "&module=Invoices&contactNameId=" + Contact_ID + "&action=sendMail","popup window","height=700,width=1200");
+				Message_out = "Qoute PDF is opening in the next window";
+			}
+			else
+			{
+				return "Please select correct contact of customer and retry to send Quote PDF.";
+			}
+		}
+		else
+		{
+			return "Sign Project and Quote Customer are not matched.";
+		}
+	}
+	else if(PDF_Generator == {})
+	{
+		Message_out = "PDF of this Quote is not created";
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Send PDF Quote / CRM Button Quotes"
+		message :"ID: " + Quote_ID + " Root Cause: " + e
+	]
+}
+return Message_out;

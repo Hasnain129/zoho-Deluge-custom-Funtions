@@ -1,0 +1,82 @@
+try 
+{
+	resp = zoho.crm.getRecordById("Deals",proj_id.toLong());
+	landlord_id = ifnull(resp.get("Landlord_Contact_Information"),"").get("id");
+	Owner = resp.get("Owner").get("id");
+	//-------------Get Current User-----------------------
+	Auth = Map();
+	Auth.put("Authorization","552c0259ab984406b9bde0a1ba5658df");
+	loginemail = zoho.loginuserid;
+	User_resp = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2/users?scope=crmapi&type=ActiveUsers"
+		type :GET
+		connection:"zoho_crm"
+	];
+	for each  users in User_resp.get("users")
+	{
+		if(users.get("email") == loginemail)
+		{
+			currentuserid = users.get("id");
+		}
+	}
+	//--------------------------------------------------------------
+	// Maps data to Landlord Criteria module
+	response = "ALERT Landlord Contact Information field is empty. Please assign a Landlord in order to request for criteria.";
+	if(landlord_id != null)
+	{
+		mp = Map();
+		mp.put("Created_By",currentuserid);
+		mp.put("Modified_By",currentuserid);
+		mp.put("Owner",currentuserid);
+		mp.put("Sign_Project",proj_id);
+		mp.put("Vendor",landlord_id);
+		mp.put("Status","Draft");
+		createrecord = zoho.crm.createRecord("Landlord_Criteria_Form",mp,{"trigger":{"workflow"}});
+		LLC_id = createrecord.get("id");
+		openUrl("https://crm.zoho.com/crm/org666155072/tab/CustomModule25/" + LLC_id,"parent window");
+		response = "Landlord criteria has been created";
+		///////////////////////// Send Email /////////////////////////////////////////////
+		// 	LLC_detail = zoho.crm.getRecordById("Landlord_Criteria_Form",LLC_id);
+		// 	LLC_Name = LLC_detail.get("Name");
+		// 	Project_id = LLC_detail.get("Sign_Project").get("id");
+		// 	Project_name = LLC_detail.get("Sign_Project").get("name");
+		// 	Vendor_id = LLC_detail.get("Vendor").get("id");
+		// 	////////////////////// Fetch Vendor Email //////////////////////////
+		// 	Vendor_details = zoho.crm.getRecordById("Vendors",Vendor_id);
+		// 	Vendor_name = Vendor_details.get("Vendor_Name");
+		// 	Vendor_email = Vendor_details.get("Email");
+		// 	info Vendor_email;
+		/////////////////////// Fetch Primary Contract from Project /////////////
+		// 	Proj_details = zoho.crm.getRecordById("Deals",Project_id);
+		// 	Service_location = Proj_details.get("Service_Locations").get("name");
+		// 	Contact_id = Proj_details.get("Contact_Name").get("id");
+		// 	Contact_details = zoho.crm.getRecordById("Contacts",Contact_id);
+		// 	Contact_email = Contact_details.get("Email");
+		// 	info Contact_email;
+		//////////////////////////////// Subject of Email //////////////////////////
+		// 	subject_content = "New Signage for Your Tenant at " + Service_location;
+		// 	//////////////////////////////// Message of Email /////////////////////////
+		// 	str = "<div style='padding-left: 160px; text-align: justify;'><table border='1' style='height: 400px; width: 60.5078%; border-collapse: collapse; border-style: hidden;'><tbody><tr><td style='width: 100%;'><span style='font-family: calibri, sans-serif; font-size: 11pt;'>Dear " + Vendor_name + ",</span><div><span style='font-family: calibri, sans-serif; font-size: 11pt;'>&nbsp;</span></div><div><span style='font-family: calibri, sans-serif; font-size: 11pt;'>Our organization, Blink Signs,&nbsp; is working with your tenant to provide them&nbsp;<span class='il'>signage&nbsp;</span>services at the following site:" + Service_location + ". We will be abiding by the city code, however, we do require your criteria for the&nbsp;<span class='il'>signage</span>&nbsp;types allowed at this property. If you have any requirements, please click below to let us know.</span></div><div>&nbsp;</div><div style='text-align: center;'><div style='padding-left: 0px; text-align: center;'><span style='font-family: calibri, sans-serif; font-size: 12pt;'><a href='https://zfrmz.com/bPg8ing4JqCc4wcW1fsL?project=" + Project_name + "&landlord=" + Vendor_name + "&address=" + Service_location + "&LLC=" + LLC_Name + "'style='box-shadow: rgba(0, 0, 0, 0.2) 0px 1px 0px 0px; color: white; background: grey; border-radius: 5px; border: none; font-weight: bold; padding: 5px 15px; text-decoration: none;'><span style='font-size: 14pt;'>Signage Criteria</span></a></span></div></div><div>&nbsp;</div><div><div><span style='font-size: 11pt; font-family: calibri, sans-serif;'>We will utilize your requirements to design the sign for your tenant. Once the design is completed, we will be contacting you for final approval in the form of a signed letter on company letterhead. Attached is a template that can be used for this letterhead. This letter will also be used for the permit process.</span></div><div><div><span style='font-family: calibri, sans-serif; font-size: 11pt;'>&nbsp;</span></div><div><span style='font-family: calibri, sans-serif; font-size: 11pt;'>Please forward your criteria as well as any specific requirements as it relates to&nbsp;<span class='il'>signage&nbsp;</span>for this location so we are able to continue with this project.</span></div><div><span style='font-family: calibri, sans-serif; font-size: 11pt;'>&nbsp;</span></div><div><span style='font-family: calibri, sans-serif; font-size: 11pt;'>Thank You!</span></div></div></div></td></tr></tbody></table></div>";
+		// 	//////////////////////////////////////////////////////////////////////////
+		// 	sendmail
+		// 	[
+		// 		from :zoho.loginuserid
+		// 		to :Vendor_email
+		// 		cc:Contact_email
+		// 		subject :subject_content
+		// 		message :str
+		// 	]
+		/////////////////////////////////////////////////////////////////////
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Landlord Criteria / CRM Button Sign Project"
+		message :"ID: " + proj_id + " Root Cause: " + e
+	]
+}
+return response;

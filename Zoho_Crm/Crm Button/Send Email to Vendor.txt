@@ -1,0 +1,38 @@
+Vendor_details = zoho.crm.getRecordById("Vendors",Vendor_ID);
+Vendor_Name = Vendor_details.get("Vendor_Name");
+Vendor_email = Vendor_details.get("Email");
+if(Vendor_email != null)
+{
+	/////////////////////////////////// Creating Map to send email //////////////////////
+	Email_Map = Map();
+	Email_Map.put("from",{"user_name":"ERP Communications","email":zoho.adminuserid});
+	Email_Map.put("to",{{"user_name":Vendor_Name,"email":Vendor_email}});
+	Email_Map.put("reply_to",{"user_name":zoho.loginuser,"email":zoho.loginuserid});
+	Email_Map.put("template",{"id":"3205780000131131699"});
+	////////////////////////////////////////////////////////////////////////////////////
+	Email_map_list = List();
+	Email_map_list.add(Email_Map);
+	final_email_mp = {"data":Email_map_list};
+	///////////////////////////////////////////////////////////////////////////////////
+	Resp = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2.1/Vendors/" + Vendor_ID + "/actions/send_mail"
+		type :POST
+		parameters:final_email_mp + ""
+		connection:"zoho_crm"
+	];
+	info Resp;
+	if(Resp.get("data").get("0").get("code") == "SUCCESS")
+	{
+		Message_out = "Email has been sent to the Vendor";
+	}
+	else
+	{
+		Message_out = "Email is not sent. Please reach out to Support Team";
+	}
+}
+else
+{
+	Message_out = "Vendor email is missing. Please update Vendor Email on this record.";
+}
+return Message_out;

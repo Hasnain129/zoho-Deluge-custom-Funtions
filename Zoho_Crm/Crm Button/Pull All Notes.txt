@@ -1,0 +1,204 @@
+try 
+{
+	count = 0;
+	Deal = zoho.crm.getRecordById("Deals",Deal_id);
+	Reminder_Date = Deal.get("Reminder_Date");
+	////////////////////////////////////// Get Notes From Design //////////////////////////////////////////////
+	Designs_obj = zoho.crm.getRelatedRecords("Designs","Deals",Deal_id);
+	for each  data in Designs_obj
+	{
+		Notes_Obj = zoho.crm.getRelatedRecords("Notes","Designs",data.get("id").toLong());
+		for each  note in Notes_Obj
+		{
+			Created_Date = note.get("Created_Time");
+			Seconds = (Created_Date.toDateTime("yyyy-MM-dd'T'HH:mm:ss") - Reminder_Date.toDateTime("yyyy-MM-dd'T'HH:mm:ss")) / 3600;
+			info Seconds;
+			if(Seconds.toLong() > 0)
+			{
+				str = "Created by : " + note.get("Created_By").get("name") + "\n";
+				str = str + "Module : Design" + "\n\n";
+				str = str + "Content : " + note.get("Note_Content") + "\n\n";
+				str = str + "Link of record : " + "\n";
+				str = str + "https://crm.zoho.com/crm/org666155072/tab/CustomModule32/" + data.get("id") + "\n";
+				Mp = Map();
+				Mp.put("Note_Title",note.get("Note_Title"));
+				Mp.put("Note_Content",str);
+				Mp2 = Map();
+				Mp2.put("data",Mp.toList());
+				Resp = invokeurl
+				[
+					url :"https://www.zohoapis.com/crm/v2/Deals/" + Deal_id + "/Notes"
+					type :POST
+					parameters:Mp2 + ""
+					connection:"zoho_crm"
+				];
+				info Resp;
+				count = count + 1;
+			}
+		}
+	}
+	////////////////////////////////////// Get Notes From Quote //////////////////////////////////////////////
+	Quotes_obj = zoho.crm.getRelatedRecords("Quotes","Deals",Deal_id);
+	for each  data in Quotes_obj
+	{
+		Notes_Obj = zoho.crm.getRelatedRecords("Notes","Quotes",data.get("id"));
+		for each  note in Notes_Obj
+		{
+			Created_Date = note.get("Created_Time");
+			Seconds = (Created_Date.toDateTime("yyyy-MM-dd'T'HH:mm:ss") - Reminder_Date.toDateTime("yyyy-MM-dd'T'HH:mm:ss")) / 3600;
+			info Seconds;
+			if(Seconds.toLong() > 0)
+			{
+				str = "Created by : " + note.get("Created_By").get("name") + "\n";
+				str = str + "Module : Quotes" + "\n\n";
+				str = str + "Content : " + note.get("Note_Content") + "\n\n";
+				str = str + "Link of record : " + "\n";
+				str = str + "https://crm.zoho.com/crm/org666155072/tab/Quotes/" + data.get("id") + "\n";
+				Mp = Map();
+				Mp.put("Note_Title",note.get("Note_Title"));
+				Mp.put("Note_Content",str);
+				Mp2 = Map();
+				Mp2.put("data",Mp.toList());
+				Resp = invokeurl
+				[
+					url :"https://www.zohoapis.com/crm/v2/Deals/" + Deal_id + "/Notes"
+					type :POST
+					parameters:Mp2 + ""
+					connection:"zoho_crm"
+				];
+				count = count + 1;
+			}
+		}
+	}
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////// Get Notes From Purchase Orders ///////////////////////////////
+	PO_obj = zoho.crm.getRelatedRecords("Purchase_Orders","Deals",Deal_id);
+	for each  data in PO_obj
+	{
+		Notes_Obj = zoho.crm.getRelatedRecords("Notes","Purchase_Orders",data.get("id"));
+		for each  note in Notes_Obj
+		{
+			Created_Date = note.get("Created_Time");
+			Seconds = (Created_Date.toDateTime("yyyy-MM-dd'T'HH:mm:ss") - Reminder_Date.toDateTime("yyyy-MM-dd'T'HH:mm:ss")) / 3600;
+			info Seconds;
+			if(Seconds.toLong() > 0)
+			{
+				str = "Created by : " + note.get("Created_By").get("name") + "\n";
+				str = str + "Module : Purchase Orders" + "\n\n";
+				str = str + "Content : " + note.get("Note_Content") + "\n\n";
+				str = str + "Link of record : " + "\n";
+				str = str + "https://crm.zoho.com/crm/org666155072/tab/PurchaseOrders/" + data.get("id") + "\n";
+				Mp = Map();
+				Mp.put("Note_Title",note.get("Note_Title"));
+				Mp.put("Note_Content",str);
+				Mp2 = Map();
+				Mp2.put("data",Mp.toList());
+				Resp = invokeurl
+				[
+					url :"https://www.zohoapis.com/crm/v2/Deals/" + Deal_id + "/Notes"
+					type :POST
+					parameters:Mp2 + ""
+					connection:"zoho_crm"
+				];
+				count = count + 1;
+			}
+		}
+	}
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////// Get Notes From Sales Orders ///////////////////////////////
+	SO_obj = zoho.crm.getRelatedRecords("SalesOrders","Deals",Deal_id);
+	for each  data in SO_obj
+	{
+		Notes_Obj = zoho.crm.getRelatedRecords("Notes","Sales_Orders",data.get("id"));
+		for each  note in Notes_Obj
+		{
+			Created_Date = note.get("Created_Time");
+			Seconds = (Created_Date.toDateTime("yyyy-MM-dd'T'HH:mm:ss") - Reminder_Date.toDateTime("yyyy-MM-dd'T'HH:mm:ss")) / 3600;
+			info Seconds;
+			if(Seconds.toLong() > 0)
+			{
+				str = "Created by : " + note.get("Created_By").get("name") + "\n";
+				str = str + "Module : Sales Orders" + "\n\n";
+				str = str + "Content : " + note.get("Note_Content") + "\n\n";
+				str = str + "Link of record : " + "\n";
+				str = str + "https://crm.zoho.com/crm/org666155072/tab/SalesOrders/" + data.get("id") + "\n";
+				Mp = Map();
+				Mp.put("Note_Title",note.get("Note_Title"));
+				Mp.put("Note_Content",str);
+				Mp2 = Map();
+				Mp2.put("data",Mp.toList());
+				Resp = invokeurl
+				[
+					url :"https://www.zohoapis.com/crm/v2/Deals/" + Deal_id + "/Notes"
+					type :POST
+					parameters:Mp2 + ""
+					connection:"zoho_crm"
+				];
+				count = count + 1;
+			}
+		}
+	}
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////// Get Notes From Workflow Steps ///////////////////////////////
+	Steps_obj = zoho.crm.getRelatedRecords("Workflow_Step","Deals",Deal_id);
+	for each  data in Steps_obj
+	{
+		Notes_Obj = zoho.crm.getRelatedRecords("Notes","Sign_Projects_X_Step",data.get("id"));
+		for each  note in Notes_Obj
+		{
+			Created_Date = note.get("Created_Time");
+			Seconds = (Created_Date.toDateTime("yyyy-MM-dd'T'HH:mm:ss") - Reminder_Date.toDateTime("yyyy-MM-dd'T'HH:mm:ss")) / 3600;
+			info Seconds;
+			if(Seconds.toLong() > 0)
+			{
+				str = "Created by : " + note.get("Created_By").get("name") + "\n";
+				str = str + "Module : Workflow Steps (" + data.get("Completed_Steps").get("name") + ")" + "\n\n";
+				str = str + "Content : " + note.get("Note_Content") + "\n\n";
+				str = str + "Link of record : " + "\n";
+				str = str + "https://crm.zoho.com/crm/org666155072/tab/LinkingModule25/" + data.get("id") + "\n";
+				Mp = Map();
+				Mp.put("Note_Title",note.get("Note_Title"));
+				Mp.put("Note_Content",str);
+				Mp2 = Map();
+				Mp2.put("data",Mp.toList());
+				Resp = invokeurl
+				[
+					url :"https://www.zohoapis.com/crm/v2/Deals/" + Deal_id + "/Notes"
+					type :POST
+					parameters:Mp2 + ""
+					connection:"zoho_crm"
+				];
+				count = count + 1;
+			}
+		}
+	}
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	if(count > 0)
+	{
+		Mp3 = Map();
+		Mp3.put("Reminder_Date",zoho.currenttime.toString("yyyy-MM-dd'T'HH:mm:ss","GMT-4"));
+		resp = zoho.crm.updateRecord("Deals",Deal_id,Mp3);
+		info resp;
+	}
+	if(count > 0 && count < 2)
+	{
+		return count + " Note Pulled Successfully!";
+	}
+	else if(count > 1)
+	{
+		return count + " Notes Pulled Successfully!";
+	}
+	else
+	{
+		return "No New Notes Found!";
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Pull All Notes / CRM Button Sign Project"
+		message :"ID: " + Deal_id + " Root Cause: " + e
+	]
+}

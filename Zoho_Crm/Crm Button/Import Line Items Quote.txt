@@ -1,0 +1,19 @@
+QuoteRec = zoho.crm.getRecordById("Quotes",QuoteID);
+ZohoSheetID = ifnull(QuoteRec.get("Zoho_Sheet_ID"),"");
+if(ZohoSheetID == "")
+{
+	return "Sheet doesn't exist! Please press the button \"Import From Sheet\" first to create sheet.";
+}
+CheckTriggerVal = QuoteRec.get("Trigger_Importing_Workflow");
+if(CheckTriggerVal == true)
+{
+	zoho.crm.updateRecord("Quotes",QuoteID,{"Trigger_Importing_Workflow":false});
+}
+Update_mp = Map();
+Update_mp.put("Trigger_Importing_Workflow",true);
+Update_mp.put("Imported_Items_Count",0);
+Update_mp.put("Logged_In_Username",zoho.loginuser);
+Update_mp.put("Logged_In_User_Email",zoho.loginuserid);
+zoho.crm.updateRecord("Quotes",QuoteID,Update_mp,{"trigger":{"workflow"}});
+//----------------------------------------------------------------------------------------------------------------------------------------
+return "Line Items Importing Initiated!";

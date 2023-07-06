@@ -1,0 +1,27 @@
+try 
+{
+	mp = Map();
+	mp.put("Quote_Stage","Uploaded");
+	update_quote = zoho.crm.updateRecord("Quotes",Quote_id,mp,{"trigger":{"workflow"}});
+	//////////////////////// Create Note //////////////////////////
+	User_name = zoho.loginuser;
+	Title = "Quote marked as Uploaded";
+	Content = "Quote no: \"" + Quote_No + "\" is marked as Uploaded by " + User_name;
+	mp = Map();
+	mp.put("Parent_Id",Quote_id.tolong());
+	mp.put("Note_Title",Title);
+	mp.put("Note_Content",Content);
+	mp.put("$se_module","Quotes");
+	create_note = zoho.crm.createRecord("Notes",mp);
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Mark Quote As Uploaded / Quotes / Button / CRM"
+		message :"ID: " + Quote_id + " Root Cause: " + e
+	]
+}
+return "Quote is marked as Uploaded";

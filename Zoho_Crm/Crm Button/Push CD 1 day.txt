@@ -1,0 +1,19 @@
+try 
+{
+	Po_obj = zoho.crm.getRecordById("Sign_Projects_X_Step",id.toLong());
+	New_Date = Po_obj.get("Next_Contact_Date").addBusinessDay(1);
+	Update_Date = Map();
+	Update_Date.put("Next_Contact_Date",New_Date);
+	zoho.crm.updateRecord("Sign_Projects_X_Step",id.tolong(),Update_Date);
+	openUrl("https://crm.zoho.com/crm/org666155072/tab/LinkingModule25/" + id,"parent window");
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Push CD 1 day / CRM Button Project Workload"
+		message :"ID: " + id + " Root Cause: " + e
+	]
+}
+return "Next Contact Date Successfully Pushed";

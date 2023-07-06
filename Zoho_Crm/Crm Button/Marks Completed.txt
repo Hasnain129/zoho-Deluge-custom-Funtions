@@ -1,0 +1,96 @@
+rep = List();
+rep = step_id.replaceall("|||",",",true);
+steps_id = List();
+for each  data in rep
+{
+	sign_project_obj = zoho.crm.getRelatedRecords("Workflow_Step","Deals",Sign_Pro_id.toLong());
+	for each  data2 in sign_project_obj
+	{
+		if(data2.get("Completed_Steps").get("id") == data.toLong())
+		{
+			steps_id.add(data2.get("id"));
+		}
+	}
+}
+for each  Step_proj_id in steps_id
+{
+	step_proj_details = zoho.crm.getRecordById("Sign_Projects_X_Step",Step_proj_id.toLong());
+	Completed_date = ifnull(step_proj_details.get("Completed_Date"),"");
+	if(Completed_date == "")
+	{
+		//-----------------------------------------------------
+		// update the step completed date
+		today_date = today;
+		info today_date;
+		mp = Map();
+		mp.put("Completed_Date",today_date);
+		update = zoho.crm.updateRecord("Sign_Projects_X_Step",Step_proj_id.tolong(),mp);
+		//------------------------------------------------------
+		// Update the related sign project completed steps
+		step_proj_details = zoho.crm.getRecordById("Sign_Projects_X_Step",Step_proj_id.toLong());
+		proj_id = step_proj_details.get("Project_Status_Steps").get("id");
+		Step_name = step_proj_details.get("Completed_Steps").get("name");
+		proj_details = zoho.crm.getRecordById("Deals",proj_id);
+		Completed_Steps = ifnull(proj_details.get("Completed_Steps1"),"");
+		if(Completed_Steps == "")
+		{
+			Complete_Step = Step_name;
+		}
+		else if(Completed_Steps != "")
+		{
+			Complete_Step = Completed_Steps + "," + Step_name;
+		}
+		info Complete_Step;
+		mp2 = Map();
+		mp2.put("Completed_Steps1",Complete_Step);
+		update_proj = zoho.crm.updateRecord("Deals",proj_id,mp2,{"trigger":{"workflow"}});
+		message_out = "This step has been marked as completed.";
+	}
+	else
+	{
+		message_out = "This step is already marked as completed.";
+	}
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+	Sign_Project_obj = zoho.crm.getRelatedRecords("Workflow_Step","Deals",Sign_Pro_id.toLong());
+	Sign_Project = zoho.crm.getRecordById("deals",Sign_Pro_id.toLong());
+	info Sign_Project.get("Status");
+	if(Sign_Project.get("Status") != "Cancelled")
+	{
+		count = 0;
+		Complete_Step = List();
+		for each  data in Sign_Project_obj
+		{
+			Step_obj = zoho.crm.getRecordById("Sign_Projects_X_Step",data.get("id"));
+			if(Step_obj.get("Status") == "Active")
+			{
+				Active_Step = "Active";
+			}
+			else if(Step_obj.get("Status") == "Completed")
+			{
+				Complete_Step.add("Completed");
+			}
+			count = count + 1;
+		}
+		Update_Status = Map();
+		if(Active_Step != null)
+		{
+			Update_Status.put("Status",Active_Step);
+		}
+		if(Active_Step == null && Complete_Step.size() != count)
+		{
+			Update_Status.put("Status","On-Hold");
+		}
+		if(count - 1 == Complete_Step.size())
+		{
+			Update_Status.put("Status","Completed");
+		}
+		zoho.crm.updateRecord("Deals",Sign_Pro_id.toLong(),Update_Status);
+	}
+	else
+	{
+		return "Project already cancelled so step can't be marked as completed";
+	}
+}
+///////////////////////////////////////////////////////////////////////////////////////
+openUrl("https://crm.zoho.com/crm/org666155072/tab/Potentials/" + Sign_Pro_id,"parent window");
+return "";

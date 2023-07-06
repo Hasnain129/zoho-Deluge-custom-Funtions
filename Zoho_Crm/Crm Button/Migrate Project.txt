@@ -1,0 +1,230 @@
+try 
+{
+	mess = "";
+	deal_data = zoho.crm.getRecordById("Deals",Sp_Id);
+	ZProj_id = deal_data.get("Zoho_Projects_Project_ID");
+	info ZProj_id;
+	if(deal_data.get("Migrated_To_Projects") == true && ZProj_id != null)
+	{
+		mess = "Project is already migrated to Zoho Projects";
+	}
+	else if(deal_data.get("Migrated_To_Projects") == false && ZProj_id != null)
+	{
+		mess = "Project already exists on Zoho Projects";
+	}
+	else if(deal_data.get("Migrated_To_Projects") == false && ZProj_id == null)
+	{
+		workflow_id = deal_data.get("Workflow").get("id");
+		work_setup = zoho.crm.getRecordById("Workflow_Setup",workflow_id);
+		Selected_template = work_setup.get("Template_ID");
+		info "Template ID: " + Selected_template;
+		if(Selected_template != null)
+		{
+			name_P_ID = deal_data.get("Project_ID").toString();
+			customer = deal_data.get("Account_Name");
+			if(customer != null)
+			{
+				name_customer = customer.get("name");
+				////////////////////////////////////////////////////////////
+				if(name_customer.len() > 20)
+				{
+					name_customer = name_customer.subString(0,20);
+				}
+				///////////////////////////////////////////////////
+				location = deal_data.get("Service_Locations");
+				if(location != null)
+				{
+					location_name = location.get("name");
+					street_address = location_name.getPrefix(",");
+					if(street_address.len() > 50)
+					{
+						street_address = street_address.subString(0,50);
+					}
+				}
+				else
+				{
+					street_address = "";
+				}
+				///////////////////////////////////////////////////////////////////
+				project_name = name_customer + " / " + street_address + " / " + name_P_ID;
+				//info project_name;
+				Projet_manager = zoho.crm.getRecordById("users",deal_data.get("Owner").get("id")).get("users").toMap().get("zuid");
+				Production_Manager_id = deal_data.get("Production_Manager");
+				if(Production_Manager_id != null)
+				{
+					Production_Manager_i = Production_Manager_id.get("id");
+					Production_Manager = zoho.crm.getRecordById("users",Production_Manager_i).get("users").toMap().get("zuid");
+				}
+				sales_Rep_id = deal_data.get("Lead_Owner");
+				if(sales_Rep_id != null)
+				{
+					sales_Rep_id_i = sales_Rep_id.get("id");
+					sales_Rep = zoho.crm.getRecordById("users",sales_Rep_id_i).get("users").toMap().get("zuid");
+				}
+				info Projet_manager;
+				info Production_Manager;
+				info sales_Rep;
+				info deal_data.get("Created_Time").toDate().toString("MM-dd-yyyy");
+				proj_map = Map();
+				// ---------------------------------------------  Project Fields
+				proj_map.put("name",project_name);
+				proj_map.put("owner",Projet_manager);
+				proj_map.put("description",deal_data.get("Description"));
+				proj_map.put("show_project_overview","yes");
+				proj_map.put("template_id",Selected_template);
+				proj_map.put("entityId",Sp_Id);
+				proj_map.put("start_date",deal_data.get("Created_Time").toDate().toString("MM-dd-yyyy"));
+				if(deal_data.get("Closing_Date") == null)
+				{
+					info "Closing Date is Empty";
+				}
+				else
+				{
+					dt = deal_data.get("Closing_Date");
+					dt1 = dt.toString("MM-dd-yyyy");
+					proj_map.put("end_date",dt1);
+				}
+				// ------------------------------------------- Custom Fields ---------
+				proj_map.put("UDF_CHAR1",Sp_Id);
+				proj_map.put("UDF_USER2",Production_Manager);
+				proj_map.put("UDF_USER4",Projet_manager);
+				proj_map.put("UDF_USER3",sales_Rep);
+				proj_map.put("UDF_CHAR3",deal_data.get("Project_ID"));
+				//------------------------------------------Create Project------------------------------------
+				//info proj_map;
+				resp = invokeurl
+				[
+					url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/"
+					type :POST
+					parameters:proj_map
+					connection:"zohoprojectcall"
+				];
+				info "New project Created: " + resp;
+				// info resp.get("projects").get("id");
+				// --------------------------------------    -------------------------
+				Created_Project_data = resp.get("projects").toMap();
+				ZProj_id = Created_Project_data.get("id_string");
+				info "Zoho Project ID: " + ZProj_id;
+				//--------------------------------------- Get Customer details
+				customer_id = deal_data.get("Account_Name").get("id");
+				customer_data = zoho.crm.getRecordById("Accounts",customer_id);
+				info "Client ID: " + customer_data.get("zp_client_id");
+				if(customer_data.get("zp_client_id") == null)
+				{
+					//----------------------------------- Create a Client Company
+					param_Clint_Update = Map();
+					param_Clint_Update.put("name",deal_data.get("Account_Name").get("name"));
+					get_client_Update = invokeurl
+					[
+						url :"https://projectsapi.zoho.com/restapi/portal/666337121/clients/"
+						type :POST
+						parameters:param_Clint_Update
+						connection:"zohoprojectcall"
+					];
+					client_id = get_client_Update.get("clients").get(0).get("id");
+					////////////////// Updating ZP Client ID in CRM ////////////////////
+					update_account_map = Map();
+					update_account_map.put("zp_client_id",client_id.tostring());
+					update_account_resp = zoho.crm.updateRecord("Accounts",customer_id,update_account_map);
+				}
+				else
+				{
+					client_id = customer_data.get("zp_client_id");
+				}
+				/////////////////////////////////------- Add Client Company to Project
+				param_Clint_Update = Map();
+				param_Clint_Update.put("company_id",client_id);
+				param_Clint_Update.put("primary_client","yes");
+				get_client_Update = invokeurl
+				[
+					url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProj_id + "/clients/"
+					type :POST
+					parameters:param_Clint_Update
+					connection:"zohoprojectcall"
+				];
+				//info "Link  client company with Project" + get_client_Update;
+				// ---------------------------------------------- Link Project To Deals -----------
+				mp = Map();
+				mp.put("name",project_name);
+				datalist = List();
+				datalist.add(mp);
+				datamp = Map();
+				datamp.put("data",datalist);
+				resp = invokeurl
+				[
+					url :"https://www.zohoapis.com/crm/v2/Potentials/" + Sp_Id + "/Zoho_Projects/" + ZProj_id
+					type :POST
+					parameters:datamp.toString()
+					connection:"zohoprojectcall"
+				];
+				//info "Link Deal and ZProject" + resp;
+				//------------------------------------------Re-Update Update Project for correct owner ------------------------------------
+				update_map = Map();
+				update_map.put("owner",Projet_manager);
+				update_map.put("owner_id",Projet_manager);
+				Update_resp = invokeurl
+				[
+					url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProj_id + "/"
+					type :POST
+					parameters:update_map
+					connection:"zohoprojectcall"
+				];
+				//info "Update project " + Update_resp;
+				// --------------------------------------    -------------------------
+				// info resp.get("data").get(0).get(1).get("id");
+				update_crm_project = Map();
+				update_crm_project.put("Testing",true);
+				update_crm_project.put("Migrated_To_Projects",true);
+				update_crm_project.put("Zoho_Projects_Project_ID",ZProj_id);
+				update_crm_project.put("Estimated_Due_Date","");
+				update_crm_project.put("Task_Owner_Assignment",false);
+				update_crm_project.put("Task_Assignment_Done",false);
+				update_crm_project.put("Tasks_Map","");
+				update_crm_project.put("ZP_Main_Tasks","");
+				update_crm_project.put("ZP_Sub_Tasks","");
+				update_crm_project.put("ZP_ALL_Tasks","");
+				update_crm_project.put("Stage","Implementation");
+				resp = zoho.crm.updateRecord("Deals",Sp_Id,update_crm_project);
+				///////////////////////////////
+				if(ZProj_id == "")
+				{
+					mess = "Project Not Migrated. Please Contact Administrator";
+				}
+				else
+				{
+					//  ----------------------------------------------------  On Sucsess  Note Creation
+					User_name = zoho.loginuser;
+					Title = "Project Migrated";
+					Content = "Project ID: \"" + name_P_ID + "\" has been migrated to Zoho Projects by " + User_name;
+					mp = Map();
+					mp.put("Parent_Id",Sp_Id);
+					mp.put("Note_Title",Title);
+					mp.put("Note_Content",Content);
+					mp.put("$se_module","Deals");
+					create_note = zoho.crm.createRecord("Notes",mp);
+					//info create_note + "Note Returned";
+					// --------------------------------------------------------------------------------
+					mess = "Project Migrated";
+				}
+			}
+			else
+			{
+				mess = "No Customer is linked to this project";
+			}
+		}
+		else
+		{
+			mess = "Workflow / Template currently does not exist on Zoho Projects";
+		}
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Migrate Project / CRM Button Sign Project"
+		message :"ID: " + Sp_Id + " Root Cause: " + e
+	]
+}
+return mess;

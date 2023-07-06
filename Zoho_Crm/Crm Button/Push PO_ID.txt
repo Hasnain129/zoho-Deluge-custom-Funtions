@@ -1,0 +1,26 @@
+try 
+{
+	rep = List();
+	rep = Sign_pro_id.replaceall("|||",",",true);
+	for each  ids in rep
+	{
+		Sign_Pro = zoho.crm.getRecordById("Deals",ids);
+		Sign_Pro_obj = zoho.crm.getRelatedRecords("Workflow_Step","Deals",ids);
+		for each  data in Sign_Pro_obj
+		{
+			Mp = Map();
+			Mp.put("Project_ID",Sign_Pro.get("Project_ID"));
+			resp = zoho.crm.updateRecord("Sign_Projects_X_Step",data.get("id"),Mp);
+		}
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Push PO_ID / CRM Button Sign Project"
+		message :"ID: " + Sign_pro_id + " Root Cause: " + e
+	]
+}
+return "Done";

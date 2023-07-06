@@ -1,0 +1,67 @@
+Po_obj = zoho.crm.getRecordById("Sign_Projects_X_Step",id.toLong());
+New_Date = Po_obj.get("Dynamic_Due_Date").addBusinessDay(2);
+Update_Date = Map();
+Update_Date.put("Dynamic_Due_Date",New_Date);
+Update_Date.put("Due_Date_Updated_Manually",true);
+response = zoho.crm.updateRecord("Sign_Projects_X_Step",id.tolong(),Update_Date);
+///////////// Mark Status as Active if Due Date is Greater Then Todays Date ///////////////
+Po_obj2 = zoho.crm.getRecordById("Sign_Projects_X_Step",response.get("id"));
+today_Date = today.addBusinessDay(0);
+dyn_due_date = ifnull(Po_obj2.get("Dynamic_Due_Date"),"").addBusinessDay(0);
+if(Po_obj2.get("Status") == "Active" || Po_obj2.get("Status") == "Overdue")
+{
+	if(today_Date > dyn_due_date)
+	{
+		Status = "Overdue";
+		Overdue_Days = dyn_due_date.daysBetween(today_Date);
+		if(Overdue_Days == 1)
+		{
+			Overdue_rage = "1 Day";
+		}
+		else if(Overdue_Days == 2)
+		{
+			Overdue_rage = "2 Days";
+		}
+		else if(Overdue_Days == 3)
+		{
+			Overdue_rage = "3 Days";
+		}
+		else if(Overdue_Days > 3)
+		{
+			Overdue_rage = "3+ Days";
+		}
+		info Overdue_rage;
+		mp = Map();
+		mp.put("Todays_Date",today_Date);
+		mp.put("Overdue_Day",Overdue_Days);
+		mp.put("Overdue_Range",Overdue_rage);
+		mp.put("Status",Status);
+		update_record = zoho.crm.updateRecord("Sign_Projects_X_Step",response.get("id"),mp);
+	}
+	else
+	{
+		mp = Map();
+		mp.put("Status","Active");
+		mp.put("Overdue_Day","0");
+		mp.put("Overdue_Range","0");
+		update_record = zoho.crm.updateRecord("Sign_Projects_X_Step",response.get("id"),mp);
+	}
+}
+////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////// Update Estimate Due and Actual Start Date Project Level ////////////////////////
+Para = Map();
+Para.put("Sign_Project_id",Sign_Project_id);
+responed = invokeurl
+[
+	url :"https://crm.zoho.com/crm/v2/functions/count_all_steps_and_overdue_steps/actions/execute?auth_type=apikey&zapikey=1003.92bd8627e27fde976f5cecde483425d6.4247c26ba87331570834d7fb4d0ff618"
+	type :GET
+	parameters:Para
+];
+///////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////// This is used only to trigger workflows of Sign Project ///////////////////
+Status_empty = Map();
+Status_empty.put("Status","");
+zoho.crm.updateRecord("Deals",Sign_Project_id.toLong(),Status_empty,{"trigger":{"workflow"}});
+/////////////////////////////////////////////////////////////////////////////////////////////////
+openUrl("https://crm.zoho.com/crm/org666155072/tab/LinkingModule25/" + id,"parent window");
+return "Due Date Successfully Pushed";

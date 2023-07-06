@@ -1,0 +1,2 @@
+openUrl("https://books.zoho.com/app#/invoices/" + invoice_id + "/payment?filter_by=Status.Unpaid&per_page=25&sort_column=invoice_number&sort_order=D","popup window","height=600,width=800");
+return "Success";

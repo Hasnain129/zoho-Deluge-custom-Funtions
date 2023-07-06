@@ -1,0 +1,17 @@
+try 
+{
+	mp = Map();
+	mp.put("Quote_Stage","Lost");
+	update_quote = zoho.crm.updateRecord("Quotes",Quote_id,mp,{"trigger":{"workflow"}});
+	openUrl("https://crm.zoho.com/crm/org666155072/tab/Quotes/" + Quote_id + "/edit","parent window");
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Mark as Lost / CRM Button Quotes"
+		message :"ID: " + Quote_id + " Root Cause: " + e
+	]
+}
+return "Quote is marked as Lost";

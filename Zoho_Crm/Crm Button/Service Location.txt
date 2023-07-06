@@ -1,0 +1,16 @@
+try 
+{
+	Sign_project_obj = zoho.crm.getRecordById("Deals",Sign_Project_id.toLong());
+	Service_id = Sign_project_obj.get("Service_Locations").get("id");
+	openUrl("https://crm.zoho.com/crm/org666155072/tab/CustomModule24/" + Service_id + "/","new window");
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Service Location / CRM Button Sign Project"
+		message :"ID: " + Sign_Project_id + " Root Cause: " + e
+	]
+}
+return "";

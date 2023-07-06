@@ -1,0 +1,158 @@
+rep = List();
+rep = PO_id.replaceall("|||",",",true);
+resp = zoho.crm.getRecordById("Purchase_Orders",PO_id.tolong());
+respstr = resp.toString();
+respmap = respstr.toMap();
+//////////////////////// Organization Data ////////////////////////////
+Authtoken = Map();
+Authtoken.put("Authorization","552c0259ab984406b9bde0a1ba5658df");
+response = invokeurl
+[
+	url :"https://www.zohoapis.com/crm/v2/org"
+	type :GET
+	headers:Authtoken
+];
+for each  abc in response
+{
+	Organization_data = abc.get(0);
+}
+Organization_Logo = Organization_data.get("photo_id");
+Organization_Name = Organization_data.get("company_name");
+Organization_street = Organization_data.get("street");
+Organization_City = Organization_data.get("city");
+Organization_state = Organization_data.get("state");
+Organization_country_code = Organization_data.get("country_code");
+Organization_zip = Organization_data.get("zip");
+//////////////////////// Organization Data Ends ////////////////////////////
+///////////////////  Quote Details ///////////////////////////////
+///////////////////  Quote Owner Contact Details ///////////////////////////////
+Owner_ID = resp.get("Vendor_Name").get("id");
+Owner_Name = respmap.get("Vendor_Name").get("name");
+Vendor_id = respmap.get("Vendor_Name").get("id");
+Vendor_obj = zoho.crm.getRecordById("Vendors",Owner_ID);
+email = Vendor_obj.get("Email");
+// // ///////////////////  Quote Owner Contact Details Ends ///////////////////////////////
+PO_ID = respmap.get("PO_ID");
+Project = respmap.get("Project").get("name");
+dealid = respmap.get("Project").get("id");
+project_id = respmap.get("Project").get("id");
+RFQ = respmap.get("RFQ").get("name");
+Service_location = respmap.get("Service_Location").get("name");
+Grand_Total = respmap.get("Grand_Total");
+Due_Date = respmap.get("Due_Date").toDate();
+Vendor_Name = respmap.get("Vendor_Name").get("name");
+Terms = respmap.get("Terms");
+Payment_Method = respmap.get("Payment_Method1");
+Terms_and_Conditions = respmap.get("Terms_and_Conditions");
+Dessign_id = respmap.get("Design_Associated").get("id");
+// ///////////////////  Customer Details Ends /////////////////////////
+// ////////////////////////// Putting Data for Quote (Left Side)/////////////////////////////////////
+proj_obj = zoho.crm.getRecordById("Designs",Dessign_id);
+fileupload = proj_obj.get("Design");
+attachementId2 = fileupload.get(0).get("file_Id");
+// downloadFile1 = invokeurl
+// 	[
+// 		url :"https://www.zohoapis.com/crm/v2/Designs/" + Dessign_id + "/Attachments/3205780000011120009"
+// 		type :GET
+// 		connection:"attachfile"
+// 	];
+// info downloadFile1;
+abc = Map();
+Design_map = Map();
+// Design_map.put("entity_Id", 3205780000008901003);
+// Design_map.put("file_Name", "BlingSigns Logo.png");
+// Design_map.put("file_Id", "2lto605522708bbcf4396b093cb72a2d3b37f");
+Design_map.put("attachment_Id","3205780000011095130");
+info Design_map;
+abc = zoho.crm.attachFile("Designs",3205780000008901003,"3205780000008901003");
+info abc;
+//////////////////////////////////////////////////////////////////////////////////
+if(respmap.get("PO_Type") == "Non Site Survey")
+{
+	////////////////////////////////////////////////////////////////////////////
+	str = "Dear " + Vendor_Name + ",<br><br>Please find below the attached purchase order for details regarding scope of work <br> and pricing. Please review the PO and approve it.";
+	str = str + "<br><br><br><table><tr><td colspan='12' style='padding:4px 8px 4px 0px;border-bottom:0px solid #ccc' align='left'><a href='https://forms.zohopublic.com/blinksigns/form/BlinkSignsPOApproval1/formperma/iTQ8MRfAJSXU8VDJrH33BXBQ4YvZU6RjVspTegrdWq0?Project_ID=" + project_id + "&PO_ID=" + PO_ID + "&Vendor=" + Vendor_Name + "&RFQ=" + RFQ + "'; style='-webkit-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; -moz-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; color:#FFFF; background: #4CAF50; border-radius:5px; -moz-border-radius:5px; -webkit-border-radius:5px; border:none; font-size:14px; font-weight:700; padding:10px 26px; text-shadow:rgb(255, 238, 102) 0px 1px 0px; background-color: rgb(128, 128, 128);'>Accept/Reject PO</a></td></tr></table><br><br>Thank you! <br> Blink Signs Team!";
+}
+else
+{
+	str = "Dear " + Vendor_Name + ",<br><br>Please find below the attached purchase order for details regarding scope of work <br> and pricing. Please review the PO and approve it before beginning work:";
+	str = str + "<br><br><table><tr><td colspan='12' style='padding:4px 8px 4px 0px;border-bottom:0px solid #ccc' align='left'><a href='https://forms.zohopublic.com/blinksigns/form/BlinkSignsPOApproval1/formperma/iTQ8MRfAJSXU8VDJrH33BXBQ4YvZU6RjVspTegrdWq0?Project_ID=" + project_id + "&PO_ID=" + PO_ID + "&Vendor=" + Vendor_Name + "&RFQ=" + RFQ + "'; style='-webkit-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; -moz-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; color:#FFFF; background: #4CAF50; border-radius:5px; -moz-border-radius:5px; -webkit-border-radius:5px; border:none; font-size:14px; font-weight:700; padding:10px 26px; text-shadow:rgb(255, 238, 102) 0px 1px 0px; background-color: rgb(128, 128, 128);'>Accept/Reject PO</a></td></tr></table>";
+	str = str + "<br>After you have approved the PO, you can begin work. You will be submitting your results <br> through the following form within 8 hours of site survey completion before 04/15/2019 <br>through the following form:<br><br>  <table><tr><td colspan='12' style='padding:4px 8px 4px 0px;border-bottom:0px solid #ccc' align='left'><a href='https://creator.zohopublic.com/blinksigns/vendor-quotes/form-perma/Site_Survey_Documents/gJ65ppZkVzDWW206JA9YanTpO6GeBdRVKWsBrDfERUhf8A6uBreOKAr91rBG8AVSHN7sAtgOuBZeSY9JafUm47bsZqauahsCKwFR?Project=" + project_id + "&Vendor=" + Vendor_id + "&PO=" + PO_ID + "'; style='-webkit-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; -moz-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; color:#FFFF; background: #4CAF50; border-radius:5px; -moz-border-radius:5px; -webkit-border-radius:5px; border:none; font-size:14px; font-weight:700; padding:10px 26px; text-shadow:rgb(255, 238, 102) 0px 1px 0px; background-color: rgb(128, 128, 128);'>Submit Site Survey Results</a></td></tr></table><br><br>Thank you! <br> Blink Signs Team!";
+}
+str = str + "<br><br><br><table border='0' cellspacing='0' cellpadding='0' width='100%' style='background:#fff;padding:2px;'><tbody><tr><td><table border='0' cellspacing='0'cellpadding='0' width='100%' style='border-left:1px solid #dadada;border-right:4px solid#dadada;border-top:1px solid #dadada;border-bottom:4px solid #dadada;padding:10px;background-color:white;'><tbody><tr><td valign='top'><div style='font-family:Arial, Helvetica, sans-serif; font-size: 13px;'><div style='font-family: Verdana, arial,Helvetica, sans-serif; font-size: 12px;'></div>";
+str = str + "<br><br><div'><table border='0' width='100%'><tr><td><div><img src='https://drive.google.com/uc?export=view&id=1S3yAxWH-e3HE-1ipiPcaaU4fMhcM8hmj'></div></td>";
+str = str + "<td><div style='font-family: Arial;  font-size: 16px; text-align:right; font-weight:bold; color:black;'>" + Organization_Name + "</div>";
+str = str + "<div style='font-family: Arial; font-size:14px; text-align:right; color:black;'>" + Organization_street + ", " + Organization_City + ",<br> " + Organization_state + ", " + Organization_country_code + ", " + Organization_zip + " </div><div style='font-family: Verdana, arial,Helvetica, sans-serif; font-size: 12px;'><br><br></div></td></tr></table></div>";
+str = str + "<hr style='display:block; height:1px; border:0; border-top:1px solid #ccc; margin:1ength auto; padding:0;'></hr>";
+str = str + "<div style='display: block;'><ul style='float:left; width:350px; height:370px;'><span style='font-family: sans-serif; font-size: 26px; font-weight:bold;'>Purchase Order</span><br><span style='font-family: sans-serif; font-size: 16px; font-weight:bold; color:gray;'>" + PO_ID + "</span><br><br><br><table><td valign='top' width='20%'><span style='font-family: sans-serif; font-size: 15px; font-weight:bold;'>Project Name</span></td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<td valign='top'><span style='font-family: sans-serif; font-size: 14px; color:black;'>" + Project + "</span></td></table><br><span style='font-family: sans-serif; font-size: 15px; font-weight:bold;'>  RFQ</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style='font-family: sans-serif; font-size: 14px; color:black;'>" + RFQ + "</span><br><br><table><td valign='top'><span style='font-family: sans-serif; font-size: 15px; font-weight:bold;'>Service Location</span></td><td valign='top'><span style='font-family: sans-serif; font-size: 14px; color:black;'>" + Service_location + "</span></td></table><br><br><span style='font-family: sans-serif; font-size: 15px; font-weight:bold;'>Grand Total</span>&nbsp;&nbsp;&nbsp;&nbsp;<span style='font-family: sans-serif; font-size: 14px; color:black; font-weight:bold;'>$ " + Grand_Total + "</span><br><br><br><br></ul></div>";
+/////////////////////////Putting Data for Quote (Left Side) Ends /////////////////////////////////////
+/////////////////////////Putting Data for Quote (Right Side) Ends //////////////////////////////////
+str = str + "<br><br><br><br><br><div style='float: left; width:auto; height:auto; padding:auto'><ul style='float:left'><span style='font-family: sans-serif; font-size: 15px; font-weight:bold;'>Due Date</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style='font-family: sans-serif; font-size: 14px; color:black;'>" + Due_Date + "</span><br><br><span style='font-family: sans-serif; font-size: 15px; font-weight:bold;'>Vendor</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style='font-family: sans-serif; font-size: 14px; color:black;'>" + Vendor_Name + "</span><br><br><span style='font-family: sans-serif; font-size: 15px; font-weight:bold;'>Terms</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style='font-family: sans-serif; font-size: 14px; color:black;'>" + Terms + "</span><br><br><span style='font-family: sans-serif; font-size: 15px; font-weight:bold;'>Payment Method</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style='font-family: sans-serif; font-size: 14px; color:black;'>" + Payment_Method + "</span><br><br></ul></div>";
+/////////////////////////Putting Data for Quote (Right Side) Ends ///////////////////////////////////
+str = str + "<table  border='0' cellspacing='0'cellpadding='0' width='100%' style='font-family: Arial, Helvetica,sans-serif; font-size:15px; color:black;'><tr style='height:50px;'><td style='font-weight:bold; background-color:#708090;padding:4px 10px 4px 10px; border-top:0px solid gray; color:#FFFFFF'>S.No.</td><td style='padding:4px 10px 4px 10px;font-weight:bold;background-color:#708090;border-top:0px solid gray; color:#FFFFFF'>Items & Description</td><td style='padding:4px 10px 4px 10px;font-weight:bold;background-color:#708090;border-top:0px solid gray; color:#FFFFFF'>List Price</td><td style='padding:4px 10px 4px 10px;font-weight:bold;background-color:#708090;border-top:0px solid gray; color:#FFFFFF'>Qty</td><td style='padding:4px 10px 4px 10px;font-weight:bold;background-color:#708090;border-top:0px solid gray; color:#FFFFFF'>Discount</td><td align='right' style='padding:4px 10px 4px 10px;font-weight:bold;background-color:#708090;border-top:0px solid gray; color:#FFFFFF'>Amount</td></tr>";
+//////////////////////////// Ends /////////////////////////////////////
+productmap = respmap.get("Product_Details");
+jlist = productmap.toJSONList();
+count = 0;
+for each index j in jlist
+{
+	count = count + 1;
+	mapvar = jlist.get(j);
+	finalMap = mapvar.toMap();
+	pdt = finalMap.get("product").get("name");
+	description = finalMap.get("product_description");
+	listPrice = finalMap.get("list_price");
+	qty = finalMap.get("quantity");
+	discount = finalMap.get("Discount");
+	UnitPrice = finalMap.get("unit_price");
+	TotalDis = finalMap.get("total_after_discount");
+	Tax = finalMap.get("Tax");
+	netTotal = finalMap.get("net_total");
+	Total = finalMap.get("total");
+	str = str + "<tbody><tr><td style='padding:4px 10px 4px 10px;border-bottom:2px dotted #dadada' valign='top'><b>" + count + "<br></b></td>";
+	str = str + "<td style='padding:4px 10px 4px 10px; border-bottom:2px dotted #dadada'><b>" + pdt + "</b><br>" + description + "</td>";
+	str = str + "<td style='padding:4px 10px 4px 10px;border-bottom:2px dotted #dadada' valign='top' color:#E0E2E5 >" + "$" + listPrice + "</td>";
+	str = str + "<td style='padding:4px 10px 4px 10px;border-bottom:2px dotted #dadada' valign='top' color:#E0E2E5>" + qty + "</td>";
+	str = str + "<td style='padding:4px 10px 4px 10px;border-bottom:2px dotted #dadada' valign='top' color:#E0E2E5>" + "$" + discount + "</td>";
+	str = str + "<td style='padding:4px 10px 4px 10px;border-bottom:2px dotted #dadada' align='right' valign='top' color:#E0E2E5>" + "$" + Total + "</td>";
+	str = str + "</tr></tbody>";
+}
+subtotal = ifnull(respmap.get("Sub_Total"),"0.00");
+totaltax = ifnull(respmap.get("Tax"),"0.00");
+adjustment = ifnull(respmap.get("Adjustment"),"0.00");
+Grandtotal = ifnull(respmap.get("Grand Total"),"0.00");
+str = str + "</table>";
+str = str + "<div style='width:70%;float:left;padding-top: 100px'> <b style='font-size:15px; padding-left:12px; '>Authority Signature</b></div>";
+str = str + "<div style='width:30%;float:left;'>";
+str = str + "<table border='0' cellspacing='0' cellpadding='0' width='100%' style='font-family: Arial, Helvetica,sans-serif; font-size:15px; color:black;'><tbody><tr> ";
+str = str + "<td style='padding:4px 10px 4px 10px;border-bottom:0px solid #ccc'><b>Sub Total</b></td>";
+str = str + "<td  style='padding:4px 10px 4px 10px;border-bottom:0px solid #ccc;border-top:0px solid #dadada;' align='right'><b>" + "$" + subtotal + "</b></td></tr><br>";
+str = str + "<tr><td  style='padding:4px 10px 4px 10px;border-bottom:0px solid #ccc'><b>Service Tax</b></td>";
+str = str + "<td  style='padding:4px 10px 4px 10px;border-bottom:0px solid #ccc;border-top:0px solid #dadada;' align='right'><b>" + "$" + totaltax + "</b></td></tr><br>";
+str = str + "<tr><td style='border-bottom:0px solid #ccc; border-top:0px solid #dadada; color:#FFFFFF;background:#708090;padding:4px 10px 4px 10px;'><b> Grand Total </b></td>";
+str = str + "<td  style='border-bottom:0px solid #ccc; border-top:0px solid #dadada; color:#FFFFFF; text-align:right; background:#708090;padding:4px 10px 4px 10px;'><b>" + "$" + Grand_Total + "</b></td></tr></tbody></table></div>";
+str = str + "<tr><td colspan='12' style='padding:4px 10px 4px 10px;border-bottom:0px solid #ccc' align='justify'><br><b style='font-size:15px'>Terms & Conditions :</b><br><br>" + Terms_and_Conditions + "<br><br><br><br></td></tr><br><br><br><br>";
+////////////////////////////////////////////////////////////////////
+if(respmap.get("PO_Type") == "Site Survey")
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"shahzaib.shah@basecampdata.com"
+		subject :"PO Details"
+		message :str
+		content type :HTML
+	]
+}
+else
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"shahzaib.shah@basecampdata.com"
+		subject :"PO Details"
+		message :str
+		content type :HTML
+	]
+}
+return "PO Email Sent Successfully";

@@ -1,0 +1,68 @@
+QuoteRec = zoho.crm.getRecordById("Quotes",QuoteID);
+QuoteNumber = QuoteRec.get("Quote_Auto_No");
+// ProjectName = QuoteRec.get("Deal_Name").get("name");
+OrganizationName = QuoteRec.get("Organization_Name");
+ZohoSheetID = ifnull(QuoteRec.get("Zoho_Sheet_ID"),"");
+if(ZohoSheetID == "")
+{
+	Req_Para = Map();
+	Req_Para.put("method","workbook.createfromtemplate");
+	Req_Para.put("resource_id","6nvcq1b39ca7074e14915abc7c29668dcb95f");
+	Req_Para.put("workbook_name",QuoteNumber);
+	CreateResp = invokeurl
+	[
+		url :"https://sheet.zoho.com/api/v2/createfromtemplate"
+		type :POST
+		parameters:Req_Para
+		connection:"zoho_sheet"
+	];
+	ZohoSheetID = CreateResp.get("resource_id");
+	//----------------------------------------------------------------------------------
+	info zoho.crm.updateRecord("Quotes",QuoteID,{"Zoho_Sheet_ID":ZohoSheetID});
+	Update_Req_Para = Map();
+	Update_Req_Para.put("method","worksheet.jsondata.set");
+	Update_Req_Para.put("worksheet_name","Line Item");
+	Update_Req_Para.put("json_data",{{"row_index":2,"Organization":OrganizationName}});
+	UpdateResp = invokeurl
+	[
+		url :"https://sheet.zoho.com/api/v2/" + ZohoSheetID + ""
+		type :POST
+		parameters:Update_Req_Para
+		connection:"zoho_sheet"
+	];
+	info UpdateResp;
+	//----------------------------------------------------------------------------------
+	LoggedInUserEmail = zoho.loginuserid;
+	if(LoggedInUserEmail != "erp@blinksigns.com")
+	{
+		Update_Req_Para = Map();
+		Update_Req_Para.put("method","workbook.share");
+		Update_Req_Para.put("resource_id",ZohoSheetID);
+		Update_Req_Para.put("share_json",{{"user_email":LoggedInUserEmail,"access_level":"edit"}});
+		UpdateResp = invokeurl
+		[
+			url :"https://sheet.zoho.com/api/v2/share"
+			type :POST
+			parameters:Update_Req_Para
+			connection:"zoho_sheet"
+		];
+		info UpdateResp;
+	}
+	//----------------------------------------------------------------------------------
+	createTrigger_mp = Map();
+	createTrigger_mp.put("Quote_ID",QuoteID.toLong());
+	createTriggerData_mp = Map();
+	createTriggerData_mp.put("data",createTrigger_mp);
+	createTriggerResp = invokeurl
+	[
+		url :"https://creator.zoho.com/api/v2/blinksigns/api-triggers/form/Line_Item_Workflow_Triggers"
+		type :POST
+		parameters:createTriggerData_mp + ""
+		connection:"zoho_creator"
+	];
+	info createTriggerResp;
+	//----------------------------------------------------------------------------------
+	zoho.crm.updateRecord("Quotes",QuoteID,{"Add_Remaining_Sheet_Users":true},{"trigger":{"workflow"}});
+}
+openUrl("https://sheet.zoho.com/sheet/open/" + ZohoSheetID + "","popup window","height=600,width=1200");
+return "";

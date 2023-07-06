@@ -1,0 +1,36 @@
+SORec = zoho.crm.getRecordById("Sales_Orders",SOID);
+SONumber = SORec.get("SO_No");
+// ProjectName = SORec.get("Deal_Name").get("name");
+ZohoSheetID = ifnull(SORec.get("Zoho_Sheet_ID"),"");
+if(ZohoSheetID == "")
+{
+	Req_Para = Map();
+	Req_Para.put("method","workbook.createfromtemplate");
+	Req_Para.put("resource_id","jbjzic86df0cd7f0a4ba1a662f2660c8aceab");
+	Req_Para.put("workbook_name",SONumber);
+	CreateResp = invokeurl
+	[
+		url :"https://sheet.zoho.com/api/v2/createfromtemplate"
+		type :POST
+		parameters:Req_Para
+		connection:"zoho_sheet"
+	];
+	ZohoSheetID = CreateResp.get("resource_id");
+	info zoho.crm.updateRecord("Sales_Orders",SOID,{"Zoho_Sheet_ID":ZohoSheetID});
+	// 	Update_Req_Para = Map();
+	// 	Update_Req_Para.put("method","cell.content.set");
+	// 	Update_Req_Para.put("worksheet_name","Line Item");
+	// 	Update_Req_Para.put("row",2);
+	// 	Update_Req_Para.put("column",1);
+	// 	Update_Req_Para.put("content",SOID);
+	// 	UpdateResp = invokeurl
+	// 	[
+	// 		url :"https://sheet.zoho.com/api/v2/" + ZohoSheetID + ""
+	// 		type :POST
+	// 		parameters:Update_Req_Para
+	// 		connection:"zoho_sheet"
+	// 	];
+	// 	info UpdateResp;
+}
+openUrl("https://sheet.zoho.com/sheet/open/" + ZohoSheetID + "","popup window","height=600,width=1200");
+return "";

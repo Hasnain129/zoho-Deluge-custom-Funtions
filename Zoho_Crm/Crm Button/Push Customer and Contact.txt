@@ -1,0 +1,50 @@
+try 
+{
+	rep = List();
+	rep = So_id.replaceall("|||",",",true);
+	for each  ids in rep
+	{
+		So_obj = zoho.crm.getRecordById("SO_Data_Import",ids);
+		if(So_obj.get("Customer_Name") == null)
+		{
+			if(So_obj.get("Sign_Project") != null)
+			{
+				Sign_pro_id = So_obj.get("Sign_Project").get("id");
+				Sign_pro_obj = zoho.crm.getRecordById("Deals",Sign_pro_id);
+				if(Sign_pro_obj != {})
+				{
+					if(Sign_pro_obj.get("Account_Name") != null)
+					{
+						mp = Map();
+						mp.put("id",Sign_pro_obj.get("Account_Name").get("id"));
+						customer_mp = Map();
+						customer_mp.put("Customer_Name",mp);
+						update = zoho.crm.updateRecord("SO_Data_Import",ids,customer_mp);
+					}
+					if(Sign_pro_obj.get("Contact_Name") != null)
+					{
+						mp2 = Map();
+						mp2.put("id",Sign_pro_obj.get("Contact_Name").get("id"));
+						contact_mp = Map();
+						contact_mp.put("Contacts",mp2);
+						update2 = zoho.crm.updateRecord("SO_Data_Import",ids,contact_mp);
+					}
+				}
+			}
+		}
+		//////////////////////////// Update Subject /////////////////////////////////////////
+		Sub_mp = Map();
+		Sub_mp.put("Subject","New Sales Order from Blink Signs" + " " + So_obj.get("SO_No"));
+		zoho.crm.updateRecord("SO_Data_Import",ids,Sub_mp);
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Push Customer and Contact / CRM Button SO Data Import"
+		message :"ID: " + So_id + " Root Cause: " + e
+	]
+}
+return "Done";

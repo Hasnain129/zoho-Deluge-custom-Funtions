@@ -1,0 +1,41 @@
+// 3205780000113620225
+rep = List();
+rep = Lead_IDs.replaceall("|||",",",true);
+for each  Lead_id in rep
+{
+	entityMap = zoho.crm.getRecordById("Leads",Lead_id);
+	testing = entityMap.get("test");
+	Company_name = entityMap.get("Company");
+	info testing + "Testing";
+	info Company_name + "Company_name";
+	lead_update_map = Map();
+	if(testing = True)
+	{
+		if(Company_name != "")
+		{
+			query = "{\"select_query\":\"select Account_Name from Accounts where (Account_Name='" + Company_name + "' and (Type=Brands))\"}";
+			QueryResp = invokeurl
+			[
+				url :"https://www.zohoapis.com/crm/v2/coql"
+				type :POST
+				parameters:query
+				connection:"zoho_crm"
+			];
+			if(ifnull(QueryResp.size(),0) > 0)
+			{
+				lead_update_map.put("Qualification_Criteria","Brands");
+			}
+			else
+			{
+				lead_update_map.put("Qualification_Criteria","Not Brands");
+			}
+		}
+		else
+		{
+			lead_update_map.put("Qualification_Criteria","");
+		}
+		updated_lead = zoho.crm.updateRecord("leads",Lead_id,lead_update_map);
+		info updated_lead;
+	}
+}
+return "";

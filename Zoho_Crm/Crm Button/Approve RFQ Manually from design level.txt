@@ -1,0 +1,119 @@
+rfq = zoho.crm.getRecordById("Requests_for_quote",rfqid.toLong());
+rfqname = ifnull(rfq.get("Name"),"");
+dealDetails = zoho.crm.getRecordById("Deals",dealid.toLong());
+projectname = dealDetails.get("Deal_Name");
+designDetails = zoho.crm.getRecordById("Designs",designid.toLong());
+designname = designDetails.get("Name");
+/////////////////// Get Vendor Names //////////////////////////////
+vendorIdList = List();
+vendorSubform = ifnull(rfq.get("Vendor_Lookup"),"");
+for each  ele in vendorSubform
+{
+	vendorIdList.add(ele.get("Vendor").get("id"));
+}
+for each  vendorId in vendorIdList
+{
+	vendorInfo = zoho.crm.getRecordById("Vendors",vendorId);
+	vendorName = vendorInfo.get("Vendor_Name");
+}
+/////////////////////////////////Get WorkDetails Service Name ///////////////////////////////
+work_detial = rfq.get("Work_Details");
+jlist = work_detial.toJSONList();
+for each index j in jlist
+{
+	if(j == 0)
+	{
+		mapvar = jlist.get(0);
+		finalMap = mapvar.toMap();
+		service_name_1 = ifnull(finalMap.get("Service").get("name"),"none");
+		no_of_services = "1";
+	}
+	else if(j == 1)
+	{
+		mapvar = jlist.get(1);
+		finalMap = mapvar.toMap();
+		service_name_2 = ifnull(finalMap.get("Service").get("name"),"none");
+		no_of_services = "2";
+	}
+	else if(j == 2)
+	{
+		mapvar = jlist.get(2);
+		finalMap = mapvar.toMap();
+		service_name_3 = ifnull(finalMap.get("Service").get("name"),"none");
+		no_of_services = "3";
+	}
+	else if(j == 3)
+	{
+		mapvar = jlist.get(3);
+		finalMap = mapvar.toMap();
+		service_name_4 = ifnull(finalMap.get("Service").get("name"),"none");
+		no_of_services = "4";
+	}
+	else if(j == 4)
+	{
+		mapvar = jlist.get(4);
+		finalMap = mapvar.toMap();
+		service_name_5 = ifnull(finalMap.get("Service").get("name"),"none");
+		no_of_services = "5";
+	}
+}
+Services = List();
+if(service_name_1 != null)
+{
+	Services.add(service_name_1);
+}
+if(service_name_2 != null)
+{
+	Services.add(service_name_2);
+}
+if(service_name_3 != null)
+{
+	Services.add(service_name_3);
+}
+if(service_name_4 != null)
+{
+	Services.add(service_name_4);
+}
+if(service_name_5 != null)
+{
+	Services.add(service_name_5);
+}
+Characters = List({"'","*","(",")","!","@","#","$","%","+","^","&","_","-","-","=","}","{","]","[",'"',":",";",".",'\',"<",">"});
+for each  data in Services
+{
+	for each  data2 in Characters
+	{
+		if(service_name_1 != null)
+		{
+			service_name_1 = service_name_1.remove(data2);
+		}
+		if(service_name_2 != null)
+		{
+			service_name_2 = service_name_2.remove(data2);
+		}
+		if(service_name_3 != null)
+		{
+			service_name_3 = service_name_3.remove(data2);
+		}
+		if(service_name_4 != null)
+		{
+			service_name_4 = service_name_4.remove(data2);
+		}
+		if(service_name_5 != null)
+		{
+			service_name_5 = service_name_5.remove(data2);
+		}
+	}
+}
+info no_of_services;
+info vendorName;
+info rfqname;
+info projectname;
+info service_name_1;
+info service_name_2;
+info service_name_3;
+info service_name_4;
+info service_name_5;
+/////////////////////////////////////////////////////////////////////////
+openUrl("https://zfrmz.com/GoMclEBAh6XjS35hfCkZ?num=" + no_of_services + "&v=" + vendorName + "&rfq=" + rfqname + "&s1=" + ifnull(service_name_1,"") + "&s2=" + ifnull(service_name_2,"") + "&s3=" + ifnull(service_name_3,"") + "&s4=" + ifnull(service_name_4,"") + "&s5=" + ifnull(service_name_5,"") + "&p=" + projectname + "&d=" + designname,"open window");
+return "Please approve the RFQ on the opened form and provide signature on behalf of the Vendor";

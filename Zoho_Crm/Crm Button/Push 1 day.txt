@@ -1,0 +1,23 @@
+try 
+{
+	rep = List();
+	rep = PO_id.replaceall("|||",",",true);
+	for each  ids in rep
+	{
+		Po_obj = zoho.crm.getRecordById("Purchase_Orders",ids);
+		New_Date = Po_obj.get("Next_Contact_Date").addDay(1);
+		Update_Date = Map();
+		Update_Date.put("Next_Contact_Date",New_Date);
+		zoho.crm.updateRecord("Purchase_Orders",ids,Update_Date);
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Push 1 day / CRM Button Purchase Orders"
+		message :"ID: " + PO_id + " Root Cause: " + e
+	]
+}
+return "Next Contact Date Successfully Pushed";

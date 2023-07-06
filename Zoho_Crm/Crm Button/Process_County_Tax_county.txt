@@ -1,0 +1,129 @@
+AuthToken = Map();
+AuthToken.put("Authorization","af908161b079b35a056e260f5142b0a7");
+CRM_AuthToken = Map();
+CRM_AuthToken.put("Authorization","552c0259ab984406b9bde0a1ba5658df");
+iter_main = List({1,2,3,4,5});
+for each  i in iter_main
+{
+	Tax_List = zoho.crm.searchRecords("Tax","(county_processed:equals:false)",i,200);
+	for each  tax in Tax_List
+	{
+		// 	check specific tax 		
+		selected_tax = zoho.crm.getRecordById("Tax",tax.get("id"));
+		if(selected_tax.get("county_tax_id") == "123")
+		{
+			//////////////////
+			query = "{\"select_query\":\"Select Name,County_Tax,county_tax_id from Tax where (County_Tax='" + selected_tax.get("County_Tax") + "')and(county_tax_id != 123)  limit 1\" }";
+			search_existing = invokeurl
+			[
+				url :"https://www.zohoapis.com/crm/v2/coql"
+				type :POST
+				parameters:query
+				headers:CRM_AuthToken
+			];
+			if(search_existing == "")
+			{
+				// Create  tax  in zoho books 
+				make_tax_map = Map();
+				make_tax_map.put("tax_name",selected_tax.get("County_Tax"));
+				make_tax_map.put("tax_percentage",selected_tax.get("County_Tax1"));
+				make_tax_map.put("tax_authority_name",selected_tax.get("County_Tax_Authority"));
+				JSONString = Map();
+				JSONString.put("JSONString",make_tax_map);
+				update_response = invokeurl
+				[
+					url :"https://books.zoho.com/api/v3/settings/taxes?organization_id=666479573"
+					type :POST
+					parameters:JSONString
+					headers:AuthToken
+				];
+				info "Record Created" + update_response;
+				books_tax_id = update_response.get("tax").get("tax_id");
+				//////////////////////////////////////////////////////////////// update the current tax in crm  ////////////
+				crm_update_map = Map();
+				crm_update_map.put("county_tax_id",books_tax_id);
+				crm_update_map.put("county_processed",true);
+				updation = zoho.crm.updateRecord("Tax",selected_tax.get("id"),crm_update_map);
+				info "Record Updated" + updation;
+				//////////////////////////////////////////////////////// search in crm to update the same name taxes 
+				// search = zoho.crm.searchRecords("Tax","((State_Tax:equals:"+selected_tax.get("State_Tax")  +")and(state_tax_id:equals:"+"123"+"))");
+				query = "{\"select_query\":\"Select Name,County_Tax from Tax where (County_Tax='" + selected_tax.get("County_Tax") + "')  \"}";
+				search = invokeurl
+				[
+					url :"https://www.zohoapis.com/crm/v2/coql"
+					type :POST
+					parameters:query
+					headers:CRM_AuthToken
+				];
+				info "data on search to mass update ahead" + search;
+				data = search.toMap();
+				A = data.get("data");
+				for each  w in A
+				{
+					crm_update_map = Map();
+					crm_update_map.put("county_tax_id",books_tax_id);
+					crm_update_map.put("county_processed",true);
+					updation = zoho.crm.updateRecord("Tax",w.get("id"),crm_update_map);
+				}
+			}
+			else
+			{
+				data = search_existing.toMap();
+				A = data.get("data");
+				extracted_id = 123;
+				for each  w in A
+				{
+					extracted_id = w.get("id");
+				}
+				info extracted_id;
+				//////////////////////////////////////////////////////////////// update the current tax in crm  ////////////
+				crm_update_map = Map();
+				crm_update_map.put("county_tax_id",extracted_id);
+				crm_update_map.put("county_processed",true);
+				updation = zoho.crm.updateRecord("Tax",selected_tax.get("id"),crm_update_map);
+				info "else on " + selected_tax.get("County_Tax");
+				query = "{\"select_query\":\"Select Name,County_Tax from Tax where (County_Tax='" + selected_tax.get("County_Tax") + "')  \"}";
+				search = invokeurl
+				[
+					url :"https://www.zohoapis.com/crm/v2/coql"
+					type :POST
+					parameters:query
+					headers:CRM_AuthToken
+				];
+				info "data search to mass update ahead on else" + search;
+				data = search.toMap();
+				A = data.get("data");
+				for each  w in A
+				{
+					crm_update_map = Map();
+					crm_update_map.put("county_tax_id",extracted_id);
+					crm_update_map.put("county_processed",true);
+					updation = zoho.crm.updateRecord("Tax",w.get("id"),crm_update_map);
+				}
+			}
+		}
+		else
+		{
+			info "else on " + selected_tax.get("County_Tax");
+			query = "{\"select_query\":\"Select Name,County_Tax from Tax where (County_Tax='" + selected_tax.get("County_Tax") + "')  \"}";
+			search = invokeurl
+			[
+				url :"https://www.zohoapis.com/crm/v2/coql"
+				type :POST
+				parameters:query
+				headers:CRM_AuthToken
+			];
+			info "data search to mass update ahead on else" + search;
+			data = search.toMap();
+			A = data.get("data");
+			for each  w in A
+			{
+				crm_update_map = Map();
+				crm_update_map.put("county_tax_id",selected_tax.get("county_tax_id"));
+				crm_update_map.put("county_processed",true);
+				updation = zoho.crm.updateRecord("Tax",w.get("id"),crm_update_map);
+			}
+		}
+	}
+}
+return "Completed";

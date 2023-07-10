@@ -1,0 +1,13 @@
+rep = List();
+rep = Quote_ids.replaceall("|||",",",true);
+for each  Quote_id in rep
+{
+	Quote_details = zoho.crm.getRecordById("Quotes",Quote_id);
+	created_date = Quote_details.get("Created_Time").toDate();
+	info created_date;
+	mp = Map();
+	mp.put("Quote_Sent_Date",created_date);
+	Update_Quotes = zoho.crm.updateRecord("Quotes",Quote_id,mp);
+	info Update_Quotes;
+}
+return "Updated";

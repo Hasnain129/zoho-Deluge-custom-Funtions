@@ -1,0 +1,105 @@
+try 
+{
+	///////////////////////// Getting Record //////////////////////////////////
+	rep = List();
+	rep = sp_id.replaceall("|||",",",true);
+	for each  Sp_Id in rep
+	{
+		sign_project = zoho.crm.getRecordById("Deals",Sp_Id);
+		zoho_project_id = sign_project.get("Zoho_Projects_Project_ID");
+		workdrive_folder_id = sign_project.get("WorkDrive_Folder_ID");
+		if(zoho_project_id != null)
+		{
+			////////////////Getting WD folder id from Zoho Project  /////////////////////////////
+			resp = invokeurl
+			[
+				url :"https://projectsapi.zoho.com/api/v3/portal/666337121/projects/" + zoho_project_id + "/folders"
+				type :GET
+				connection:"wd_projects_test"
+			];
+			Folders = resp.get("folders");
+			for each  data in Folders
+			{
+				if(data.get("name") != "My Folder")
+				{
+					workdrive_parent_folder_id = data.get("thirdparty_folder_id");
+				}
+			}
+			//////////////////////////////////// Moving Folder /////////////////////////////
+			// 		if(workdrive_parent_folder_id != null && workdrive_folder_id != null)
+			// 		{
+			// 			attributeMap = Map();
+			// 			attributeMap.put("parent_id",workdrive_parent_folder_id);
+			// 			// Destination id in "parent_id"
+			// 			payLoad = Map();
+			// 			payLoad.put("attributes",attributeMap);
+			// 			payLoad.put("id",workdrive_folder_id);
+			// 			// resource id in "id"
+			// 			payLoad.put("type","files");
+			// 			list = list();
+			// 			list.add(payLoad);
+			// 			data = Map();
+			// 			data.put("data",list);
+			// 			headersMap = Map();
+			// 			headersMap.put("Accept","application/vnd.api+json");
+			// 			headersMap.put("Content-Type"," application/json charset=UTF-8");
+			// 			url = "https://workdrive.zoho.com/api/v1/files";
+			// 			moveFolder = invokeurl
+			// 			[
+			// 				url :url
+			// 				type :PATCH
+			// 				parameters:data.toString()
+			// 				headers:headersMap
+			// 				connection:"zoho_workdrive"
+			// 			];
+			// 			info "Move Folder Message : " + moveFolder;
+			// 		}
+			// 		else
+			// 		{
+			// 			// 			info "cant move folder : team folder or old folder does not exist";
+			// 		}
+			///////////////////////////  Updating New field (Parent folder id)///////////////
+			if(workdrive_parent_folder_id != null)
+			{
+				updateDealMap = Map();
+				updateDealMap.put("WD_Folder_Parent_ID",workdrive_parent_folder_id);
+				updateDeal = zoho.crm.updateRecord("Deals",Sp_Id,updateDealMap);
+			}
+			else
+			{
+				//info "cant update field : team folder does not exist on projects";
+				sendmail
+				[
+					from :zoho.adminuserid
+					to :"rabia@erphub.com"
+					subject :"Workdrive Migration / Parent ID Not updated / team folder not found"
+					message :"ID: " + Sp_Id
+				]
+			}
+		}
+		else
+		{
+			sendmail
+			[
+				from :zoho.adminuserid
+				to :"rabia@erphub.com"
+				subject :"Workdrive Migration / zoho proj id not found"
+				message :"ID: " + Sp_Id
+			]
+		}
+	}
+	return "successfully";
+}
+catch (e)
+{
+	info "Catch: " + e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"shehryar@erphub.com"
+		subject :"Workdrive Migration / CRM Button Sign Project"
+		message :"ID: " + sp_id + " Root Cause: " + e
+	]
+	return "Migration Unsuccesfull";
+}
+return "";

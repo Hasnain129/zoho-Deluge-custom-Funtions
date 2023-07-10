@@ -1,0 +1,180 @@
+try 
+{
+	rep = List();
+	rep = ac_id.replaceall("|||",",",true);
+	messages = "";
+	if(rep.size() < 2)
+	{
+		for each  data_ac_id in rep
+		{
+			ass_comp_data = zoho.crm.getRecordById("Associated_Companies",data_ac_id);
+			Now_Primary_Account = ass_comp_data.get("Company").get("id");
+			Now_Primary_Contact = ass_comp_data.get("Contact").get("id");
+			Primary_acc_data = zoho.crm.getRecordById("Accounts",Now_Primary_Account);
+			Now_Parent_Company = ifnull(Primary_acc_data.get("Parent_Customer"),"").get("id");
+			project_Id = ass_comp_data.get("Project").get("id");
+			////////////////////////////// Project Data ////////////////////////
+			proj_data = zoho.crm.getRecordById("Deals",project_Id);
+			Organization_Name = proj_data.get("Organization_Name");
+			Old_Account_ID = proj_data.get("Account_Name").get("id");
+			Old_contact_ID = proj_data.get("Contact_Name").get("id");
+			/////////////////////////////// Getting Production Manager //////////////////////////////////
+			Production_Manager = proj_data.get("Production_Manager");
+			if(Production_Manager != null)
+			{
+				Production_Manager_id = proj_data.get("Production_Manager").get("id");
+				Users = zoho.crm.getRecordById("users",Production_Manager_id.tolong());
+				UserEmail = ifnull(Users.get("users").get(0).get("Creator_User_Name"),"");
+				if(UserEmail == "")
+				{
+					UserEmail = "blinksigns";
+				}
+			}
+			else
+			{
+				UserEmail = "blinksigns";
+			}
+			///////////////////////////////////////////////////////////////////////////
+			if(Now_Primary_Account == Old_Account_ID && Now_Primary_Contact == Old_contact_ID)
+			{
+				messages = "Selected Company - Contact relationship is already Selected";
+			}
+			else
+			{
+				////////////////////// Removing the Primary contact check mark //////////////////////
+				All_ass_comp = zoho.crm.getRelatedRecords("Associated_Companies","Deals",project_Id);
+				for each  asscomp_all in All_ass_comp
+				{
+					ass_comp_id = asscomp_all.get("id");
+					if(asscomp_all.get("Primary") == true)
+					{
+						update_map = Map();
+						update_map.put("Primary",False);
+						update_comp = zoho.crm.updateRecord("Associated_Companies",ass_comp_id,update_map);
+					}
+				}
+				//////////////////////////////////////
+				proj_Update_map = Map();
+				proj_Update_map.put("Account_Name",Now_Primary_Account);
+				proj_Update_map.put("Contact_Name",Now_Primary_Contact);
+				proj_Update_map.put("Parent_Company",Now_Parent_Company);
+				update_project = zoho.crm.updateRecord("Deals",project_Id,proj_Update_map,{"trigger":{"workflow"}});
+				//////////////////////////// Updating associated company record to Primary ////////////////////
+				update_asscom_map = Map();
+				update_asscom_map.put("Primary",True);
+				update_comp = zoho.crm.updateRecord("Associated_Companies",data_ac_id,update_asscom_map);
+				//info "Comp" + update_comp;
+				///////////////////////////////////////// Getting Quote Against a project ////////////////////////////////
+				All_Quote_data = zoho.crm.getRelatedRecords("Quotes","Deals",project_Id);
+				Quotes_dateList = List();
+				Quotes_CustList = List();
+				//info Quotes_dateList.size();
+				for each  Q_Data in All_Quote_data
+				{
+					Quote_created_time = Q_Data.get("Created_Time");
+					//info Quote_created_time;
+					Quote_customer = Q_Data.get("Account_Name").get("id");
+					Quotes_dateList.add(Quote_created_time);
+					Quotes_CustList.add(Quote_customer);
+				}
+				sorted_date = Quotes_dateList.sort(false);
+				////////////////////////////////////////////////////////
+				if(Quotes_dateList.size() == 0)
+				{
+					messages = "Customer and Contact Updated  only";
+				}
+				else
+				{
+					if(Quotes_CustList.contains(Now_Primary_Account.toLong()))
+					{
+						messages = "Customer and Contact Updated  only";
+					}
+					else
+					{
+						Latest_Quote_Date = sorted_date.get(0);
+						for each  data in All_Quote_data
+						{
+							if(data.get("Created_Time") == Latest_Quote_Date)
+							{
+								Prev_Qoute_id = data.get("id");
+								latest_data = Collection();
+								latest_data = data.toCollection();
+								latest_data.deleteKey("Contact_Name");
+								latest_data.deleteKey("Account_Name");
+								latest_data.deleteKey("Subject");
+								///////////////////////////////////////////////////////////
+								Qoute_map = Map();
+								Qoute_map = latest_data.toMap();
+								Qoute_map.put("Contact_Name",Now_Primary_Contact);
+								Qoute_map.put("Account_Name",Now_Primary_Account);
+								Qoute_map.put("Subject","New Quote from " + Organization_Name);
+								Quote_created = zoho.crm.createRecord("Quotes",Qoute_map,{"trigger":{"workflow"}});
+								////////////////////////////////////////////////////////////////////////////
+								New_Qoute_Id = Quote_created.get("id");
+								Quote_details = zoho.crm.getRecordById("Quotes",New_Qoute_Id);
+								Autono = Quote_details.get("Quote_Auto_No");
+								mp2 = Map();
+								mp2.put("Subject","New Quote from " + Organization_Name + " " + Autono);
+								Quote_update = zoho.crm.updateRecord("Quotes",New_Qoute_Id,mp2,{"trigger":{"workflow"}});
+								/////////////////////////////// Duplocate creator Line / Cost Items ////////////////////////
+								Line_Data_mp = Map();
+								Line_Data_mp.put("criteria","Quote==\"" + Prev_Qoute_id + "\"");
+								creator_data = invokeurl
+								[
+									url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/All_Line_Items?process_until_limit=true"
+									type :GET
+									parameters:Line_Data_mp
+									connection:"zoho_creator"
+								];
+								//info creator_data;
+								CheckCode = creator_data.get("code");
+								if(CheckCode == 3000)
+								{
+									creator_entries = creator_data.get("data");
+									for each  data in creator_entries
+									{
+										Entry_id = data.get("ID").tolong();
+										//info Entry_id;
+										mp = Map();
+										mp.put("Quote_ID_Duplicate_Quote",New_Qoute_Id);
+										Line_upadate_mp = Map();
+										Line_upadate_mp.put("data",mp);
+										Update_Line_creator = invokeurl
+										[
+											url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/All_Line_Items/" + Entry_id
+											type :PATCH
+											parameters:Line_upadate_mp + ""
+											connection:"zoho_creator"
+										];
+										info Update_Line_creator;
+										break;
+									}
+								}
+								messages = "Customer - Contact updated and Quote is replicated";
+							}
+						}
+					}
+				}
+				////////////////// Refresh project /////////////////////////////
+				openUrl("https://crm.zoho.com/crm/org666155072/tab/Potentials/" + project_Id,"parent window");
+			}
+		}
+	}
+	else
+	{
+		messages = "Please select 01 Company - Contact relationship only";
+	}
+	///////////////////////////////////////////////////////////////////////////
+	//info "MESSAGE: " + messages;
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"auto@rebiz.zohodesk.com"
+		subject :"Swtich Primary Contact / Sign Project / Button / CRM"
+		message :"Record ID: " + rep + " Error: " + e
+	]
+}
+return messages;

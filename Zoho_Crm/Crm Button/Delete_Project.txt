@@ -1,0 +1,60 @@
+rep = List();
+rep = projects_ids.replaceall("|||",",",true);
+for each  Sp_Id in rep
+{
+	deal_data = zoho.crm.getRecordById("Deals",Sp_Id);
+	name_P_ID = deal_data.get("Project_ID").toString();
+	//========Active===========================================
+	update_map = Map();
+	update_map.put("index",1);
+	update_map.put("range",20);
+	update_map.put("status","active");
+	update_map.put("json_string",{"filter":{"UDF_CHAR3":{name_P_ID}}});
+	Update_resp = invokeurl
+	[
+		url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/"
+		type :GET
+		parameters:update_map
+		connection:"zohoprojectcall"
+	];
+	All_Active_Projects = Update_resp.get("projects");
+	for each  project in All_Active_Projects
+	{
+		DeleteResp = invokeurl
+		[
+			url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + project.get("id") + "/"
+			type :DELETE
+			connection:"zohoprojectcall"
+		];
+		// 		info DeleteResp;
+	}
+	//========Archieve===========================================
+	update_map = Map();
+	update_map.put("index",1);
+	update_map.put("range",20);
+	update_map.put("status","archived");
+	update_map.put("json_string",{"filter":{"UDF_CHAR3":{name_P_ID}}});
+	Update_resp = invokeurl
+	[
+		url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/"
+		type :GET
+		parameters:update_map
+		connection:"zohoprojectcall"
+	];
+	All_Active_Projects = Update_resp.get("projects");
+	for each  project in All_Active_Projects
+	{
+		DeleteResp = invokeurl
+		[
+			url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + project.get("id") + "/"
+			type :DELETE
+			connection:"zohoprojectcall"
+		];
+		// 		info DeleteResp;
+	}
+	uodate_crm_project = Map();
+	uodate_crm_project.put("Zoho_Projects_Project_ID","");
+	uodate_crm_project.put("SV_Imported_to_Zoho_Projects",false);
+	resp = zoho.crm.updateRecord("Deals",Sp_Id,uodate_crm_project);
+}
+return "Projects Deleted";

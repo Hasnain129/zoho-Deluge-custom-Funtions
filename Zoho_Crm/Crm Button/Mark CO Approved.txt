@@ -1,0 +1,23 @@
+so_details = zoho.crm.getRecordById("Sales_Orders",so_id);
+so_no = so_details.get("SO_No");
+CO_status = so_details.get("Revised_Approval_Status");
+// info CO_status;
+if(CO_status != "Approved")
+{
+	mp1 = Map();
+	mp1.put("Revised_Approval_Status","Approved");
+	update_SO = zoho.crm.updateRecord("Sales_Orders",so_id.toLong(),mp1,{"trigger":{"workflow"}});
+	mp = Map();
+	mp.put("Parent_Id",so_id.tolong());
+	mp.put("Note_Title","Change Order 'Approved'");
+	mp.put("Note_Content",so_no + " Change Order has been marked 'Approved' internally by " + zoho.loginuser);
+	mp.put("$se_module","Sales_Orders");
+	create_note = zoho.crm.createRecord("Notes",mp);
+	Message_out = "CO Status is successfully mark as 'Approved'.";
+}
+else
+{
+	Message_out = "CO Status is already 'Approved' so cannot be mark as 'Approved'.";
+}
+//info create_note;
+return Message_out;

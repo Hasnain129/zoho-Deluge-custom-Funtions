@@ -1,0 +1,1100 @@
+try 
+{
+	Messages = "";
+	SO_details = zoho.crm.getRecordById("Sales_Orders",SO_id.toLong());
+	Invoice_id = ifnull(SO_details.get("Invoice_ID"),"");
+	contact_id = SO_details.get("Contact_Name").get("id");
+	if(Invoice_id == "" || Invoice_id == null)
+	{
+		info "New Invoice";
+		customer_id = SO_details.get("Account_Name").get("id");
+		customerName = SO_details.get("Account_Name").get("name");
+		contact_name = SO_details.get("Contact_Name").get("name");
+		crm_contact_id = SO_details.get("Contact_Name").get("id");
+		Quote_id = SO_details.get("Quote_Name").get("id");
+		SO_autono = SO_details.get("SO_No");
+		Testing = SO_details.get("Testing");
+		Zip_Code = SO_details.get("Shipping_Code");
+		Adjustment = SO_details.get("Adjustment");
+		Inv_Terms = SO_details.get("Terms");
+		Currency = SO_details.get("Currency");
+		SO_GrandTotal = SO_details.get("Grand_Total");
+		/////////////////////////////////////////////////////
+		Quote_details = zoho.crm.getRecordById("Quotes",Quote_id.toLong());
+		Quote_Owner_name = Quote_details.get("Owner").get("name");
+		Quote_Owner_id = Quote_details.get("Owner").get("id");
+		Downpayment = Quote_details.get("Down_Payment");
+		Quote_autono = Quote_details.get("Quote_Auto_No");
+		Project_id = ifnull(Quote_details.get("Deal_Name"),"").get("id");
+		Project_name = ifnull(Quote_details.get("Deal_Name"),"").get("name");
+		DP_Terms = Quote_details.get("Down_Payment_Terms");
+		/////////////////////////////////// Quote Owner Data ///////////////////////////////
+		Quote_Owner_details = zoho.crm.getRecordById("users",Quote_Owner_id);
+		Quote_Owner_Data = Quote_Owner_details.get("users").tomap();
+		Quote_Owner_email = Quote_Owner_Data.get("email");
+		////////////////////////////////////////////////////////////////////////////////////
+		Project_obj = zoho.crm.getRecordById("Deals",Project_id);
+		Organization_Name = Project_obj.get("Organization_Name");
+		PO_ID = Project_obj.get("Project_ID");
+		PO_Ref = ifnull(Project_obj.get("PO_Reference"),"");
+		// 		info "Sign Project Details : " + Project_obj;
+		Invoice_recipient_email = ifnull(Project_obj.get("Invoice_Recipient_Email"),"");
+		/////////////////////////////////////////////////////////////////////////////////
+		Customer_details = zoho.crm.getRecordById("Accounts",customer_id);
+		Customer_Tax = Customer_details.get("Taxable");
+		//////////////////////////////// Contact Data ///////////////////////////////
+		Contact_details = zoho.crm.getRecordById("Contacts",crm_contact_id);
+		crm_contact_email = Contact_details.get("Email");
+		////////////////// Check Sign Project Customer and Contact with Quote /////////////
+		if(Project_obj.get("Account_Name").get("id") == SO_details.get("Account_Name").get("id"))
+		{
+			Customer_contacts = zoho.crm.getRelatedRecords("Contacts","Accounts",customer_id);
+			Customer_Secondary_contacts = zoho.crm.getRelatedRecords("Contacts139","Accounts",customer_id);
+			contact_id = SO_details.get("Contact_Name").get("id");
+			Match_contact = 0;
+			/////////////////// Checking Main Contacts ///////////////////
+			for each  contact in Customer_contacts
+			{
+				if(contact.get("id") == contact_id)
+				{
+					Match_contact = Match_contact + 1;
+				}
+			}
+			///////////// Checking Secondary Contacts /////////////
+			for each  sec_contact in Customer_Secondary_contacts
+			{
+				if(sec_contact.get("Linking_Customers").get("id") == contact_id)
+				{
+					Match_contact = Match_contact + 1;
+				}
+			}
+			if(Match_contact > 0)
+			{
+				////////////////////////////////// Taxes ////////////////////////////////////
+				////////////////////////////  Searching Creator ///////////////////////////
+				// 				creator_entries = zoho.creator.v1.getRecords("blinksigns","line-items","All_Taxes_Report","Zip_Code_Text==\"" + Zip_Code + "\"");
+				// 				Creator_message = ifnull(creator_entries.toMap().get("message"),"");
+				creator_resp = zoho.creator.getRecords("blinksigns","line-items","All_Taxes_Report","Zip_Code_Text==\"" + Zip_Code + "\"",1,200,"zoho_creator");
+				CheckCode = creator_resp.get("code");
+				if(CheckCode == 3000 && Customer_Tax == true)
+				{
+					creator_entries = creator_resp.get("data");
+					info creator_entries + "creator_entries";
+					for each  tax_record in creator_entries
+					{
+						State_Tax_Name = tax_record.get("State_Tax_Name").remove("(").remove(")");
+						State_Tax_perc = tax_record.get("State_Tax_perc").remove("(").remove(")");
+						State_Tax_Auth = tax_record.get("State_Tax_Authority").remove("(").remove(")");
+						County_Tax_Name = tax_record.get("County_Tax_Name").remove("(").remove(")");
+						County_Tax_perc = tax_record.get("County_Tax_perc").remove("(").remove(")");
+						County_Tax_Auth = tax_record.get("County_Tax_Authority").remove("(").remove(")");
+					}
+					/////////////////////////////// Fetching Taxes and creating Tax Group ///////////////////
+					info "Zip_Code" + Zip_Code;
+					Tax_group = zoho.crm.searchRecords("Tax","(Tax_Name:equals:Tax Group of " + Zip_Code + ")");
+					info "Tax_group: " + Tax_group;
+					if(Tax_group != {})
+					{
+						for each  data in Tax_group
+						{
+							Tax_Group_Id = data.get("Books_Tax_ID");
+							info "Old Tax Group Id " + Tax_Group_Id;
+						}
+					}
+					else
+					{
+						/////////////////////////////////// Create State Tax ////////////////////////////////
+						State_tax = zoho.crm.searchRecords("Tax","(Tax_Name:equals:" + State_Tax_Name + ")");
+						if(State_tax != {})
+						{
+							for each  data in State_tax
+							{
+								State_Tax_Id = data.get("Books_Tax_ID");
+								info "Old State Taxid " + State_Tax_Id;
+							}
+						}
+						else
+						{
+							//////////////////////////// Creating State Tax in Books /////////////////////////
+							State_tax_map = Map();
+							State_tax_map.put("tax_name",State_Tax_Name);
+							State_tax_map.put("tax_percentage",State_Tax_perc);
+							State_tax_map.put("tax_authority_name",State_Tax_Auth);
+							JSONString = Map();
+							JSONString.put("JSONString",State_tax_map);
+							create_tax_state = invokeurl
+							[
+								url :"https://books.zoho.com/api/v3/settings/taxes?organization_id=666479573"
+								type :POST
+								parameters:JSONString
+								connection:"zoho_books"
+							];
+							info create_tax_state;
+							State_Tax_Id = create_tax_state.get("tax").get("tax_id");
+							info "New " + State_Tax_Id;
+							//////////////////////// Creating State Tax in CRM ////////////////////////////
+							State_map = Map();
+							State_map.put("Tax_Name",State_Tax_Name);
+							State_map.put("Tax_Perc",State_Tax_perc);
+							State_map.put("Tax_Authority",State_Tax_Auth);
+							State_map.put("Books_Tax_ID",State_Tax_Id);
+							create_state = zoho.crm.createRecord("Tax",State_map);
+						}
+						/////////////////////////////////// Create County Tax ///////////////////////////
+						info County_Tax_Name;
+						County_tax = zoho.crm.searchRecords("Tax","(Tax_Name:equals:" + County_Tax_Name + ")");
+						info "County_tax" + County_tax;
+						if(County_tax != {})
+						{
+							for each  data in County_tax
+							{
+								County_Tax_Id = data.get("Books_Tax_ID");
+								info "Old County_Tax_Id" + County_Tax_Id;
+							}
+						}
+						else
+						{
+							/////////////////////////// Creating County Tax in Books ////////////////////////////
+							County_tax_map = Map();
+							County_tax_map.put("tax_name",County_Tax_Name);
+							County_tax_map.put("tax_percentage",County_Tax_perc);
+							County_tax_map.put("tax_authority_name",County_Tax_Auth);
+							JSONString = Map();
+							JSONString.put("JSONString",County_tax_map);
+							create_tax_county = invokeurl
+							[
+								url :"https://books.zoho.com/api/v3/settings/taxes?organization_id=666479573"
+								type :POST
+								parameters:JSONString
+								connection:"zoho_books"
+							];
+							County_Tax_Id = create_tax_county.get("tax").get("tax_id");
+							info "New County_Tax_Id" + County_Tax_Id;
+							////////////////////////// Creating State Tax in CRM //////////////////////////////
+							County_map = Map();
+							County_map.put("Tax_Name",County_Tax_Name);
+							County_map.put("Tax_Perc",County_Tax_perc);
+							County_map.put("Tax_Authority",County_Tax_Auth);
+							County_map.put("Books_Tax_ID",County_Tax_Id);
+							create_county = zoho.crm.createRecord("Tax",County_map);
+						}
+						////////////////////////// Creating Group in Books ///////////////////////////////				
+						Tax_group_map = Map();
+						Tax_group_list = list();
+						stateId = State_Tax_Id;
+						countyId = County_Tax_Id;
+						Tax_group_list.add(stateId);
+						Tax_group_list.add(countyId);
+						Tax_group_map.put("tax_group_name","Tax Group of " + Zip_Code);
+						Tax_group_map.put("taxes",Tax_group_list.toString());
+						JSONString = Map();
+						JSONString.put("JSONString",Tax_group_map);
+						create_group = invokeurl
+						[
+							url :"https://books.zoho.com/api/v3/settings/taxgroups?organization_id=666479573"
+							type :POST
+							parameters:JSONString
+							connection:"zoho_books"
+						];
+						Tax_Group_Id = create_group.get("tax_group").get("tax_group_id");
+						info "New Tax_Group_Id " + Tax_Group_Id;
+						///////////////////////// Creating Group in CRM ///////////////////////////////
+						Group_map = Map();
+						Group_map.put("Tax_Name","Tax Group of " + Zip_Code);
+						Group_map.put("Books_Tax_ID",Tax_Group_Id);
+						create_group = zoho.crm.createRecord("Tax",Group_map);
+					}
+				}
+				else
+				{
+					Tax_Group_Id = "1316483000000255373";
+				}
+				//////////////////////////// Fetch Books Customer ID /////////////////////////
+				try 
+				{
+					info "CRM Customer ID: " + customer_id;
+					searchParam = {"zcrm_account_id":customer_id};
+					BooksContact = zoho.books.getRecords("contacts","666479573",searchParam);
+					//info BooksContact;
+					Books_contact_Info = BooksContact.get("contacts").get(0);
+					Book_contact_ID = Books_contact_Info.get("contact_id");
+					info "Books Contact ID: " + Book_contact_ID;
+				}
+				catch (e)
+				{
+					Messages = Messages + "Sync Your Contact into Zoho Books...";
+				}
+				////////////////////////////////Fetch Books User ID //////////////////////////
+				searchParam = {"email":Quote_Owner_email};
+				BooksUsers = zoho.books.getRecords("users","666479573",searchParam);
+				Books_User_Info = BooksUsers.get("users").get(0);
+				Book_User_ID = Books_User_Info.get("user_id");
+				Book_User_email = Books_User_Info.get("email");
+				////////////////Get contact details via customer id /////////////////////////////////////
+				// 				contactdetails = zoho.books.getRecordsByID("contacts","666479573",Book_contact_ID);
+				// 				Contact_obj = contactdetails.get("contact").get("contact_persons");
+				contact_persons = invokeurl
+				[
+					url :"https://books.zoho.com/api/v3/contacts/" + Book_contact_ID + "/contactpersons?organization_id=666479573"
+					type :GET
+					connection:"zoho_books"
+				];
+				// 				info "Contact Persons : " + contact_persons;
+				Contact_obj = contact_persons.get("contact_persons");
+				//info Contact_obj;
+				for each  data_contact in Contact_obj
+				{
+					if(Invoice_recipient_email == "")
+					{
+						if(data_contact.get("email") == crm_contact_email)
+						{
+							Inv_contact_id = data_contact.get("contact_person_id");
+						}
+					}
+					else
+					{
+						if(data_contact.get("email") == Invoice_recipient_email)
+						{
+							Inv_contact_id = data_contact.get("contact_person_id");
+						}
+					}
+				}
+				info "Accounting POC Email: " + Invoice_recipient_email;
+				info "Invoice Contact ID: " + Inv_contact_id;
+				/////////////////////////////////////  Create Invoice ///////////////////////////////////////////////////////////////
+				////////////////////// Terms and conditions and template //////////////////
+				if(Organization_Name == "Blink Signs")
+				{
+					terms_and_conditions = SO_details.get("Terms_and_Conditions");
+					Template_id = "1316483000000017001";
+				}
+				else if(Organization_Name == "Blink Swag")
+				{
+					terms_and_conditions = SO_details.get("Terms_and_Conditions_Swag");
+					Template_id = "1316483000009790351";
+				}
+				else if(Organization_Name == "Blink Sourcing")
+				{
+					terms_and_conditions = SO_details.get("Terms_and_Conditions");
+					Template_id = "1316483000017240117";
+				}
+				//////////////////// Get payment terms based on terms for Invoice creation ///////////////////////////
+				if(Inv_Terms == "Direct Debit Payment")
+				{
+					Payment_terms = "0";
+				}
+				else if(Inv_Terms == "Net 15")
+				{
+					Payment_terms = "15";
+				}
+				else if(Inv_Terms == "Net 30")
+				{
+					Payment_terms = "30";
+				}
+				else if(Inv_Terms == "Net 45")
+				{
+					Payment_terms = "45";
+				}
+				else if(Inv_Terms == "Net 60")
+				{
+					Payment_terms = "60";
+				}
+				//////////////////////////// Creating Line Items //////////////////////////////////
+				productDetails = SO_details.get("Product_Details").toJSONList();
+				info "productDetails" + productDetails;
+				productList = List();
+				for each  product in productDetails
+				{
+					productName = product.get("product").get("name");
+					productID = product.get("product").get("id");
+					quantity = product.get("quantity");
+					rate = product.get("list_price");
+					desc = product.get("product_description");
+					Discount = product.get("Discount");
+					///////////////////////////////////////////////////////////
+					item = Map();
+					Product_details = zoho.crm.getRecordById("Products",productID);
+					Taxable = Product_details.get("Taxable");
+					if(Taxable == true)
+					{
+						item.put("tax_id",Tax_Group_Id);
+					}
+					else if(Taxable == false)
+					{
+						item.put("tax_exemption_id","1316483000008309089");
+						item.put("tax_exemption_code","SERVICE");
+					}
+					/////////////////////////////// Fetching product  ///////////////////////////////////////////////
+					searchParam = {"zcrm_product_id":productID};
+					Booksitem = zoho.books.getRecords("items","666479573",searchParam);
+					info "Booksitem    =" + Booksitem;
+					item_Info = Booksitem.get("items").get(0);
+					info "item_Info    = " + item_Info;
+					item_id = item_Info.get("item_id");
+					info "item_id    = " + item_id;
+					item_status = item_Info.get("status");
+					info "item_status    = " + item_status;
+					item_type = item_Info.get("item_type");
+					info "item_type    = " + item_type;
+					///////////////////// Update Product as Active if it is In Active //////////////////////////////////
+					if(item_status != "active")
+					{
+						Active_Product = invokeurl
+						[
+							url :"https://books.zoho.com/api/v3/items/" + item_id + "/active?organization_id=666479573"
+							type :POST
+							connection:"zoho_books"
+						];
+					}
+					//////////////////////// Update Item to Sales & Purchases type only if item type is purchases///////////////////////////////////
+					if(item_type == "purchases")
+					{
+						product_data = Map();
+						product_data.put("item_type","sales_and_purchases");
+						product_data.put("account_id","1316483000000000388");
+						update_product = zoho.books.updateRecord("items","666479573",item_id,product_data);
+						info update_product;
+					}
+					/////////////////////// Creating a product details map  ///////////////////////////////
+					item.put("item_id",item_id);
+					item.put("description",desc);
+					item.put("rate",rate);
+					item.put("quantity",quantity);
+					item.put("discount",Discount);
+					productList.add(item);
+				}
+				info "Item Map: " + productList;
+				///////////////////// Data of Custom Fields /////////////////////////////////
+				cf_list = List();
+				cf_org_name = Map();
+				cf_org_name.put("label","Organization Name");
+				cf_org_name.put("value",Organization_Name);
+				cf_list.add(cf_org_name);
+				/////////////////////////////////////////////////
+				cf_contact = Map();
+				cf_contact.put("label","Contact");
+				cf_contact.put("value",contact_name);
+				cf_list.add(cf_contact);
+				/////////////////////////////////////////////////
+				cf_project = Map();
+				cf_project.put("label","Project Name");
+				cf_project.put("value",Project_name);
+				cf_list.add(cf_project);
+				/////////////////////////////////////////////////
+				cf_project = Map();
+				cf_project.put("label","Project ID");
+				cf_project.put("value",PO_ID);
+				cf_list.add(cf_project);
+				/////////////////////////////////////////////////
+				cf_quote = Map();
+				cf_quote.put("label","Quote #");
+				cf_quote.put("value",Quote_autono);
+				cf_list.add(cf_quote);
+				//////////////////////////////////////////////////
+				cf_po_reference = Map();
+				cf_po_reference.put("label","Client PO");
+				cf_po_reference.put("value",PO_Ref);
+				cf_list.add(cf_po_reference);
+				//////////////////////////////////////////////////
+				cf_po_So = Map();
+				cf_po_So.put("label","SO #");
+				cf_po_So.put("value",SO_autono);
+				cf_list.add(cf_po_So);
+				//////////////////////////////////////////////////
+				// 				cf_po_quote_owner = Map();
+				// 				cf_po_quote_owner.put("label","Quote Owner");
+				// 				cf_po_quote_owner.put("value",Book_User_ID);
+				// 				cf_list.add(cf_po_quote_owner);
+				//////////////////////////////////////////////////
+				cf_po_owner_email = Map();
+				cf_po_owner_email.put("label","Owner Email");
+				cf_po_owner_email.put("value",Book_User_email);
+				cf_list.add(cf_po_owner_email);
+				/////////////////////////// Selecting Currency //////////////////
+				if(Currency == "USD")
+				{
+					currency_id = 1316483000000000097;
+					///////////////Configuring Authorize.net /////////////////////////
+					payment_getway = Map();
+					payment_getway.put("configured",true);
+					payment_getway.put("can_show_billing_address",false);
+					payment_getway.put("is_bank_account_applicable",true);
+					payment_getway.put("gateway_name","authorize_net");
+					payment_options = Map();
+					payment_options.put("payment_gateways",{payment_getway});
+				}
+				else if(Currency == "CAD")
+				{
+					currency_id = 1316483000000000101;
+					///////////////Configuring Paypal /////////////////////////
+					payment_getway = Map();
+					payment_getway.put("configured",true);
+					payment_getway.put("can_show_billing_address",false);
+					payment_getway.put("additional_field1","standard");
+					payment_getway.put("is_bank_account_applicable",true);
+					payment_getway.put("can_pay_using_new_card",true);
+					payment_getway.put("gateway_name","paypal");
+					payment_options = Map();
+					payment_options.put("payment_gateways",{payment_getway});
+				}
+				//info "Adjustment: " + Adjustment;
+				////////////////Create Invoice in books ////////////////////////////
+				InvoiceData = Map();
+				InvoiceData.put("customer_id",Book_contact_ID);
+				InvoiceData.put("zcrm_potential_id",Project_id);
+				InvoiceData.put("reference_number",SO_autono);
+				InvoiceData.put("line_items",productList);
+				InvoiceData.put("terms",terms_and_conditions);
+				InvoiceData.put("template_id",Template_id);
+				InvoiceData.put("payment_terms",Payment_terms);
+				InvoiceData.put("contact_persons",{Inv_contact_id});
+				InvoiceData.put("payment_options",payment_options);
+				InvoiceData.put("is_emailed",true);
+				InvoiceData.put("custom_fields",cf_list);
+				InvoiceData.put("salesperson_name",Quote_Owner_name);
+				InvoiceData.put("adjustment",Adjustment);
+				InvoiceData.put("adjustment_description","Adjustment");
+				InvoiceData.put("currency_id",currency_id);
+				InvoiceData.put("reason",". Invoice is created by: '" + zoho.loginuser + "'");
+				resp_inv = zoho.books.createRecord("invoices","666479573",InvoiceData);
+				info "checking invoice reposne";
+				info "invoice response " + resp_inv;
+				if(resp_inv.get("code") == 0)
+				{
+					Invoice_No = resp_inv.get("invoice").get("invoice_number");
+					Invoice_ID = resp_inv.get("invoice").get("invoice_id");
+					Inv_total = resp_inv.get("invoice").get("total");
+					Inv_balanace = resp_inv.get("invoice").get("balance");
+					/////////////////////// Update INV no on SO CRM /////////////////////////////////
+					Inv_Mp = Map();
+					Inv_Mp.put("Invoice_No",Invoice_No);
+					Inv_Mp.put("Invoice_ID",Invoice_ID);
+					Inv_Mp.put("Invoice_Date",resp_inv.get("invoice").get("date").toDate());
+					abc = zoho.crm.updateRecord("Sales_Orders",SO_id,Inv_Mp,{"trigger":{"workflow"}});
+					/////////////////////////////////// Fixing Invoice Adjustment ///////////////////////////////
+					Update_Invoice_Adjustment = ifnull(resp_inv.get("invoice").get("adjustment"),0);
+					Difference_Inv_SO = ifnull(SO_GrandTotal,0) - ifnull(Inv_total,0);
+					New_Adjustment = Update_Invoice_Adjustment + Difference_Inv_SO;
+					//info Update_Invoice_Adjustment;
+					info "Invoice Adjustment: " + Update_Invoice_Adjustment;
+					info "Difference: " + Difference_Inv_SO;
+					info "New Adjustment: " + New_Adjustment;
+					////////////////////////////////////////////////////////
+					if(Difference_Inv_SO > 0)
+					{
+						Update_InvoiceData = Map();
+						Update_InvoiceData.put("customer_id",Book_contact_ID);
+						Update_InvoiceData.put("adjustment",New_Adjustment);
+						Update_InvoiceData.put("adjustment_description","Adjustment");
+						Update_InvoiceData.put("reason","Invoice is updated by: '" + zoho.loginuser + "'");
+						Update_resp_inv = zoho.books.updateRecord("invoices","666479573",Invoice_id,Update_InvoiceData);
+						info "invoice update response: " + Update_resp_inv;
+					}
+					//////////////////////////////////////////////////////////////////////////////
+					if(resp_inv.get("code") != "2007")
+					{
+						Invoice_ID = resp_inv.get("invoice").get("invoice_id");
+						Invoice_No = resp_inv.get("invoice").get("invoice_number");
+						///////////////////////////////////// Invoice to Mark as sent /////////////////////////////
+						Mark_status_sent = zoho.books.markStatus("invoices","666479573",Invoice_ID,"sent");
+						//////////////////// Applying retainer Invoice to created invoice ////////////////
+						Retainer_invoices = zoho.crm.getRelatedRecords("Retainer_Invoice","Sales_Orders",SO_id);
+						if(Retainer_invoices != {})
+						{
+							for each  data2 in Retainer_invoices
+							{
+								retainer_invoiceID = data2.get("Retainer_Invoice_ID");
+								retainer_record_id = data2.get("id");
+								////////////////////////////// Fetching Retainer Invoice ////////////////////////////////////
+								try 
+								{
+									retainerinvoices = zoho.books.getRecordsByID("retainerinvoices","666479573",retainer_invoiceID);
+									resp = retainerinvoices.get("retainerinvoice").toMap();
+									ret_invoice_total = resp.get("total");
+									ret_status = resp.get("status");
+									info ret_status;
+									///////////////////////////// Apply Retainer Invoice to created Invoice //////////////
+									if(ret_status == "paid")
+									{
+										retInvoiceData = Map();
+										retInvoiceData.put("invoice_id",Invoice_ID);
+										retInvoiceData.put("amount_applied",ret_invoice_total);
+										invoice_Payment = Map();
+										invoice_Payment.put("invoice_payments",{retInvoiceData});
+										JsonString2 = Map();
+										JsonString2.put("JSONString",invoice_Payment);
+										resp_inv1 = invokeurl
+										[
+											url :"https://books.zoho.com/api/v3/retainerinvoices/" + retainer_invoiceID + "/invoices?organization_id=666479573"
+											type :POST
+											parameters:JsonString2
+											connection:"zoho_books"
+										];
+										//info resp_inv1;
+									}
+									////////////////////////////// Void Sent and Draft Retainer Invoices ///////////////////////
+									else if(ret_status == "sent" || ret_status == "draft")
+									{
+										update_retainer = invokeurl
+										[
+											url :"https://books.zoho.com/api/v3/retainerinvoices/" + retainer_invoiceID + "/status/void?organization_id=666479573"
+											type :POST
+											connection:"zoho_books"
+										];
+										//info update_retainer;
+										///////////////////////////// Adding Comment ///////////////////////////////
+										add_comment = Map();
+										add_comment.put("description","Retainer Invoice is voided because Final Invoice " + Invoice_No + " is created");
+										add_comment.put("show_comment_to_clients",false);
+										JsonString = Map();
+										JsonString.put("JSONString",add_comment);
+										retainer_comment = invokeurl
+										[
+											url :"https://books.zoho.com/api/v3/retainerinvoices/" + retainer_invoiceID + "/comments?organization_id=666479573"
+											type :POST
+											parameters:JsonString
+											connection:"zoho_books"
+										];
+										//info retainer_comment;
+										//////////////////////////////////// Voiding CRM retainer record //////////////
+										mp_ret = Map();
+										mp_ret.put("Paid","Voided");
+										update_retainer_crm = zoho.crm.updateRecord("Down_Payment_Invoices",retainer_record_id,mp_ret,{"trigger":{"workflow"}});
+									}
+								}
+								catch (e)
+								{
+									Messages = Messages + "No Retainer Invoice Amount Found to Apply...";
+								}
+							}
+						}
+						///////////////////////////////////////// Open PDF invoice ///////////////////////////////////////// 
+						PDF_Generator = zoho.crm.getRelatedRecords("Invoices","Sales_Orders",SO_id);
+						if(PDF_Generator != {})
+						{
+							for each  data in PDF_Generator
+							{
+								PDF_Gen_ID = data.get("id");
+							}
+							openUrl("https://crm.zoho.com/crm/org666155072/Template.do?step=previewPop&entityId=" + PDF_Gen_ID + "&module=Invoices&contactNameId=" + contact_id + "&action=sendMail","popup window","height=700,width=1200");
+						}
+						////////////////////////////////////////////////////////////////////////////////////////////////
+						if(Messages != "")
+						{
+							return Messages;
+						}
+						else
+						{
+							return "Invoice Created Successfully.";
+						}
+					}
+					else
+					{
+						return "Check Products of line Items. They either are Inactive on Zoho books or not Found..!";
+					}
+				}
+				else
+				{
+					messages = resp_inv.get("message");
+					return messages;
+				}
+			}
+			else
+			{
+				return "Please select correct contact of customer and retry to Send Invoice.";
+			}
+		}
+		else
+		{
+			return "Sign Project and SO Customer are not matched.";
+		}
+	}
+	/////////////////////////////////////////////////////// Update invoice //////////////////////////////////////
+	else
+	{
+		info "Invoice Updated";
+		//////////////////////////// Fetching adjustment from the Invoice //////////////////////
+		// 		info "Invoice_id    =  "+Invoice_id;
+		Invoice_Data_A = zoho.books.getRecordsByID("invoices",666479573,Invoice_id);
+		info "Invoice_Data_A    =  " + Invoice_Data_A;
+		Invoice_Adjustment = ifnull(Invoice_Data_A.get("invoice").get("adjustment"),0);
+		info "Invoice_Adjustment    =  " + Invoice_Adjustment;
+		////////////////////////////////////////////////////////////////////////////////////////////////
+		customer_id = SO_details.get("Account_Name").get("id");
+		customerName = SO_details.get("Account_Name").get("name");
+		contact_name = SO_details.get("Contact_Name").get("name");
+		crm_contact_id = SO_details.get("Contact_Name").get("id");
+		Quote_id = SO_details.get("Quote_Name").get("id");
+		SO_autono = SO_details.get("SO_No");
+		Testing = SO_details.get("Testing");
+		Zip_Code = SO_details.get("Shipping_Code");
+		Adjustment = SO_details.get("Adjustment");
+		Inv_Terms = SO_details.get("Terms");
+		Currency = SO_details.get("Currency");
+		SO_GrandTotal = SO_details.get("Grand_Total");
+		/////////////////////////////////////////////////////
+		Quote_details = zoho.crm.getRecordById("Quotes",Quote_id.toLong());
+		Quote_Owner_name = Quote_details.get("Owner").get("name");
+		Quote_Owner_id = Quote_details.get("Owner").get("id");
+		Downpayment = Quote_details.get("Down_Payment");
+		Quote_autono = Quote_details.get("Quote_Auto_No");
+		Project_id = ifnull(Quote_details.get("Deal_Name"),"").get("id");
+		Project_name = ifnull(Quote_details.get("Deal_Name"),"").get("name");
+		DP_Terms = Quote_details.get("Down_Payment_Terms");
+		/////////////////////////////////// Quote Owner Data ///////////////////////////////
+		Quote_Owner_details = zoho.crm.getRecordById("users",Quote_Owner_id);
+		Quote_Owner_Data = Quote_Owner_details.get("users").tomap();
+		Quote_Owner_email = Quote_Owner_Data.get("email");
+		////////////////////////////////////////////////////////////////////////////////////
+		Project_obj = zoho.crm.getRecordById("Deals",Project_id);
+		Organization_Name = Project_obj.get("Organization_Name");
+		PO_ID = Project_obj.get("Project_ID");
+		PO_Ref = ifnull(Project_obj.get("PO_Reference"),"");
+		Invoice_recipient_email = ifnull(Project_obj.get("Invoice_Recipient_Email"),"");
+		/////////////////////////////////////////////////////////////////////////////////
+		Customer_details = zoho.crm.getRecordById("Accounts",customer_id);
+		Customer_Tax = Customer_details.get("Taxable");
+		//////////////////////////////// Contact Data ///////////////////////////////
+		Contact_details = zoho.crm.getRecordById("Contacts",crm_contact_id);
+		crm_contact_email = Contact_details.get("Email");
+		////////////////////////////////// Taxes ////////////////////////////////////
+		////////////////////////////  Searching Creator ///////////////////////////
+		// 				creator_entries = zoho.creator.v1.getRecords("blinksigns","line-items","All_Taxes_Report","Zip_Code_Text==\"" + Zip_Code + "\"");
+		// 				Creator_message = ifnull(creator_entries.toMap().get("message"),"");
+		creator_resp = zoho.creator.getRecords("blinksigns","line-items","All_Taxes_Report","Zip_Code_Text==\"" + Zip_Code + "\"",1,200,"zoho_creator");
+		CheckCode = creator_resp.get("code");
+		if(CheckCode == 3000 && Customer_Tax == true)
+		{
+			creator_entries = creator_resp.get("data");
+			for each  tax_record in creator_entries
+			{
+				State_Tax_Name = tax_record.get("State_Tax_Name").remove("(").remove(")");
+				State_Tax_perc = tax_record.get("State_Tax_perc").remove("(").remove(")");
+				State_Tax_Auth = tax_record.get("State_Tax_Authority").remove("(").remove(")");
+				County_Tax_Name = tax_record.get("County_Tax_Name").remove("(").remove(")");
+				County_Tax_perc = tax_record.get("County_Tax_perc").remove("(").remove(")");
+				County_Tax_Auth = tax_record.get("County_Tax_Authority").remove("(").remove(")");
+				info "County_Tax_Name: " + County_Tax_Name;
+			}
+			/////////////////////////////// Fetching Taxes and creating Tax Group ///////////////////
+			Tax_group = zoho.crm.searchRecords("Tax","(Tax_Name:equals:Tax Group of " + Zip_Code + ")");
+			if(Tax_group != {})
+			{
+				for each  data in Tax_group
+				{
+					Tax_Group_Id = data.get("Books_Tax_ID");
+					info "Old Tax Group Id " + Tax_Group_Id;
+				}
+			}
+			else
+			{
+				/////////////////////////////////// Create State Tax ////////////////////////////////
+				State_tax = zoho.crm.searchRecords("Tax","(Tax_Name:equals:" + State_Tax_Name + ")");
+				if(State_tax != {})
+				{
+					for each  data in State_tax
+					{
+						State_Tax_Id = data.get("Books_Tax_ID");
+						info "Old State TaxId " + State_Tax_Id;
+					}
+				}
+				else
+				{
+					//////////////////////////// Creating State Tax in Books /////////////////////////
+					State_tax_map = Map();
+					State_tax_map.put("tax_name",State_Tax_Name);
+					State_tax_map.put("tax_percentage",State_Tax_perc);
+					State_tax_map.put("tax_authority_name",State_Tax_Auth);
+					JSONString = Map();
+					JSONString.put("JSONString",State_tax_map);
+					create_tax_state = invokeurl
+					[
+						url :"https://books.zoho.com/api/v3/settings/taxes?organization_id=666479573"
+						type :POST
+						parameters:JSONString
+						connection:"zoho_books"
+					];
+					State_Tax_Id = create_tax_state.get("tax").get("tax_id");
+					info "New " + State_Tax_Id;
+					//////////////////////// Creating State Tax in CRM ////////////////////////////
+					State_map = Map();
+					State_map.put("Tax_Name",State_Tax_Name);
+					State_map.put("Tax_Perc",State_Tax_perc);
+					State_map.put("Tax_Authority",State_Tax_Auth);
+					State_map.put("Books_Tax_ID",State_Tax_Id);
+					create_state = zoho.crm.createRecord("Tax",State_map);
+				}
+				/////////////////////////////////// Create County Tax ///////////////////////////
+				// 				County_tax = zoho.crm.searchRecords("Tax","(Tax_Name:equals:" + County_Tax_Name + ")");
+				County_tax = zoho.crm.searchRecords("Tax","(Tax_Name:equals:" + County_Tax_Name + ")");
+				info "County_tax" + County_tax;
+				info "County_Tax_Name" + County_Tax_Name;
+				////////////
+				// 								if(County_tax != {})
+				if(County_tax.isEmpty() == false)
+				{
+					info "County_tax != {}";
+					for each  data in County_tax
+					{
+						County_Tax_Id = data.get("Books_Tax_ID");
+						info "Old County_Tax_Id " + County_Tax_Id;
+					}
+				}
+				else
+				{
+					info "ELSE:County_tax != {}";
+					/////////////////////////// Creating County Tax in Books ////////////////////////////
+					County_tax_map = Map();
+					County_tax_map.put("tax_name",County_Tax_Name + " ");
+					County_tax_map.put("tax_percentage",County_Tax_perc);
+					County_tax_map.put("tax_authority_name",County_Tax_Auth);
+					JSONString = Map();
+					JSONString.put("JSONString",County_tax_map);
+					create_tax_county = invokeurl
+					[
+						url :"https://books.zoho.com/api/v3/settings/taxes?organization_id=666479573"
+						type :POST
+						parameters:JSONString
+						connection:"zoho_books"
+					];
+					info "create_tax_county" + create_tax_county;
+					County_Tax_Id = create_tax_county.get("tax").get("tax_id");
+					info "New County_Tax_Id line 745 " + County_Tax_Id;
+					////////////////////////// Creating State Tax in CRM //////////////////////////////
+					County_map = Map();
+					County_map.put("Tax_Name",County_Tax_Name);
+					County_map.put("Tax_Perc",County_Tax_perc);
+					County_map.put("Tax_Authority",County_Tax_Auth);
+					County_map.put("Books_Tax_ID",County_Tax_Id);
+					create_county = zoho.crm.createRecord("Tax",County_map);
+				}
+				////////////////////////// Creating Group in Books ///////////////////////////////				
+				Tax_group_map = Map();
+				Tax_group_list = list();
+				stateId = State_Tax_Id;
+				countyId = County_Tax_Id;
+				Tax_group_list.add(stateId);
+				Tax_group_list.add(countyId);
+				Tax_group_map.put("tax_group_name","Tax Group of " + Zip_Code);
+				Tax_group_map.put("taxes",Tax_group_list.toString());
+				JSONString = Map();
+				JSONString.put("JSONString",Tax_group_map);
+				create_group = invokeurl
+				[
+					url :"https://books.zoho.com/api/v3/settings/taxgroups?organization_id=666479573"
+					type :POST
+					parameters:JSONString
+					connection:"zoho_books"
+				];
+				info "Create Group in Books: " + create_group;
+				Tax_Group_Id = create_group.get("tax_group").get("tax_group_id");
+				info "New " + Tax_Group_Id;
+				///////////////////////// Creating Group in CRM ///////////////////////////////
+				Group_map = Map();
+				Group_map.put("Tax_Name","Tax Group of " + Zip_Code);
+				Group_map.put("Books_Tax_ID",Tax_Group_Id);
+				create_group = zoho.crm.createRecord("Tax",Group_map);
+			}
+		}
+		else
+		{
+			Tax_Group_Id = "1316483000000255373";
+		}
+		//////////////////////////// Fetch Books Customer ID /////////////////////////
+		try 
+		{
+			searchParam = {"zcrm_account_id":customer_id};
+			BooksContact = zoho.books.getRecords("contacts","666479573",searchParam);
+			info BooksContact;
+			Books_contact_Info = BooksContact.get("contacts").get(0);
+			Book_contact_ID = Books_contact_Info.get("contact_id");
+			info "Books contact id: " + Book_contact_ID;
+		}
+		catch (e)
+		{
+			return Messages + "Sync Your Contact into Zoho Books";
+		}
+		////////////////////////////////Fetch Books User ID //////////////////////////
+		searchParam = {"email":Quote_Owner_email};
+		BooksUsers = zoho.books.getRecords("users","666479573",searchParam);
+		Books_User_Info = BooksUsers.get("users").get(0);
+		Book_User_ID = Books_User_Info.get("user_id");
+		Book_User_email = Books_User_Info.get("email");
+		////////////////Get contact details via customer id /////////////////////////////////////
+		contactdetails = zoho.books.getRecordsByID("contacts","666479573",Book_contact_ID);
+		Contact_obj = contactdetails.get("contact").get("contact_persons");
+		// 		info "contact object : " + Contact_obj;
+		for each  data_contact in Contact_obj
+		{
+			if(Invoice_recipient_email == "")
+			{
+				if(data_contact.get("email") == crm_contact_email)
+				{
+					Inv_contact_id = data_contact.get("contact_person_id");
+				}
+			}
+			else
+			{
+				if(data_contact.get("email") == Invoice_recipient_email)
+				{
+					Inv_contact_id = data_contact.get("contact_person_id");
+				}
+			}
+		}
+		info "Accounting POC Email: " + Invoice_recipient_email;
+		info "Invoice Contact ID: " + Inv_contact_id;
+		/////////////////////////////////////  Create Invoice ///////////////////////////////////////////////////////////////
+		////////////////////// Terms and conditions and template //////////////////
+		if(Organization_Name == "Blink Signs")
+		{
+			terms_and_conditions = SO_details.get("Terms_and_Conditions");
+			Template_id = "1316483000000017001";
+		}
+		else if(Organization_Name == "Blink Swag")
+		{
+			terms_and_conditions = SO_details.get("Terms_and_Conditions_Swag");
+			Template_id = "1316483000009790351";
+		}
+		else if(Organization_Name == "Blink Sourcing")
+		{
+			terms_and_conditions = SO_details.get("Terms_and_Conditions");
+			Template_id = "1316483000017240117";
+		}
+		//////////////////// Get payment terms based on terms for Invoice creation ///////////////////////////
+		if(Inv_Terms == "Direct Debit Payment")
+		{
+			Payment_terms = "0";
+		}
+		else if(Inv_Terms == "Net 15")
+		{
+			Payment_terms = "15";
+		}
+		else if(Inv_Terms == "Net 30")
+		{
+			Payment_terms = "30";
+		}
+		else if(Inv_Terms == "Net 45")
+		{
+			Payment_terms = "45";
+		}
+		else if(Inv_Terms == "Net 60")
+		{
+			Payment_terms = "60";
+		}
+		info "Payment Terms: " + Payment_terms;
+		//////////////////////////// Creating Line Items //////////////////////////////////
+		productDetails = SO_details.get("Product_Details").toJSONList();
+		productList = List();
+		for each  product in productDetails
+		{
+			productName = product.get("product").get("name");
+			productID = product.get("product").get("id");
+			quantity = product.get("quantity");
+			rate = product.get("list_price");
+			desc = product.get("product_description");
+			Discount = product.get("Discount");
+			///////////////////////////////////////////////////////////
+			item = Map();
+			Product_details = zoho.crm.getRecordById("Products",productID);
+			Taxable = Product_details.get("Taxable");
+			if(Taxable == true)
+			{
+				item.put("tax_id",Tax_Group_Id);
+			}
+			else if(Taxable == false)
+			{
+				item.put("tax_exemption_id","1316483000008309089");
+				item.put("tax_exemption_code","SERVICE");
+			}
+			/////////////////////////////// Fetching product  ///////////////////////////////////////////////
+			searchParam = {"zcrm_product_id":productID};
+			Booksitem = zoho.books.getRecords("items","666479573",searchParam);
+			item_Info = Booksitem.get("items").get(0);
+			item_id = item_Info.get("item_id");
+			item_status = item_Info.get("status");
+			item_type = item_Info.get("item_type");
+			///////////////////// Update Product as Active if it is In Active //////////////////////////////////
+			if(item_status != "active")
+			{
+				Active_Product = invokeurl
+				[
+					url :"https://books.zoho.com/api/v3/items/" + item_id + "/active?organization_id=666479573"
+					type :POST
+					connection:"zoho_books"
+				];
+			}
+			//////////////////////// Update Item to Sales & Purchases type only if item type is purchases///////////////////////////////////
+			if(item_type == "purchases")
+			{
+				product_data = Map();
+				product_data.put("item_type","sales_and_purchases");
+				product_data.put("account_id","1316483000000000388");
+				update_product = zoho.books.updateRecord("items","666479573",item_id,product_data);
+				info update_product;
+			}
+			/////////////////////// Creating a product details map  ///////////////////////////////
+			item.put("item_id",item_id);
+			item.put("description",desc);
+			item.put("rate",rate);
+			item.put("quantity",quantity);
+			item.put("discount",Discount);
+			productList.add(item);
+		}
+		//info "Item Map: " + productList;
+		///////////////////// Data of Custom Fields /////////////////////////////////
+		cf_list = List();
+		cf_org_name = Map();
+		cf_org_name.put("label","Organization Name");
+		cf_org_name.put("value",Organization_Name);
+		cf_list.add(cf_org_name);
+		/////////////////////////////////////////////////
+		cf_contact = Map();
+		cf_contact.put("label","Contact");
+		cf_contact.put("value",contact_name);
+		cf_list.add(cf_contact);
+		/////////////////////////////////////////////////
+		cf_project = Map();
+		cf_project.put("label","Project Name");
+		cf_project.put("value",Project_name);
+		cf_list.add(cf_project);
+		/////////////////////////////////////////////////
+		cf_project = Map();
+		cf_project.put("label","Project ID");
+		cf_project.put("value",PO_ID);
+		cf_list.add(cf_project);
+		/////////////////////////////////////////////////
+		cf_quote = Map();
+		cf_quote.put("label","Quote #");
+		cf_quote.put("value",Quote_autono);
+		cf_list.add(cf_quote);
+		//////////////////////////////////////////////////
+		cf_po_reference = Map();
+		cf_po_reference.put("label","Client PO");
+		cf_po_reference.put("value",PO_Ref);
+		cf_list.add(cf_po_reference);
+		//////////////////////////////////////////////////
+		cf_po_So = Map();
+		cf_po_So.put("label","SO #");
+		cf_po_So.put("value",SO_autono);
+		cf_list.add(cf_po_So);
+		//////////////////////////////////////////////////
+		// 		cf_po_quote_owner = Map();
+		// 		cf_po_quote_owner.put("label","Quote Owner");
+		// 		cf_po_quote_owner.put("value",Book_User_ID);
+		// 		cf_list.add(cf_po_quote_owner);
+		//////////////////////////////////////////////////
+		cf_po_owner_email = Map();
+		cf_po_owner_email.put("label","Owner Email");
+		cf_po_owner_email.put("value",Book_User_email);
+		cf_list.add(cf_po_owner_email);
+		/////////////////////////// Selecting Currency //////////////////
+		if(Currency == "USD")
+		{
+			currency_id = 1316483000000000097;
+			///////////////Configuring Authorize.net /////////////////////////
+			payment_getway = Map();
+			payment_getway.put("configured",true);
+			payment_getway.put("can_show_billing_address",false);
+			payment_getway.put("is_bank_account_applicable",true);
+			payment_getway.put("gateway_name","authorize_net");
+			payment_options = Map();
+			payment_options.put("payment_gateways",{payment_getway});
+		}
+		else if(Currency == "CAD")
+		{
+			currency_id = 1316483000000000101;
+			///////////////Configuring Paypal /////////////////////////
+			payment_getway = Map();
+			payment_getway.put("configured",true);
+			payment_getway.put("can_show_billing_address",false);
+			payment_getway.put("additional_field1","standard");
+			payment_getway.put("is_bank_account_applicable",true);
+			payment_getway.put("can_pay_using_new_card",true);
+			payment_getway.put("gateway_name","paypal");
+			payment_options = Map();
+			payment_options.put("payment_gateways",{payment_getway});
+		}
+		info "Adjustment: " + Adjustment;
+		////////////////Update Invoice in books ////////////////////////////
+		InvoiceData = Map();
+		InvoiceData.put("customer_id",Book_contact_ID);
+		InvoiceData.put("zcrm_potential_id",Project_id);
+		InvoiceData.put("reference_number",SO_autono);
+		InvoiceData.put("line_items",productList);
+		InvoiceData.put("terms",terms_and_conditions);
+		InvoiceData.put("template_id",Template_id);
+		InvoiceData.put("payment_terms",Payment_terms);
+		InvoiceData.put("contact_persons",{Inv_contact_id});
+		InvoiceData.put("payment_options",payment_options);
+		InvoiceData.put("custom_fields",cf_list);
+		InvoiceData.put("salesperson_name",Quote_Owner_name);
+		InvoiceData.put("discount",Discount);
+		InvoiceData.put("adjustment",Invoice_Adjustment);
+		InvoiceData.put("adjustment_description","Adjustment");
+		InvoiceData.put("reason","Invoice is updated by: '" + zoho.loginuser + "'");
+		// 		info "map response : " + InvoiceData;
+		resp_inv = zoho.books.updateRecord("invoices","666479573",Invoice_id,InvoiceData);
+		info "update response" + resp_inv;
+		if(resp_inv.get("code") == 0)
+		{
+			///////////////////////////////////////////////////////////////////////////////////
+			Inv_total = resp_inv.get("invoice").get("total");
+			Inv_balanace = resp_inv.get("invoice").get("balance");
+			paid_amt = Inv_total - Inv_balanace;
+			//info paid_amt;
+			Inv_Mp = Map();
+			Inv_Mp.put("Paid_Retainer_Amount",paid_amt);
+			Inv_Mp.put("Invoice_Date",resp_inv.get("invoice").get("date").toDate());
+			SO_updated_info = zoho.crm.updateRecord("Sales_Orders",SO_id,Inv_Mp,{"trigger":{"workflow"}});
+			//info SO_updated_info;
+			/////////////////////////////////// Fixing Invoice Adjustment ///////////////////////////////
+			Update_Invoice_Adjustment = ifnull(resp_inv.get("invoice").get("adjustment"),0);
+			Difference_Inv_SO = ifnull(SO_GrandTotal,0) - ifnull(Inv_total,0);
+			New_Adjustment = Update_Invoice_Adjustment + Difference_Inv_SO;
+			//info Update_Invoice_Adjustment;
+			info "Invoice Adjustment: " + Update_Invoice_Adjustment;
+			info "Difference: " + Difference_Inv_SO;
+			info "New Adjustment: " + New_Adjustment;
+			////////////////////////////////////////////////////////
+			if(Difference_Inv_SO > 0)
+			{
+				Update_InvoiceData = Map();
+				Update_InvoiceData.put("customer_id",Book_contact_ID);
+				Update_InvoiceData.put("adjustment",New_Adjustment);
+				Update_InvoiceData.put("adjustment_description","Adjustment");
+				Update_InvoiceData.put("reason","Invoice is updated by: '" + zoho.loginuser + "'");
+				Update_resp_inv = zoho.books.updateRecord("invoices","666479573",Invoice_id,Update_InvoiceData);
+				info "Difference Inv SO Update" + Update_resp_inv;
+			}
+			///////////////////////////////////////// Open PDF invoice ///////////////////////////////////////// 
+			PDF_Generator = zoho.crm.getRelatedRecords("Invoices","Sales_Orders",SO_id);
+			//info PDF_Generator;
+			if(PDF_Generator != {})
+			{
+				for each  data in PDF_Generator
+				{
+					PDF_Gen_ID = data.get("id");
+				}
+				openUrl("https://crm.zoho.com/crm/org666155072/Template.do?step=previewPop&entityId=" + PDF_Gen_ID + "&module=Invoices&contactNameId=" + contact_id + "&action=sendMail","popup window","height=700,width=1200");
+			}
+			return "Invoice is already created in the system";
+		}
+		else
+		{
+			messages = resp_inv.get("message");
+			return messages;
+		}
+	}
+	info "message: " + messages;
+}
+catch (e)
+{
+	info e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Create / Update / Send Invoice - New / CRM Button Sales Orders"
+		message :"ID: " + SO_id + ", Root Cause: " + e + ", Resp: " + resp_inv
+	]
+}

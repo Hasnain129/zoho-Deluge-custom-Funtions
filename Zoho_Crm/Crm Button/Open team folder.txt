@@ -1,0 +1,177 @@
+try 
+{
+	///////////////////////// Getting Record //////////////////////////////////
+	sign_project = zoho.crm.getRecordById("Deals",sp_id);
+	zoho_project_id = sign_project.get("Zoho_Projects_Project_ID");
+	workdrive_folder_id = sign_project.get("WorkDrive_Folder_ID");
+	Parentnewfolder = sign_project.get("WD_Folder_Parent_ID");
+	Team_Folder_Open = sign_project.get("Team_Folder_Open");
+	info "parent folder : " + Parentnewfolder;
+	info "team folder opened : " + Team_Folder_Open;
+	//////////////////////// Opening Team Folder //////////////////////////////
+	if(Parentnewfolder != null && Team_Folder_Open == true)
+	{
+		Message_out = "Opening Workdrive Folder";
+		openUrl("https://workdrive.zoho.com/home/2lto636be3147893644f593904d8744431ad8/ws/" + Parentnewfolder + "/folders/files","popup window","height=800,width=1000");
+	}
+	////////////////////////////////////////////////////////////////////////////
+	else if(Team_Folder_Open == false)
+	{
+		if(Parentnewfolder == null)
+		{
+			////////////////Getting WD folder id from Zoho Project  /////////////////////////////
+			resp = invokeurl
+			[
+				url :"https://projectsapi.zoho.com/api/v3/portal/666337121/projects/" + zoho_project_id + "/folders"
+				type :GET
+				connection:"wd_projects_test"
+			];
+			Folders = resp.get("folders");
+			for each  data in Folders
+			{
+				if(data.get("name") != "My Folder")
+				{
+					Parentnewfolder = data.get("thirdparty_folder_id");
+				}
+			}
+		}
+		if(Parentnewfolder != null)
+		{
+			if(workdrive_folder_id != null)
+			{
+				/////////////////////////////// Moving Previous folder under Team Folder /////////////////////
+				attributeMap = Map();
+				attributeMap.put("parent_id",Parentnewfolder);
+				// Destination id in "parent_id"
+				payLoad = Map();
+				payLoad.put("attributes",attributeMap);
+				payLoad.put("id",workdrive_folder_id);
+				// resource id in "id"
+				payLoad.put("type","files");
+				list = list();
+				list.add(payLoad);
+				data = Map();
+				data.put("data",list);
+				headersMap = Map();
+				headersMap.put("Accept","application/vnd.api+json");
+				headersMap.put("Content-Type"," application/json charset=UTF-8");
+				url = "https://workdrive.zoho.com/api/v1/files";
+				info data;
+				moveFolder = invokeurl
+				[
+					url :url
+					type :PATCH
+					parameters:data.toString()
+					headers:headersMap
+					connection:"zoho_workdrive"
+				];
+				info "Move Folder Message : " + moveFolder;
+			}
+			/////////////////////// Check If Attachment Folder Exist /////////////////////////////////////
+			folder_name = "CRMAttachments";
+			headersMap = Map();
+			headersMap.put("Accept","application/vnd.api+json");
+			resp = invokeurl
+			[
+				url :"https://workdrive.zoho.com/api/v1/teams/2lto636be3147893644f593904d8744431ad8/records?search%5Ball%5D=" + folder_name + "&filter%5BteamFolder%5D=" + Parentnewfolder
+				type :GET
+				headers:headersMap
+				connection:"zoho_workdrive"
+			];
+			folder_exist = resp.get("data");
+			folder_empty = folder_exist.isEmpty();
+			if(folder_empty == true)
+			{
+				/////////////////////// creating folder for attachments //////////////////////////////////////
+				response = zoho.workdrive.createFolder("CRM Attachments",Parentnewfolder,"zoho_workdrive");
+				crm_attachment_id = response.get("data").get("id");
+			}
+			else if(folder_empty == false)
+			{
+				crm_attachment_id = resp.get("data").get("0").get("id");
+			}
+			/////////////////////////////// Move attachments /////////////////////////////////////////////
+			attachments = invokeurl
+			[
+				url :"https://www.zohoapis.com/crm/v2/Deals/" + sp_id + "/Attachments"
+				type :GET
+				connection:"attachfile"
+			];
+			for each  attachment in attachments.get("data")
+			{
+				info "Attachment found";
+				attachment_id = attachment.get("id");
+				file_name = attachment.get("File_Name").replaceAll("%","");
+				file = invokeurl
+				[
+					url :"https://www.zohoapis.com/crm/v2/Deals/" + sp_id + "/Attachments/" + attachment_id
+					type :GET
+					connection:"attachfile"
+				];
+				info "File Attachments : " + file;
+				// 				checkFile = file.toString();
+				if(file.contains("DOWNLOAD_NOT_ALLOWED") == false && file != null)
+				{
+					to_workdrive = zoho.workdrive.uploadFile(file,crm_attachment_id,file_name,true,"zoho_workdrive");
+					info "Workdrive attachment Move : " + to_workdrive;
+				}
+				else if(file != null)
+				{
+					url_id = attachment.get("$link_url");
+					url_file = url_id.tofile("URL");
+					to_workdrive = zoho.workdrive.uploadFile(url_file,crm_attachment_id,file_name,true,"zoho_workdrive");
+					info "moving attachment : : " + to_workdrive;
+					info "URL found";
+				}
+				else
+				{
+					info "File not found";
+				}
+			}
+			//////////////////////////// Deleting attachments //////////////////////////////////
+			// 			attachments = invokeurl
+			// 			[
+			// 				url :"https://www.zohoapis.com/crm/v2/Deals/" + sp_id + "/Attachments"
+			// 				type :GET
+			// 				connection:"attachfile"
+			// 			];
+			// 			info attachments;
+			// 			for each  attachment in attachments.get("data")
+			// 			{
+			// 				attachment_id = attachment.get("id");
+			// 				file_name = attachment.get("File_Name").replaceAll("%","");
+			// 				file = invokeurl
+			// 				[
+			// 					url :"https://www.zohoapis.com/crm/v2/Deals/" + sp_id + "/Attachments/" + attachment_id
+			// 					type :DElETE
+			// 					connection:"zoho_crm"
+			// 				];
+			// 				info "attachment deletion : " + file;
+			// 			}
+			/////////////////////////////// Opening Team Folder ////////////////////////////////////
+			Message_out = "Opening Workdrive Folder.";
+			openUrl("https://workdrive.zoho.com/home/2lto636be3147893644f593904d8744431ad8/ws/" + Parentnewfolder + "/folders/files","popup window","height=800,width=1000");
+			//////////////////// update new fields //////////////////////////
+			updateDealMap = Map();
+			updateDealMap.put("WD_Folder_Parent_ID",Parentnewfolder);
+			updateDealMap.put("Team_Folder_Open",true);
+			updateDeal = zoho.crm.updateRecord("Deals",sp_id,updateDealMap);
+		}
+		else
+		{
+			Message_out = "Team folder does not exist on Zoho Project.";
+		}
+	}
+}
+catch (e)
+{
+	info "Catch: " + e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"view document button / Button / Sign Project / CRM"
+		message :"ID: " + sp_id + " Root Cause: " + e
+	]
+}
+return Message_out;

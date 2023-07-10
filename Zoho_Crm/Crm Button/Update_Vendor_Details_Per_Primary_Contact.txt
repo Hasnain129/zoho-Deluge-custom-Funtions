@@ -1,0 +1,107 @@
+try 
+{
+	rep = List();
+	rep = Vendor_id.replaceall("|||",",",true);
+	for each  Sp_Id in rep
+	{
+		/////////////// ======== Getting Vendor INFO and CONTACTS INFO ========== /////////////////////////////////
+		Vendor_Details = zoho.crm.getRecordById("Vendors",Sp_Id);
+		Vendor_Primary_Contact = Vendor_Details.get("Primary_Contact");
+		Vendor_contacts = zoho.crm.getRelatedRecords("Contacts","Vendors",Sp_Id);
+		/////////////// ======== UPDATE VENDOR AND CONTACT WHEN PRIMARY CONTACT IS ASSOCIATED ========== /////////////////////////////////
+		if(Vendor_Primary_Contact != null)
+		{
+			Primary_contact_id = Vendor_Primary_Contact.get("id");
+			Primary_contact_name = Vendor_Primary_Contact.get("name");
+			if(!Vendor_contacts.isEmpty())
+			{
+				if(Vendor_contacts.get(0) != null)
+				{
+					if(Vendor_contacts.get(0).get("message") == null)
+					{
+						for each  data in Vendor_contacts
+						{
+							if(data.get("id") == Primary_contact_id)
+							{
+								Contact_id = data.get("id");
+								////////////////// Update Primary Contact in Vendor Module /////////////////////////////////
+								Contact_obj = zoho.crm.getRecordById("Contacts",Contact_id);
+								Update_Contact = Map();
+								Update_Contact.put("Email",Contact_obj.get("Email"));
+								Update_Contact.put("Phone",Contact_obj.get("Phone"));
+								Update_Contact.put("Vendor_Primary_Email_Updated",true);
+								update_vendor = zoho.crm.updateRecord("Vendors",Sp_Id,Update_Contact);
+								info update_vendor;
+								////////Update Associated Vendor Checkbox and Fill Vendor Name in Contact Module ///////////////
+								// 							Vendor_obj = zoho.crm.getRecordById("Vendors",Vendor_id);
+								// 							Vendor_Status = Vendor_obj.get("Vendor_Status");
+								Update_As_check = Map();
+								Update_As_check.put("Vendor_Name",Sp_Id);
+								Update_As_check.put("Vendor_Associated",true);
+								//Update_As_check.put("Primary_Contact",true);
+								abc = zoho.crm.updateRecord("Contacts",Contact_id,Update_As_check);
+								info "first loop" + abc;
+							}
+						}
+					}
+				}
+			}
+		}
+		/////////////// ======== UPDATE VENDOR AND CONTACT WHEN PRIMARY CONTACT IS NOT ASSOCIATED ========== /////////////////////////////////
+		if(Vendor_Primary_Contact == Null)
+		{
+			if(!Vendor_contacts.isEmpty())
+			{
+				if(Vendor_contacts.get(0) != null)
+				{
+					if(Vendor_contacts.get(0).get("message") == null)
+					{
+						for each  data in Vendor_contacts
+						{
+							if(data.get("Primary_Contact") == true)
+							{
+								Contact_id = data.get("id");
+								/////////////////// Update Primary Contact in Vendor Module /////////////////////////////////
+								Contact_obj = zoho.crm.getRecordById("Contacts",Contact_id);
+								Update_Contact = Map();
+								Update_Contact.put("Primary_Contact",Contact_id);
+								Update_Contact.put("Email",Contact_obj.get("Email"));
+								Update_Contact.put("Phone",Contact_obj.get("Phone"));
+								Update_Contact.put("Vendor_Primary_Email_Updated",true);
+								update_vendor = zoho.crm.updateRecord("Vendors",Sp_Id,Update_Contact);
+								info update_vendor;
+								////////Update Associated Vendor Checkbox and Fill Vendor Name in Contact Module ///////////////
+								// 							Vendor_obj = zoho.crm.getRecordById("Vendors",Vendor_id);
+								// 							Vendor_Status = Vendor_obj.get("Vendor_Status");
+								Update_As_check = Map();
+								Update_As_check.put("Vendor_Associated",true);
+								//Update_As_check.put("Primary_Contact",true);
+								abc = zoho.crm.updateRecord("Contacts",Contact_id,Update_As_check);
+								info "Second loop" + abc;
+								break;
+							}
+							else
+							{
+								info "Vendor has no primary contact in VENDORS and CONTACT Module";
+							}
+						}
+					}
+				}
+			}
+		}
+		Update_mark = Map();
+		Update_mark.put("Vendor_Primary_Email_Updated",true);
+		update_vendor = zoho.crm.updateRecord("Vendors",Sp_Id,Update_mark);
+	}
+	return "Vendor Updated";
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"Sarmad.shahbaz@rebiz.com"
+		subject :"Update Primary Contact and Vendor / Vendor / Workflow / CRM"
+		message :"ID: " + Vendor_id + " Root Cause: " + e
+	]
+}
+return "Error!";

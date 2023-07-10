@@ -1,0 +1,139 @@
+try 
+{
+	rep = List();
+	rep = projects_ids.replaceall("|||",",",true);
+	for each  Sp_Id in rep
+	{
+		deal_data = zoho.crm.getRecordById("Deals",Sp_Id);
+		Organization_name = deal_data.get("Organization_Name");
+		Deal_Name = deal_data.get("Deal_Name");
+		name_P_ID = deal_data.get("Project_ID").toString();
+		//Unique_Invoices = deal_data.get("ShopVox_Unique_Invoice_No");
+		/////////////////////////////////////////////////////////
+		if(Deal_Name.len() < 85)
+		{
+			Deal_Name = Deal_Name + " / " + name_P_ID;
+		}
+		else
+		{
+			Deal_Name = Deal_Name.subString(0,85);
+			Deal_Name = Deal_Name + " / " + name_P_ID;
+		}
+		proj_map = Map();
+		proj_map.put("name",Deal_Name);
+		//proj_map.put("owner",Projet_manager);
+		proj_map.put("description",deal_data.get("Description"));
+		proj_map.put("show_project_overview","yes");
+		proj_map.put("entityId",Sp_Id);
+		// ------------------------------------------- Custom Fields ---------
+		proj_map.put("UDF_CHAR1",Sp_Id);
+		proj_map.put("UDF_CHAR3",deal_data.get("Project_ID"));
+		info proj_map;
+		//------------------------------------------Create Project------------------------------------
+		//	info proj_map;
+		resp = invokeurl
+		[
+			url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/"
+			type :POST
+			parameters:proj_map
+			connection:"zohoprojectcall"
+		];
+		info "New project Created: " + resp;
+		info resp.get("projects").get("id");
+		// --------------------------------------    -------------------------
+		Created_Project_data = resp.get("projects").toMap();
+		ZProj_id = Created_Project_data.get("id_string");
+		info ZProj_id;
+		info "Zoho Project ID: " + ZProj_id;
+		//--------------------------------------- Get Customer details
+		customer_id = deal_data.get("Account_Name").get("id");
+		customer_data = zoho.crm.getRecordById("Accounts",customer_id);
+		info "Client ID: " + customer_data.get("zp_client_id");
+		if(customer_data.get("zp_client_id") == null)
+		{
+			//----------------------------------- Create a Client Company
+			param_Clint_Update = Map();
+			param_Clint_Update.put("name",deal_data.get("Account_Name").get("name"));
+			get_client_Update = invokeurl
+			[
+				url :"https://projectsapi.zoho.com/restapi/portal/666337121/clients/"
+				type :POST
+				parameters:param_Clint_Update
+				connection:"zohoprojectcall"
+			];
+			client_id = get_client_Update.get("clients").get(0).get("id");
+			////////////////// Updating ZP Client ID in CRM ////////////////////
+			update_account_map = Map();
+			update_account_map.put("zp_client_id",client_id.tostring());
+			update_account_resp = zoho.crm.updateRecord("Accounts",customer_id,update_account_map);
+		}
+		else
+		{
+			client_id = customer_data.get("zp_client_id");
+		}
+		/////////////////////////////////------- Add Client Company to Project
+		param_Clint_Update = Map();
+		param_Clint_Update.put("company_id",client_id);
+		param_Clint_Update.put("primary_client","yes");
+		get_client_Update = invokeurl
+		[
+			url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProj_id + "/clients/"
+			type :POST
+			parameters:param_Clint_Update
+			connection:"zohoprojectcall"
+		];
+		info "Link  client company with Project" + get_client_Update;
+		// ---------------------------------------------- Link Project To Deals -----------
+		mp = Map();
+		mp.put("name",Deal_Name);
+		datalist = List();
+		datalist.add(mp);
+		datamp = Map();
+		datamp.put("data",datalist);
+		resp = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v2/Potentials/" + Sp_Id + "/Zoho_Projects/" + ZProj_id
+			type :POST
+			parameters:datamp.toString()
+			connection:"zohoprojectcall"
+		];
+		info "Link Deal and ZProject" + resp;
+		////////////////////////////////////////////////////
+		// 	update_map = Map();
+		// 	update_map.put("status","archived");
+		// 	update_map.put("custom_status","1264527000000212116");
+		// 	resp = invokeurl
+		// 	[
+		// 		url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProj_id + "/"
+		// 		type :POST
+		// 		parameters:update_map
+		// 		connection:"zohoprojectcall"
+		// 	];
+		// 	info "Archived Project: " + resp;
+		/////////////////////////////////////////////////////
+		uodate_crm_project = Map();
+		uodate_crm_project.put("Zoho_Projects_Project_ID",ZProj_id);
+		uodate_crm_project.put("SV_Imported_to_Zoho_Projects",true);
+		resp = zoho.crm.updateRecord("Deals",Sp_Id,uodate_crm_project);
+		// 	}
+		// 	else
+		// 	{
+		// 		uodate_crm_project = Map();
+		// 		uodate_crm_project.put("Character_Limit_Exceed",true);
+		// 		resp = zoho.crm.updateRecord("Deals",Sp_Id,uodate_crm_project);
+		// 	}
+	}
+	return "Done Project!";
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"sarmad.shahbaz@erphub.com"
+		subject :"Error in Mass Update Button on Sign Projects"
+		message :"Error at: " + e
+	]
+	return "Not Created";
+}
+return "";

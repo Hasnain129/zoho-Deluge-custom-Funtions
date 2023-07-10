@@ -1,0 +1,12 @@
+rep = List();
+rep = Bill_id.replaceall("|||",",",true);
+for each  data in rep
+{
+	bill_Data = zoho.crm.getRecordById("Create_Bills",data);
+	Old_amount = bill_Data.get("Amount1");
+	////////////////////////////////////////////////////
+	mp = Map();
+	mp.put("Amount",Old_amount);
+	update_bill = zoho.crm.updateRecord("Create_Bills",data,mp);
+}
+return "Updated";

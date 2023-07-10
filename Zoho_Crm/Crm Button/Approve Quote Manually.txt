@@ -1,0 +1,111 @@
+// Quote_details = zoho.crm.getRecordById("Quotes",Quote_ID.toLong());
+// Subjects = Quote_details.get("Subject");
+// Design_Name = ifnull(Quote_details.get("Design"),"").get("name");
+// Deal_Name = ifnull(Quote_details.get("Deal_Name"),"").get("name");
+// Deal_ID = ifnull(Quote_details.get("Deal_Name"),"").get("id");
+// if(Deal_ID != null)
+// {
+// 	Deal_details = zoho.crm.getRecordById("Deals",Deal_ID);
+// 	PO_ID = Deal_details.get("Project_ID");
+// }
+// else if(Deal_ID == null)
+// {
+// 	PO_ID = "";
+// }
+// if(Deal_Name == null)
+// {
+// 	Deal_Name = "";
+// }
+// if(Design_Name == null)
+// {
+// 	Design_Name = "";
+// }
+// //////////////////// Remove Special Characters from Deal name ////////////////////////////////////
+// a = Deal_Name.remove("'");
+// b = a.remove("*");
+// c = b.remove("(");
+// d = c.remove(")");
+// e = d.remove("!");
+// f = e.remove("@");
+// g = f.remove("#");
+// h = g.remove("$");
+// i = h.remove("%");
+// j = i.remove("+");
+// k = j.remove("^");
+// l = k.remove("&");
+// m = l.remove("_");
+// n = m.remove("-");
+// o = n.remove("=");
+// p = o.remove("}");
+// q = p.remove("{");
+// r = q.remove("]");
+// s = r.remove("[");
+// t = s.remove('"');
+// u = t.remove(":");
+// v = u.remove(";");
+// w = v.remove(".");
+// x = w.remove('\');
+// y = x.remove("<");
+// z = y.remove(">");
+// Deal_Name = z;
+// //////////////////// Remove Special Characters from Quote Name ////////////////////////////////////
+// a = Subjects.remove("'");
+// b = a.remove("*");
+// c = b.remove("(");
+// d = c.remove(")");
+// e = d.remove("!");
+// f = e.remove("@");
+// g = f.remove("#");
+// h = g.remove("$");
+// i = h.remove("%");
+// j = i.remove("+");
+// k = j.remove("^");
+// l = k.remove("&");
+// m = l.remove("_");
+// n = m.remove("-");
+// o = n.remove("=");
+// p = o.remove("}");
+// q = p.remove("{");
+// r = q.remove("]");
+// s = r.remove("[");
+// t = s.remove('"');
+// u = t.remove(":");
+// v = u.remove(";");
+// w = v.remove(".");
+// x = w.remove('\');
+// y = x.remove("<");
+// z = y.remove(">");
+// Subjects = z;
+// ///////////////////////////////////////////////////
+// openUrl("https://forms.zohopublic.com/blinksigns/form/CustomerQuoteApproval/formperma/i9Izp2tYjwfphx9J8d43rp2q5wbMyrWiXdcF5xDXecA?quoteID=" + Quote_ID + "&design=" + Design_Name + "&proj_name=" + Deal_Name + "&project=" + PO_ID + "&app_by=Internal&quote=" + Subjects,"open window");
+// return "Please approve the quote on the opened form and provide signature on behalf of the Customer";
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+try 
+{
+	Quote_details = zoho.crm.getRecordById("Quotes",Quote_ID.toLong());
+	Quote_No = Quote_details.get("Quote_Auto_No");
+	mp = Map();
+	mp.put("Quote_Stage","Approved");
+	mp.put("Quote_Approved_Date",zoho.currentdate);
+	update_quote = zoho.crm.updateRecord("Quotes",Quote_ID,mp,{"trigger":{"workflow"}});
+	//////////////////////// Create Note //////////////////////////
+	User_name = zoho.loginuser;
+	Title = "Quote Approved Internally";
+	Content = "Quote no: \"" + Quote_No + "\" has been internally approved by " + User_name;
+	mp = Map();
+	mp.put("Parent_Id",Quote_ID.tolong());
+	mp.put("Note_Title",Title);
+	mp.put("Note_Content",Content);
+	mp.put("$se_module","Quotes");
+	create_note = zoho.crm.createRecord("Notes",mp);
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Approve Quote Manually / CRM Button Quotes"
+		message :"ID: " + Quote_ID + " Root Cause: " + e
+	]
+}
+return "Quote has been approved internally by " + User_name;

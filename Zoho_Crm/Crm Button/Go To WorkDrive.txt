@@ -1,0 +1,308 @@
+try 
+{
+	sign_project = zoho.crm.getRecordById("Deals",sp_id);
+	project_ID = sign_project.get("Project_ID");
+	deal_name = sign_project.get("Deal_Name");
+	workdrive_folder_id = sign_project.get("WorkDrive_Folder_ID");
+	if(workdrive_folder_id == null)
+	{
+		folder = zoho.workdrive.createFolder(deal_name + " - " + project_ID,"k98hnd2d4efa944b747c99ed33bda19659427","zoho_workdrive");
+		workdrive_folder_id = folder.get("data").get("id");
+		/////////////////// Update WorkDrive_Folder_ID on Sign Project //////////////////////////////////
+		mp_project = Map();
+		mp_project.put("WorkDrive_Folder_ID",workdrive_folder_id);
+		zoho.crm.updateRecord("Deals",sp_id,mp_project);
+	}
+	//////////////////// Fetcch Attachments and Push to Folder //////////////////////////////////
+	//////===================================  Sign Project Attachements ===============================////////
+	attachments = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2/Deals/" + sp_id + "/Attachments"
+		type :GET
+		connection:"attachfile"
+	];
+	for each  attachment in attachments.get("data")
+	{
+		attachment_id = attachment.get("id");
+		file_name = attachment.get("File_Name").replaceAll("%","");
+		// 		file_id = attachment.get("$file_id");
+		// 		if(file_id != null)
+		// 		{
+		file = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v2/Deals/" + sp_id + "/Attachments/" + attachment_id
+			type :GET
+			connection:"attachfile"
+		];
+		info file;
+		checkFile = file.toString();
+		if(checkFile.contains("DOWNLOAD_NOT_ALLOWED") == false || checkFile == null)
+		{
+			to_workdrive = zoho.workdrive.uploadFile(file,workdrive_folder_id,file_name,true,"zoho_workdrive");
+			info to_workdrive;
+		}
+		// 		}
+	}
+	//////===================================  Zoho Sign Attachements ===============================////////
+	zoho_sign_records = zoho.crm.getRelatedRecords("ZohoSign_Documents","Deals",sp_id);
+	for each  record in zoho_sign_records
+	{
+		record_id = record.get("id");
+		attachments = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v2/zohosign__ZohoSign_Documents/" + record_id + "/Attachments"
+			type :GET
+			connection:"attachfile"
+		];
+		for each  attachment in attachments.get("data")
+		{
+			attachment_id = attachment.get("id");
+			file_name = attachment.get("File_Name").replaceAll("%","");
+			// 			file_id = attachment.get("$file_id");
+			// 			if(file_id != null)
+			// 			{
+			file = invokeurl
+			[
+				url :"https://www.zohoapis.com/crm/v2/zohosign__ZohoSign_Documents/" + record_id + "/Attachments/" + attachment_id
+				type :GET
+				connection:"attachfile"
+			];
+			info file;
+			checkFile = file.toString();
+			if(checkFile.contains("DOWNLOAD_NOT_ALLOWED") == false || checkFile == null)
+			{
+				to_workdrive = zoho.workdrive.uploadFile(file,workdrive_folder_id,file_name,true,"zoho_workdrive");
+				info to_workdrive;
+			}
+			// 			}
+		}
+	}
+	//////===================================  Design Attachements ===============================////////
+	design_records = zoho.crm.getRelatedRecords("Designs","Deals",sp_id);
+	for each  record in design_records
+	{
+		record_id = record.get("id");
+		attachments = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v2/Designs/" + record_id + "/Attachments"
+			type :GET
+			connection:"attachfile"
+		];
+		for each  attachment in attachments.get("data")
+		{
+			attachment_id = attachment.get("id");
+			file_name = attachment.get("File_Name").replaceAll("%","");
+			// 			file_id = attachment.get("$file_id");
+			// 			if(file_id != null)
+			// 			{
+			file = invokeurl
+			[
+				url :"https://www.zohoapis.com/crm/v2/Designs/" + record_id + "/Attachments/" + attachment_id
+				type :GET
+				connection:"attachfile"
+			];
+			info file;
+			checkFile = file.toString();
+			if(checkFile.contains("DOWNLOAD_NOT_ALLOWED") == false || checkFile == null)
+			{
+				to_workdrive = zoho.workdrive.uploadFile(file,workdrive_folder_id,file_name,true,"zoho_workdrive");
+				info to_workdrive;
+			}
+			// 			}
+		}
+	}
+	//////===================================  Quote Attachements ===============================////////
+	quote_records = zoho.crm.getRelatedRecords("Quotes","Deals",sp_id);
+	for each  record in quote_records
+	{
+		record_id = record.get("id");
+		attachments = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v2/Quotes/" + record_id + "/Attachments"
+			type :GET
+			connection:"attachfile"
+		];
+		for each  attachment in attachments.get("data")
+		{
+			attachment_id = attachment.get("id");
+			file_name = attachment.get("File_Name").replaceAll("%","");
+			// 			file_id = attachment.get("$file_id");
+			// 			if(file_id != null)
+			// 			{
+			file = invokeurl
+			[
+				url :"https://www.zohoapis.com/crm/v2/Quotes/" + record_id + "/Attachments/" + attachment_id
+				type :GET
+				connection:"attachfile"
+			];
+			info file;
+			checkFile = file.toString();
+			if(checkFile.contains("DOWNLOAD_NOT_ALLOWED") == false || checkFile == null)
+			{
+				to_workdrive = zoho.workdrive.uploadFile(file,workdrive_folder_id,file_name,true,"zoho_workdrive");
+				info to_workdrive;
+			}
+			// 			}
+		}
+	}
+	//////===================================  PO Attachements ===============================////////
+	po_records = zoho.crm.getRelatedRecords("Purchase_Orders","Deals",sp_id);
+	for each  record in quote_records
+	{
+		record_id = record.get("id");
+		attachments = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v2/Purchase_Orders/" + record_id + "/Attachments"
+			type :GET
+			connection:"attachfile"
+		];
+		for each  attachment in attachments.get("data")
+		{
+			attachment_id = attachment.get("id");
+			file_name = attachment.get("File_Name").replaceAll("%","");
+			// 			file_id = attachment.get("$file_id");
+			// 			if(file_id != null)
+			// 			{
+			file = invokeurl
+			[
+				url :"https://www.zohoapis.com/crm/v2/Purchase_Orders/" + record_id + "/Attachments/" + attachment_id
+				type :GET
+				connection:"attachfile"
+			];
+			info file;
+			checkFile = file.toString();
+			if(checkFile.contains("DOWNLOAD_NOT_ALLOWED") == false || checkFile == null)
+			{
+				to_workdrive = zoho.workdrive.uploadFile(file,workdrive_folder_id,file_name,true,"zoho_workdrive");
+				info to_workdrive;
+			}
+			// 			}
+		}
+	}
+	//////===================================  PO Completed Attachements ===============================////////
+	po_records = zoho.crm.getRelatedRecords("POs_Completed","Deals",sp_id);
+	for each  record in quote_records
+	{
+		record_id = record.get("id");
+		attachments = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v2/POs_Completed/" + record_id + "/Attachments"
+			type :GET
+			connection:"attachfile"
+		];
+		for each  attachment in attachments.get("data")
+		{
+			attachment_id = attachment.get("id");
+			file_name = attachment.get("File_Name").replaceAll("%","");
+			// 			file_id = attachment.get("$file_id");
+			// 			if(file_id != null)
+			// 			{
+			file = invokeurl
+			[
+				url :"https://www.zohoapis.com/crm/v2/POs_Completed/" + record_id + "/Attachments/" + attachment_id
+				type :GET
+				connection:"attachfile"
+			];
+			info file;
+			checkFile = file.toString();
+			if(checkFile.contains("DOWNLOAD_NOT_ALLOWED") == false || checkFile == null)
+			{
+				to_workdrive = zoho.workdrive.uploadFile(file,workdrive_folder_id,file_name,true,"zoho_workdrive");
+				info to_workdrive;
+			}
+			// 			}
+		}
+	}
+	//////===================================  SO Attachements ===============================////////
+	po_records = zoho.crm.getRelatedRecords("SalesOrders","Deals",sp_id);
+	for each  record in quote_records
+	{
+		record_id = record.get("id");
+		attachments = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v2/Sales_Orders/" + record_id + "/Attachments"
+			type :GET
+			connection:"attachfile"
+		];
+		for each  attachment in attachments.get("data")
+		{
+			attachment_id = attachment.get("id");
+			file_name = attachment.get("File_Name").replaceAll("%","");
+			// 			file_id = attachment.get("$file_id");
+			// 			if(file_id != null)
+			// 			{
+			file = invokeurl
+			[
+				url :"https://www.zohoapis.com/crm/v2/Sales_Orders/" + record_id + "/Attachments/" + attachment_id
+				type :GET
+				connection:"attachfile"
+			];
+			info file;
+			checkFile = file.toString();
+			if(checkFile.contains("DOWNLOAD_NOT_ALLOWED") == false || checkFile == null)
+			{
+				to_workdrive = zoho.workdrive.uploadFile(file,workdrive_folder_id,file_name,true,"zoho_workdrive");
+				info to_workdrive;
+			}
+			// 			}
+		}
+	}
+	// //////===================================  ZOHO Projects Attachements ===============================////////
+	SearchPara = Map();
+	SearchPara.put("search_term",project_ID);
+	SearchPara.put("module","projects");
+	zoho_projects_records = invokeurl
+	[
+		url :"https://projectsapi.zoho.com/restapi/portal/666337121/search"
+		type :GET
+		parameters:SearchPara
+		headers:{"Authorization":"2358af7b9d534acb33004a0d4c31747c"}
+	];
+	for each  record in zoho_projects_records.get("projects")
+	{
+		record_id = record.get("id");
+		zoho_projects_attachments = invokeurl
+		[
+			url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + record_id + "/documents/"
+			type :GET
+			headers:{"Authorization":"c8e3296e6685dfa49a59c9712ff67565"}
+		];
+		all_attachments = zoho_projects_attachments.get("dataobj");
+		for each  obj in all_attachments
+		{
+			obj = obj.toMap();
+			if(obj.containKey("split") == false)
+			{
+				download_url = obj.get("docs_download_url");
+				file_name = obj.get("res_name");
+				file = invokeurl
+				[
+					url :download_url
+					type :GET
+					headers:{"Authorization":"c8e3296e6685dfa49a59c9712ff67565"}
+				];
+				if(isText(file))
+				{
+					file = file.toFile(file_name);
+				}
+				info file;
+				info file_name;
+				to_workdrive = zoho.workdrive.uploadFile(file,workdrive_folder_id,file_name,true,"zoho_workdrive");
+			}
+		}
+	}
+	////////////////////////// OPEN Folder //////////////////////////////////////
+	openUrl("https://workdrive.zoho.com/home/teams/2lto636be3147893644f593904d8744431ad8/ws/0xla061d025977f4e407cae940b854361949b/folders/" + workdrive_folder_id + "","popup window","height=700,width=1000");
+}
+catch (e)
+{
+	info "Catch: " + e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Go To WorkDrive / CRM Button Sign Project"
+		message :"ID: " + sp_id + " Root Cause: " + e
+	]
+}
+return "";

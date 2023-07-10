@@ -1,0 +1,112 @@
+try 
+{
+	/////////////////////////// getting zoho project and team folder /////////////////////////
+	rep = List();
+	rep = sp_id.replaceall("|||",",",true);
+	for each  Sp_id in rep
+	{
+		sign_project = zoho.crm.getRecordById("Deals",Sp_id);
+		zoho_project_id = sign_project.get("Zoho_Projects_Project_ID");
+		workdrive_team_folder_id = sign_project.get("WD_Folder_Parent_ID");
+		if(workdrive_team_folder_id == null)
+		{
+			resp = invokeurl
+			[
+				url :"https://projectsapi.zoho.com/api/v3/portal/666337121/projects/" + zoho_project_id + "/folders"
+				type :GET
+				connection:"wd_projects_test"
+			];
+			Folders = resp.get("folders");
+			for each  data in Folders
+			{
+				if(data.get("name") != "My Folder")
+				{
+					workdrive_team_folder_id = data.get("thirdparty_folder_id");
+				}
+			}
+		}
+		// 		info "WD Parent Folder ID From Projects : " + workdrive_team_folder_id;
+		//////////////////// adding group to team folder ////////////////////////
+		if(workdrive_team_folder_id != null && workdrive_team_folder_id != "")
+		{
+			loop = {1,2,3,4};
+			for each  number in loop
+			{
+				if(number == 1)
+				{
+					role_id = "5";
+					//editor
+					group_id = "2lto636be3147893644f593904d8744431ad8-1225897000011998003";
+				}
+				if(number == 2)
+				{
+					role_id = "2";
+					//organizor
+					group_id = "2lto636be3147893644f593904d8744431ad8-1225897000011998001";
+				}
+				if(number == 3)
+				{
+					role_id = "1";
+					//admin
+					group_id = "2lto636be3147893644f593904d8744431ad8-1225897000011998007";
+				}
+				if(number == 4)
+				{
+					role_id = "34";
+					//viewer
+					group_id = "2lto636be3147893644f593904d8744431ad8-1225897000011998005";
+				}
+				attributeMap = Map();
+				attributeMap.put("resource_id",workdrive_team_folder_id);
+				attributeMap.put("shared_type","groupmembers");
+				attributeMap.put("role_id",role_id);
+				attributeMap.put("share_to",group_id);
+				payLoad = Map();
+				payLoad.put("attributes",attributeMap);
+				payLoad.put("type","members");
+				list = list();
+				list.add(payLoad);
+				data = Map();
+				data.put("data",list);
+				headersMap = Map();
+				headersMap.put("Accept","application/vnd.api+json");
+				headersMap.put("Content-Type"," application/json charset=UTF-8");
+				resp = invokeurl
+				[
+					url :" https://workdrive.zoho.com/api/v1/members"
+					type :POST
+					parameters:data.toString()
+					headers:headersMap
+					connection:"zoho_workdrive"
+				];
+			}
+			updateDealMap = Map();
+			updateDealMap.put("WD_Access_to_all","yes");
+			updateDeal = zoho.crm.updateRecord("Deals",Sp_id,updateDealMap);
+		}
+		else
+		{
+			sendmail
+			[
+				from :zoho.adminuserid
+				to :"shehryar@erphub.com"
+				subject :"Team Folder does not exist on Zoho Project /FOLDER ACCESS / SIGN PROJECTS / BUTTON / CRM "
+				message :"ID: " + Sp_id
+			]
+		}
+	}
+	return "successfull";
+}
+catch (e)
+{
+	info "Catch: " + e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"shehryar@erphub.com"
+		subject :"FOLDER ACCESS / SIGN PROJECTS / BUTTON / CRM "
+		message :"ID: " + sp_id + " Root Cause: " + e
+	]
+	return "Operation Unsuccesfull";
+}
+return "end";

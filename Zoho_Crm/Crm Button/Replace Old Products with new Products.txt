@@ -1,0 +1,131 @@
+/////////////////////////////////GET LINE ITEM AND UPDATE /////////////////
+//oldProductID = 3205780000037149311;
+oldProductID = oldProductIDs.toLong();
+//newProductID = 3205780000007135107;
+productsData = zoho.crm.getRecordById("products",oldProductID);
+newProductID = productsData.get("Replace_Prod_ID");
+if(!newProductID.isNull())
+{
+	email = "erp@blinksigns.com";
+	viewNames = {"Purchase Order Line Items","Quote Line Items","Sales Order Line Items","Invoice Line Items"};
+	for each  viewName in viewNames
+	{
+		workspaceName = "BS_Workspace";
+		paramsMap = Map();
+		paramsMap.put("ZOHO_ACTION","EXPORT");
+		paramsMap.put("ZOHO_OUTPUT_FORMAT","JSON");
+		paramsMap.put("ZOHO_ERROR_FORMAT","JSON");
+		paramsMap.put("ZOHO_API_VERSION","1.0");
+		paramsMap.put("ZOHO_CRITERIA","PRODUCTID=" + oldProductID);
+		response_Qoute = invokeurl
+		[
+			url :"https://analyticsapi.zoho.com/api/" + encodeUrl(email) + "/" + encodeUrl(workspaceName) + "/" + encodeUrl(viewName)
+			type :POST
+			parameters:paramsMap
+			connection:"zoho_analytics"
+		];
+		//info response_Qoute;
+		//info response_Qoute;
+		row_data = response_Qoute.get("response").get("result").get("rows");
+		for each  data in row_data
+		{
+			if(viewName == "Sales Order Line Items")
+			{
+				info "sales orders";
+				/////////////////////////////////Sales Orders Products///////////////////////////////
+				soID = data.get("2");
+				salesOrderData = zoho.crm.getRecordById("Sales_Orders",soID);
+				productDetails = salesOrderData.get("Product_Details");
+			}
+			else if(viewName == "Quote Line Items")
+			{
+				info "Quote Line Item";
+				/////////////////////GET  QUOTES////////////////////////////
+				quoteID = data.get("1");
+				productlst = List();
+				quotesData = zoho.crm.getRecordById("Quotes",quoteID);
+				productDetails = quotesData.get("Product_Details");
+			}
+			else if(viewName == "Purchase Order Line Items")
+			{
+				info "Purchase Order";
+				/////////////////////////////////Purchase Orders Products///////////////////////////////
+				poID = data.get("2");
+				purchaseOrderData = zoho.crm.getRecordById("Purchase_Orders",poID);
+				productDetails = purchaseOrderData.get("Product_Details");
+			}
+			else if(viewName == "Invoice Line Items")
+			{
+				info "invoices";
+				/////////////////////////////////Invoice///////////////////////////////
+				invoiceID = data.get("1");
+				invoiceData = zoho.crm.getRecordById("Invoices",invoiceID);
+				productDetails = invoiceData.get("Product_Details");
+			}
+			productlst = List();
+			for each  product in productDetails
+			{
+				currency = product.get("product").get("Currency");
+				productID = product.get("product").get("id");
+				productName = product.get("product").get("name");
+				quantity = product.get("quantity");
+				tax = product.get("Tax");
+				listPrice = product.get("list_price");
+				productDescription = product.get("product_description");
+				prductLineTax = product.get("line_tax");
+				oldProductDetail = "Product Name: " + productName + "\nProduct Description: " + productDescription;
+				productMP = Map();
+				if(productID == oldProductID)
+				{
+					productMP.put("product",newProductID);
+					productMP.put("product_description",oldProductDetail);
+					productMP.put("line_tax",prductLineTax);
+				}
+				else
+				{
+					productMP.put("product",productID);
+					productMP.put("product_description",productDescription);
+				}
+				productMP.put("quantity",quantity);
+				productMP.put("Currency",currency);
+				productMP.put("list_price",listPrice);
+				productlst.add(productMP);
+			}
+			if(viewName == "Sales Order Line Items")
+			{
+				/////////////////////////////////Sales Orders Products///////////////////////////////
+				mp = Map();
+				mp.put("Product_Details",productlst);
+				update = zoho.crm.updateRecord("Sales_Orders",soID,mp);
+			}
+			else if(viewName == "Quote Line Items")
+			{
+				//////////////////////////////////Update Quotes//////////////////////////////////////
+				mp = Map();
+				mp.put("Product_Details",productlst);
+				update = zoho.crm.updateRecord("Quotes",quoteID,mp);
+			}
+			else if(viewName == "Purchase Order Line Items")
+			{
+				//////////////////////////////////Update Purchase Orders//////////////////////////////////////
+				mp = Map();
+				mp.put("Product_Details",productlst);
+				update = zoho.crm.updateRecord("Purchase_Orders",poID,mp);
+			}
+			else if(viewName == "Invoice Line Items")
+			{
+				/////////////////////////////////Update Invoices///////////////////////////////
+				mp = Map();
+				mp.put("Product_Details",productlst);
+				update = zoho.crm.updateRecord("Invoices",invoiceID,mp);
+			}
+		}
+	}
+	msg = "Successfully Updated";
+}
+else
+{
+	msg = "Replace Product ID is null";
+	info "farman";
+}
+return msg;

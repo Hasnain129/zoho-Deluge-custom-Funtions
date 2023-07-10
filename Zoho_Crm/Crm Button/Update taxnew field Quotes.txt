@@ -1,0 +1,49 @@
+try 
+{
+	//// Getting Record //////////////////////////////////
+	rep = List();
+	rep = Quote_ID.replaceall("|||",",",true);
+	for each  Quote in rep
+	{
+		Get_Quote_Details = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v2.1/Quotes/" + Quote
+			type :GET
+			connection:"zoho_crm"
+		];
+		// 		info Get_Quote_Details;
+		oldtax = Get_Quote_Details.get("data").get(0).get("Tax");
+		/// -----------------map data-------------////
+		map_value = Map();
+		map_value.put("Tax_N",oldtax);
+		map_value.put("Refreshed",true);
+		///////list/////
+		dlist = List();
+		dlist.add(map_value);
+		////// put list in data for api /////////
+		mp2 = Map();
+		mp2.put("data",dlist);
+		// 		info mp/2;
+		////////////// --------------updating tax field-----------------////////
+		Update_Quote_Details = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v2.1/Quotes/" + Quote
+			type :PUT
+			parameters:mp2 + ""
+			connection:"zoho_crm"
+		];
+	}
+	return "Records updated successfully";
+}
+catch (e)
+{
+	info "Catch: " + e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"rabia@erphub.com"
+		subject :"TAXFIELD NOT UPDATED"
+		message :"ID: " + Quote + " Root Cause: " + e
+	]
+}
+return "";

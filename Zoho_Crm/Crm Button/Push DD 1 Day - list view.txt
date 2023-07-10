@@ -1,0 +1,91 @@
+try 
+{
+	rep = List();
+	rep = Pro_workload_id.replaceall("|||",",",true);
+	rep2 = List();
+	rep2 = Sign_Project_id.replaceall("|||",",",true);
+	for each  ids in rep
+	{
+		Po_obj = zoho.crm.getRecordById("Sign_Projects_X_Step",ids);
+		New_Date = Po_obj.get("Dynamic_Due_Date").addBusinessDay(1);
+		Update_Date = Map();
+		Update_Date.put("Dynamic_Due_Date",New_Date);
+		Update_Date.put("Due_Date_Updated_Manually",true);
+		response = zoho.crm.updateRecord("Sign_Projects_X_Step",ids,Update_Date);
+		if(!response.containValue("INVALID_DATA"))
+		{
+			///////////// Mark Status as Active if Due Date is Greater Then Todays Date ///////////////
+			Po_obj2 = zoho.crm.getRecordById("Sign_Projects_X_Step",response.get("id"));
+			today_Date = today.addBusinessDay(0);
+			dyn_due_date = ifnull(Po_obj2.get("Dynamic_Due_Date"),"").addBusinessDay(0);
+			if(Po_obj2.get("Status") == "Active" || Po_obj2.get("Status") == "Overdue")
+			{
+				if(today_Date > dyn_due_date)
+				{
+					Status = "Overdue";
+					Overdue_Days = dyn_due_date.daysBetween(today_Date);
+					if(Overdue_Days == 1)
+					{
+						Overdue_rage = "1 Day";
+					}
+					else if(Overdue_Days == 2)
+					{
+						Overdue_rage = "2 Days";
+					}
+					else if(Overdue_Days == 3)
+					{
+						Overdue_rage = "3 Days";
+					}
+					else if(Overdue_Days > 3)
+					{
+						Overdue_rage = "3+ Days";
+					}
+					info Overdue_rage;
+					mp = Map();
+					mp.put("Todays_Date",today_Date);
+					mp.put("Overdue_Day",Overdue_Days);
+					mp.put("Overdue_Range",Overdue_rage);
+					mp.put("Status",Status);
+					update_record = zoho.crm.updateRecord("Sign_Projects_X_Step",response.get("id"),mp);
+				}
+				else
+				{
+					mp = Map();
+					mp.put("Overdue_Day","0");
+					mp.put("Overdue_Range","0");
+					mp.put("Status","Active");
+					update_record = zoho.crm.updateRecord("Sign_Projects_X_Step",response.get("id"),mp);
+				}
+			}
+		}
+		////////////////////////////////////////////////////////////////////////////////////////////////
+	}
+	for each  signProjectID in rep2
+	{
+		///////////////////// Update Estimate due date and Actual Start date ///////////////////////////////////
+		Para = Map();
+		Para.put("Sign_Project_id",signProjectID.toLong());
+		responed = invokeurl
+		[
+			url :"https://crm.zoho.com/crm/v2/functions/count_all_steps_and_overdue_steps/actions/execute?auth_type=apikey&zapikey=1003.92bd8627e27fde976f5cecde483425d6.4247c26ba87331570834d7fb4d0ff618"
+			type :GET
+			parameters:Para
+		];
+		///////////////////////////////////// Ends /////////////////////////////////////////////////
+		///////////////////// This is used only to trigger workflows of Sign Project ///////////////////
+		Status_empty = Map();
+		Status_empty.put("Status","");
+		updateRect = zoho.crm.updateRecord("Deals",signProjectID.toLong(),Status_empty,{"trigger":{"workflow"}});
+		/////////////////////////////////////////////////////////////////////////////////////////////////
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Push DD 1 Day - list view / CRM Button Project Workload"
+		message :"ID: " + Pro_workload_id + " Root Cause: " + e + " --------------Line 64 " + responed + " ----------- Line Num 70 " + updateRect + " Line No: 61 : " + Sign_Project_id
+	]
+}
+return "Due Date Successfully Pushed";

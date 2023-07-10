@@ -1,0 +1,28 @@
+try 
+{
+	mp = Map();
+	mp.put("Quote_Stage","Waiting for Approval");
+	mp.put("Quote_Sent_Date",zoho.currentdate);
+	update_quote = zoho.crm.updateRecord("Quotes",Quote_id,mp,{"trigger":{"workflow"}});
+	//////////////////////// Create Note //////////////////////////
+	User_name = zoho.loginuser;
+	Title = "Quote Marked Sent";
+	Content = "Quote no: \"" + Quote_No + "\" has been marked as sent by " + User_name;
+	mp = Map();
+	mp.put("Parent_Id",Quote_id.tolong());
+	mp.put("Note_Title",Title);
+	mp.put("Note_Content",Content);
+	mp.put("$se_module","Quotes");
+	create_note = zoho.crm.createRecord("Notes",mp);
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Mark Quote as Sent / Quotes / Button / CRM"
+		message :"ID: " + Quote_id + " Root Cause: " + e
+	]
+}
+return "Quote is marked as Sent";

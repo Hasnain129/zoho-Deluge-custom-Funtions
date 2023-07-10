@@ -1,0 +1,38 @@
+try 
+{
+	Retainer_Data = zoho.crm.getRecordById("Down_Payment_Invoices",DPI_id);
+	Status = Retainer_Data.get("Paid");
+	Retainer_ID = Retainer_Data.get("Retainer_Invoice_ID");
+	if(Status == "Active" && Retainer_ID != "")
+	{
+		///////////////////// Mark As Voided Down Payment Invoice on Zoho Books ///////////////////
+		Void_ret_Inv = invokeurl
+		[
+			url :"https://books.zoho.com/api/v3/retainerinvoices/" + Retainer_ID + "/status/void?organization_id=666479573"
+			type :POST
+			connection:"zoho_books"
+		];
+		////////////////////////////// Update DPI status to Voided /////////////////////
+		mp = Map();
+		mp.put("Paid","Voided");
+		Update_DPI = zoho.crm.updateRecord("Down_Payment_Invoices",DPI_id,mp,{"trigger":{"workflow"}});
+		return "Retainer Invoice Voided Successfully!";
+	}
+	else if(Status == "Voided")
+	{
+		return "Retainer Invoice already Voided!";
+	}
+	else
+	{
+		return "Paid Retainer Invoice Can't be Voided. Please remove the payment from the retainer on zoho books and afterwards void it.";
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Mark as Voided / CRM / Button / Retainer Invoices"
+		message :"ID: " + DPI_id + " Root Cause: " + e
+	]
+}

@@ -1,0 +1,53 @@
+try 
+{
+	Customer_related_contacts = zoho.crm.getRelatedRecords("Contacts","Accounts",customer_id);
+	//info Customer_related_contacts;
+	accounting_contact = "No";
+	for each  data in Customer_related_contacts
+	{
+		if(data.get("Position") == "Accounting")
+		{
+			Accounting_contact = "Yes";
+			Prim_contact = data.get("Primary_Contact");
+			Accounting_contact_id = data.get("id");
+		}
+	}
+	/////////////////////////////////////////////////////
+	if(Accounting_contact == "Yes")
+	{
+		for each  data2 in Customer_related_contacts
+		{
+			Related_contact_id = data2.get("id");
+			//////////////////////////// Uncheck primary contact field from all related contacts ////////////////////////
+			mp = Map();
+			mp.put("Primary_Contact",false);
+			update_contacts = zoho.crm.updateRecord("Contacts",Related_contact_id,mp);
+			//Info update_contacts;
+		}
+		////////////////////// Update Account contact to primary ////////////////////////////////
+		mp_acc = Map();
+		mp_acc.put("Primary_Contact",true);
+		update_contacts_acc = zoho.crm.updateRecord("Contacts",Accounting_contact_id,mp_acc);
+		//info update_contacts_acc;
+	}
+	////////////////////////////// Importing CRM Contact in Books //////////////////////////////
+	Import_account = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/crm/account/" + customer_id + "/import?organization_id=666479573"
+		type :POST
+		connection:"zoho_books"
+	];
+	info Import_account;
+	Book_contact_ID = Import_account.get("data").get("customer_id");
+	info Book_contact_ID;
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update Primary Contact / CRM Button Customers"
+		message :"ID: " + customer_id + " Root Cause: " + e
+	]
+}
+return "Primary Contact Updated";

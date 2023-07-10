@@ -1,0 +1,68 @@
+try 
+{
+	rep = List();
+	rep = Prod_IDs.replaceall("|||",",",true);
+	//////////////////fetch product data///////////////////////
+	for each  productID in rep
+	{
+		productData = zoho.crm.getRecordById("products",productID);
+		organization = productData.get("Organization_Name");
+		productName = productData.get("Product_Name");
+		productActive = productData.get("Product_Active");
+		productSKU = productData.get("Product_Code");
+		category = productData.get("Category");
+		subCategory = productData.get("Sub_Category");
+		Classification = productData.get("Labor_or_Material");
+		Commissionable = productData.get("Commissionable");
+		//////////////////////////Fetch Creator Product ID /////////////////
+		productDetail = zoho.creator.getRecords("blinksigns","line-items","Products_Report","PRODUCTID==" + productID + "",1,200,"zoho_creator");
+		info productDetail;
+		CheckCode = productDetail.get("code");
+		if(CheckCode != 3000)
+		{
+			///////////////////////////////Create Record in Creator//////////////////////////
+			mp = Map();
+			mp.put("Organization_Name",organization);
+			mp.put("Product_Active",productActive);
+			mp.put("PRODUCTID",productID);
+			mp.put("Product_Name",productName);
+			mp.put("Product_Code",productSKU);
+			mp.put("Category",category);
+			mp.put("Sub_Category",subCategory);
+			mp.put("Classification",Classification);
+			mp.put("Commissionable",Commissionable);
+			empty_mp = Map();
+			createProduct = zoho.creator.createRecord("blinksigns","line-items","Products",mp,empty_mp,"zoho_creator");
+			info "Created: " + createProduct;
+		}
+		else
+		{
+			creatorProductID = productDetail.get("data").get(0).get("ID");
+			info creatorProductID;
+			///////////////////////////////Update Record in Creator//////////////////////////
+			mp = Map();
+			mp.put("Organization_Name",organization);
+			mp.put("Product_Active",productActive);
+			//mp.put("PRODUCTID",productID);
+			mp.put("Product_Name",productName);
+			mp.put("Product_Code",productSKU);
+			mp.put("Category",category);
+			mp.put("Sub_Category",subCategory);
+			mp.put("Classification",Classification);
+			mp.put("Commissionable",Commissionable);
+			empty_mp = Map();
+			updateRecord = zoho.creator.updateRecord("blinksigns","line-items","Products_Report",creatorProductID,mp,empty_mp,"zoho_creator");
+			info "Updated: " + updateRecord;
+		}
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Create / Update Product on Creator / CRM"
+		message :"ID: " + productID + " Root Cause: " + e
+	]
+}
+return "Items Pushed";

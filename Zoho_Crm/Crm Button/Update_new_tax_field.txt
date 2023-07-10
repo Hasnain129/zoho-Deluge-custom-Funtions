@@ -1,0 +1,63 @@
+try 
+{
+	//// Getting Record //////////////////////////////////
+	rep = List();
+	rep = PO_ID.replaceall("|||",",",true);
+	for each  PO in rep
+	{
+		Get_po_Details = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v2.1/Purchase_Orders/" + PO
+			type :GET
+			connection:"zoho_crm"
+		];
+		oldtax = Get_po_Details.get("data").get(0).get("Tax");
+		//info "oldfield:" + oldtax;
+		Getnew = Get_po_Details.get("data").get(0).get("Tax_N");
+		//info "newfield:" + Getnew;
+		//info "oldtax:" + oldtax;
+		truncate = oldtax.truncate(8);
+		info truncate;
+		/// -----------------map data-------------////
+		//return "if:" + PO_ID;
+		map_value = Map();
+		map_value.put("Tax_N",truncate);
+		map_value.put("Refreshed",true);
+		///////list/////
+		dlist = List();
+		dlist.add(map_value);
+		////// put list in data for api /////////
+		mp2 = Map();
+		mp2.put("data",dlist);
+		info mp2;
+		////////////// --------------updating tax field-----------------////////
+		Update_PO_Details = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v2.1/Purchase_Orders/" + PO
+			type :PUT
+			parameters:mp2 + ""
+			connection:"zoho_crm"
+		];
+		// 		message = Update_PO_Details.get("data").get(0).get("message");
+		// 		status = Update_PO_Details.get("data").get(0).get("status");
+		// 		if(message = "record updated" && status == "success")
+		// 		{
+		// 			return "Records updated successfully";
+		// 		}
+		//info Update_PO_Details;
+		//info Update_PO_Details;
+	}
+	return "Records updated successfully";
+}
+catch (e)
+{
+	info "Catch: " + e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"rabia@erphub.com"
+		subject :"TAXFIELD NOT UPDATED"
+		message :"ID: " + PO + " Root Cause: " + e
+	]
+}
+return "";

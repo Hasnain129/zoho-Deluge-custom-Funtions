@@ -1,0 +1,74 @@
+try 
+{
+	Bill_obj = zoho.crm.getRecordById("Create_Bills",Bill_id);
+	if(Bill_obj.get("Paid_Amount") > 0)
+	{
+		return "Paid Bill cannot be convert to Draft.";
+	}
+	else if(Bill_obj.get("Status") == "Draft")
+	{
+		return "The bill already has been marked as Draft.";
+	}
+	else
+	{
+		PO_obj = zoho.crm.getRecordById("Purchase_Orders",Bill_obj.get("PO").get("id"));
+		Total = PO_obj.get("Grand_Total");
+		Bill_details = zoho.crm.getRelatedRecords("Bills","Purchase_Orders",Bill_obj.get("PO").get("id"));
+		Generated_bill = 0;
+		for each  bill in Bill_details
+		{
+			if(bill.get("Status") != "Void")
+			{
+				Generated_bill = Generated_bill + bill.get("Generated_bill_amount").toDecimal().round(2);
+			}
+		}
+		remaining = Total - Generated_bill;
+		if(Bill_obj.get("Status") == "Bill Generated")
+		{
+			return "The Generated bill cannot be marked as Draft.";
+		}
+		else if(remaining > 0)
+		{
+			if(remaining >= Bill_obj.get("Generated_bill_amount"))
+			{
+				/////////////////////////////////// Update Bill Amount on PO ///////////////////////////////////////////////////
+				Bill_Generated_Amount = Bill_obj.get("Generated_bill_amount");
+				if(Bill_obj.get("Bill_on_Book") == true && Bill_obj.get("Status") != "Bill Generated")
+				{
+					Mp2 = Map();
+					Mp2.put("Bill_Amount",PO_obj.get("Bill_Amount") + Bill_Generated_Amount.toDecimal());
+					zoho.crm.updateRecord("Purchase_Orders",Bill_obj.get("PO").get("id"),Mp2);
+				}
+				///////////////////////////////////////////////////////////////////////////////////////////////////////
+				Mp = Map();
+				Mp.put("Status","Draft");
+				zoho.crm.updateRecord("Create_Bills",Bill_id,Mp);
+				////////////////// Void Bill On Zoho Books /////////////////////////////////////
+				Response = invokeurl
+				[
+					url :"https://books.zoho.com/api/v3/bills/" + Bill_obj.get("Books_Bill_ID") + "/status/draft?organization_id=666479573"
+					type :POST
+					connection:"zoho_books"
+				];
+				return "The bill has been marked as Draft.";
+			}
+			else
+			{
+				return "Current Bill Amount is more than PO remaining amount.";
+			}
+		}
+		else
+		{
+			return "Total PO Grand amount already converted into Bills. Kindly void any of bill.";
+		}
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Convert to Draft / CRM Button Create Bills"
+		message :"ID: " + Bill_id + " Root Cause: " + e
+	]
+}

@@ -1,0 +1,207 @@
+try 
+{
+	proj_details = zoho.crm.getRecordById("Deals",proj_id.toLong());
+	Organization_Name = proj_details.get("Organization_Name");
+	Servloc_id = ifnull(proj_details.get("Service_Locations"),"").get("id");
+	Client_PO = ifnull(proj_details.get("PO_Reference"),"");
+	Sales_Rep = proj_details.get("Lead_Owner");
+	///////////////////////////////////////////////////
+	Customer_id = ifnull(proj_details.get("Account_Name"),"").get("id");
+	Contact_id = ifnull(proj_details.get("Contact_Name"),"").get("id");
+	Customer_contacts = zoho.crm.getRelatedRecords("Contacts","Accounts",Customer_id);
+	Customer_Secondary_contacts = zoho.crm.getRelatedRecords("Contacts139","Accounts",Customer_id);
+	Match_contact = 0;
+	/////////////////// Checking Main Contacts ///////////////////
+	for each  contact in Customer_contacts
+	{
+		if(contact.get("id") == Contact_id)
+		{
+			Match_contact = Match_contact + 1;
+		}
+	}
+	///////////// Checking Secondary Contacts /////////////
+	for each  sec_contact in Customer_Secondary_contacts
+	{
+		if(sec_contact.get("Linking_Customers").get("id") == Contact_id)
+		{
+			Match_contact = Match_contact + 1;
+		}
+	}
+	info "Match Contacts: " + Match_contact;
+	if(Match_contact > 0)
+	{
+		Customer_obj = zoho.crm.getRecordById("Accounts",Customer_id);
+		Service_loc_id = ifnull(proj_details.get("Service_Locations"),"").get("id");
+		if(Service_loc_id != null)
+		{
+			service_loc_details = zoho.crm.getRecordById("Service_Locations",Service_loc_id);
+			Street_address = service_loc_details.get("Name").getPrefix(",");
+			City_sata_zip = ifnull(service_loc_details.get("City_State_Zip"),"").get("id");
+			if(City_sata_zip != null)
+			{
+				City_state_details = zoho.crm.getRecordById("Cities_and_Zip_Codes",City_sata_zip);
+				City = City_state_details.get("City");
+				State = City_state_details.get("State");
+				Code = City_state_details.get("Zip_Code");
+				Country = City_state_details.get("Country");
+			}
+		}
+		mp = Map();
+		if(Customer_obj.get("Billing_Street") != null && Customer_obj.get("Billing_City") != null && Customer_obj.get("Billing_State") != null && Customer_obj.get("Billing_Code") != null && Customer_obj.get("Billing_Country") != null)
+		{
+			mp.put("Billing_Street",Customer_obj.get("Billing_Street"));
+			mp.put("Billing_City",Customer_obj.get("Billing_City"));
+			mp.put("Billing_State",Customer_obj.get("Billing_State"));
+			mp.put("Billing_Code",Customer_obj.get("Billing_Code"));
+			mp.put("Billing_Country",Customer_obj.get("Billing_Country"));
+		}
+		else
+		{
+			mp.put("Billing_Street",Street_address);
+			mp.put("Billing_City",City);
+			mp.put("Billing_State",State);
+			mp.put("Billing_Code",Code);
+			mp.put("Billing_Country",Country);
+		}
+		mp.put("Shipping_Street",Street_address);
+		mp.put("Shipping_City",City);
+		mp.put("Shipping_State",State);
+		mp.put("Shipping_Code",Code);
+		mp.put("Shipping_Country",Country);
+		////////////////////////////////////////////////////
+		//////////// Fetching down payment and terms /////////////////
+		Customer_details = zoho.crm.getRecordById("Accounts",Customer_id);
+		Down_Payment = Customer_details.get("Down_Payment");
+		if(Down_Payment == null)
+		{
+			Down_Payment = "50";
+		}
+		Inv_Terms = Customer_details.get("Terms");
+		if(Inv_Terms == null)
+		{
+			Inv_Terms = "Direct Debit Payment";
+		}
+		/////////////////////// Get Products ////////////////////////
+		prodlist = List();
+		prodid = "3205780000037108825";
+		product_details = zoho.crm.getRecordById("Products",prodid.toLong());
+		listprice = product_details.get("Unit_Price");
+		description = product_details.get("Description");
+		/////////////////////////////////////////////////////
+		product_mp = Map();
+		product_mp.put("id",prodid);
+		line_Tax = list();
+		//////////////////////////////////////////////////
+		prodmp = Map();
+		prodmp.put("Product_Name",product_mp);
+		prodmp.put("Description",description);
+		prodmp.put("List_Price",listprice);
+		prodmp.put("Quantity",1);
+		prodmp.put("Discount",0);
+		prodmp.put("Line_Tax",line_Tax);
+		prodmp.put("Tax",0);
+		//prodmp.put("Currency","USD");
+		prodlist.add(prodmp);
+		///////////////////// Blink Signs Terms /////////////////////////////////////////
+		if(Organization_Name == "Blink Signs")
+		{
+			Terms_condition = "Deposits:" + "\n" + "A 50% deposit is required on any orders over $1000.00 prior to fabrication starting,  unless agreed upon payment terms have been established." + "\n" + "Details:" + "\n" + "All specifications, drawing and literature are intended to give a fair description of the contract but Blink Signs reserve the right to vary the specifications, (in the event of supply difficulties or other reasons) subject always to the understanding that we would advise the customer of any such variations, and that such variations would not be structurally or functionally detrimental." + "\n" + "Delivery:" + "\n" + "Blink Signs will do everything possible to adhere to times and dates given, but cannot under any circumstances accept any liability for loss caused by failure to deliver and complete on time, whatever the cause for delay. Lead times are from the point at which the final artwork is signed off by the client." + "\n" + "Price Variations:" + "\n" + "All prices are fixed for 14 days from the quotation date. Should there be any changes in the cost, calling for an amendment to the confirmed price Blink Signs undertake to advise the customer of any such amendment prior to the start of the contract." + "\n" + "Payment Terms:" + "\n" + "Down Payment (50%) is due prior to the start of Fabrication, unless stated otherwise. The Down Payment can be paid by credit card or check, but please note that we are unable to start Fabrication until the payment is received.  Full/balance payments are due prior to Installation (or shipping if it is manufactured only), unless stated otherwise. The balance will be charged to the payment method on file once the installation is scheduled to be complete. We are able to accept a check as well, but please note that we are unable to schedule installation until the payment is received. Additional changes and/or permit fees may apply and will be  invoiced separately post installation.  You will provide us with valid and updated credit card information, or with a valid purchase order or alternative document reasonably acceptable to us. If you provide credit card information to us, you authorize us to charge such a credit card for all purchased services listed in the quote/order. If your quote/order specifies that payment will be by a method other than a credit card, we will invoice you at the end of the project. You are responsible for providing complete and accurate billing and contact information to us and notify us of any changes to such information." + "\n" + "Management Companies & Agents:" + "\n" + "In the case of clients acting on behalf of or working for end user clients (e.g. Project Management Companies or Design Companies/Houses) the contract will be between Blink Signs and the Management Company or Agent/Designer of whom the invoice is to be made out to. The payment terms will be as in the previous section titled PAYMENT TERMS. Blink Signs cannot accept delayed payments due to the terms the Management Company or Agent/Designer has arranged with their client." + "\n" + "Artwork/Design:" + "\n" + "Any amendments to the draft may be subject to additional charges. Lead times may be affected due to the following: Receipt of unsuitable artwork, delays in information and relevant files being received, delays in signing off final proofs, delays in receiving deposit payments, consistent changing of designs. Blink Signs therefore cannot be held liable for delays in production deadlines due to any of the above occurring." + "\n" + "Return Policy:" + "\n" + "Blink Signs does not accept returns. All products are manufactured to customer’s specifications. Blink Signs supplies proof drawings for the customer’s final approval. Projects don’t begin production until the customer has approved the project drawing. Once the production begins the production cannot be changed without incurring additional cost. All sales are final and no returns will be accepted." + "\n" + "Cancellation Policy:" + "\n" + "If client chooses to cancel the order with Blink Signs at any time throughout, they will be charged for ANY costs incurred. Costs incurred could include, but not limited to, items such as Survey Cost, Design Fee, Permit Acquisition...etc.";
+		}
+		/////////////////////////// Blink Swag terms ///////////////////////////////////
+		else if(Organization_Name == "Blink Swag")
+		{
+			Terms_condition_swag = "Payment Terms:" + "\n" + "Payment in full is required prior to any work being started unless NET terms are previously established. A 2% processing fee will be applied on all credit card payments. Additional charges will be incurred for payment delays and may result in rush charges, overnight delivery/shipping charges or missed deadline. A final invoice will be issued after receipt of items that includes final shipping charges, any overrun charges and is due upon receipt of final invoice." + "\n" + "Check Returns:" + "\n" + "In all cases where we have a check returned for insufficient Funds we will assess a $50.00 fee." + "\n" + "Sales Tax:" + "\n" + "Blink Swag is required by law to collect all applicable state and local taxes for services and goods shipped to Alabama, Arizona, California, Florida, Massachusetts, Minnesota, Ohio, Pennsylvania, New Jersey, New York, and Tennessee. Customers in other states may be required to remit use taxes. Please consult your tax advisor. Companies, individuals and organizations who are exempt from sales tax should provide us with a copy of their resale certificate by email to ap@blinkswag.com." + "\n" + "Shipping Delays:" + "\n" + "Customer agrees that it will not hold Blink Swag accountable for delays in delivery occasioned by acts of God or other circumstances over which we have no direct control. Factory shipment or delivery dates are the best estimates of our suppliers, and in no case shall Blink be liable for any consequential or special damages arising from any delay in delivery." + "\n" + "Copyrights:" + "\n" + "The client warrants that it has the right to produce the subject matter to be printed, duplicated or distributed. If the subject matter is copyrighted, the client warrants that it owns the copyright or has express permission of the owner to reproduce the copyrighted subject matter, and that it has not removed any copyright notice from any material to be reproduced without written permission." + "\n" + "Merchandise Consistency:" + "\n" + "Please note that we encourage you to take the opportunity to review a sample of the actual product before you order in bulk quantity. It is important that you understand that these samples are representative in nature. While we are very careful about the suppliers and manufacturers we use, manufacturing variations are unavoidable and a natural result of the manufacturing process. By choosing to place and order with Blink, you are agreeing to accept merchandise with reasonable manufacturing variances in product material, color and packaging. The most common example of this is apparel dye-lots." + "\n" + "Transfer of Ownership of Merchandise:" + "\n" + "All goods become your property at the time they are accepted by the carrier." + "\n" + "Acceptance:" + "\n" + "Your submittal of an online order and/or your signature on our Order Acknowledgment is a conditional acceptance by Blink of your offer to purchase our goods and your acceptance of our terms and conditions. It may contain terms that differ from or add to those contained in your ;purchase order, should you have one, and to the extent that this is the case,Blink hereby expressly conditions its acceptance of your offer on Blink’s assent to the additional or different terms. Your receipt and retention of the goods covered by this invoice shall constitute acceptance of any such additional or different terms. You and Blink agree that any contract hereby entered into has been made and is to be construed to Ohio State Law." + "\n" + "Cancellations and Alterations to Existing Orders:" + "\n" + "Once an Order Acknowledgment is approved, we cannot guarantee our ability to make changes or cancellations to an order. Blink will make every effort to comply with your cancellation request. If you have already signed your Order Acknowledgment, there will be a minimum charge of $50.00 to cover order entry and preparation expenses. In addition, you are liable to pay the agreed upon price for any work that may have been completed up to the time that we are able to cancel your order. These charges may include but are not limited to setup charges, artwork preparation charges, shipping charges and restocking fees. All completed work and costs incurred will be the responsibility of the customer." + "\n" + "Warranties:" + "\n" + "Blink warrants that all goods sold are free of any security interest and will make available to you all transferable warranties made to Blink by the manufacturer of the goods. Blink makes no other express or implied warranties, and specifically makes no implied warranties of merchantability or fitness for purpose." + "\n" + "Claims, Adjustments and Returns:" + "\n" + "If you have any problems with your order please contact customer service at 888.670.SWAG within 15 days of receipt. We advise opening your merchandise to review its quality if you do not intend to use it right away. After this time we will be unable to go back to our suppliers for credit. Please have your order number available. WE DO NOT ACCEPT UNAUTHORIZED RETURNS. If any problem arises, please call customer service immediately. If necessary we will issue an RMA number (Return Material Authorization) and provide you with a special shipping address." + "\n" + "Overages and Shortages:" + "\n" + "We try to produce your order in the exact quantity ordered, but this is not always possible due to quality control efforts and fast running machines. We reserve the right to ship and subsequently bill or credit, your charge card or account, for up to 10% over or under the desired quantity." + "\n" + "Shipping Charges:" + "\n" + "We make every effort to accurately estimate shipping charges. From time to time, we may underestimate the shipping charges on your order. In such event we may make reasonable adjustments to your shipping charges. You always have the option to provide us with a shipping account number (a small handling charge may apply)." + "\n" + "Website Pricing:" + "\n" + "While we make best efforts to keep our website up to date, from time to time actual market conditions may change the price of a product. We reserve the right to change published prices of product offered on our website at anytime. If a published website price is incorrect on an item your have quoted or ordered, we will contact you immediately with the most updated price or help you choose a different item that is within your budget." + "\n" + "Low-Price Guarantee:" + "\n" + "No one wants to sacrifice service and quality just to save a few pennies. At Blink Swag we offer great pricing and the best service in the industry. To make sure you never have to choose between service and price, if you find the same item at a lower price, we’ll match that price and even give you 10% off your next order. It’s that simple. Just give us a call and let us know where you found a price that beats ours. As long as it is the same item with the same options, we’ll match any price, no questions asked." + "\n" + "Website Images:" + "\n" + "We make best efforts to provide clear and color-correct product images on our website that best reflect the true nature of the products. However, web site images are inherently limited in their ability to communicate color, scale, and detail. We want to remind customers to be careful about making assumptions about products from the website image alone. We strongly urge our customers to order actual samples. If you choose not to evaluate a physical sample, we cannot be held responsible for the difference between the image as it appears on your monitor and the final product.";
+		}
+		/////////////////////////////// Checking if there is a Design against a project ////////////////////
+		Design_detail = zoho.crm.getRelatedRecords("Designs","Deals",proj_id);
+		if(Design_detail != {})
+		{
+			for each  data in Design_detail
+			{
+				design_id = data.get("id");
+			}
+		}
+		/////////////////////////// Calculating Version ///////////////////////
+		// //////////////////////// Update Previous Quotes to Voided //////////////////////
+		Quotes_details = zoho.crm.getRelatedRecords("Quotes","Deals",proj_id.toLong());
+		Version = 1;
+		if(Quotes_details != {})
+		{
+			for each  data in Quotes_details
+			{
+				// 				Quote_id = data.get("id");
+				// 				if(data.get("Quote_Stage") != "Voided")
+				// 				{
+				// 					stage = Map();
+				// 					stage.put("Quote_Stage","Voided");
+				// 					update_design_stage = zoho.crm.updateRecord("Quotes",Quote_id,stage);
+				// 				}
+				Version = Version + 1;
+			}
+		}
+		////////////////////// Creating Quote ////////////////////////////
+		mp.put("Subject","New Quote from" + Organization_Name);
+		mp.put("Owner",Sales_Rep);
+		mp.put("Version",Version);
+		mp.put("Organization_Name",Organization_Name);
+		mp.put("Deal_Name",proj_id);
+		mp.put("Contact_Name",Contact_id);
+		mp.put("Account_Name",Customer_id);
+		mp.put("Design",design_id);
+		mp.put("Client_PO",Client_PO);
+		mp.put("Quote_Stage","Draft");
+		mp.put("Service_location",Servloc_id);
+		mp.put("Down_Payment",Down_Payment);
+		mp.put("Terms",Inv_Terms);
+		mp.put("Down_Payment_Invoice_Status","Not Sent");
+		mp.put("Quoted_Items",prodlist);
+		mp.put("Terms_and_Conditions",Terms_condition);
+		mp.put("Terms_and_Conditions_Swag",Terms_condition_swag);
+		mp.put("Tax_N",0);
+		// 		mp.put("Testing",true);
+		//created = zoho.crm.createRecord("Quotes",mp,{"trigger":{"workflow"}});
+		////////////////////////////////////////////////
+		dlist = List();
+		dlist.add(mp);
+		mp3 = Map();
+		mp3.put("data",dlist);
+		/////////////////////// Create CFQ /////////////////////
+		Create_Quote = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v2.1/Quotes"
+			type :POST
+			parameters:mp3 + ""
+			connection:"zoho_crm"
+		];
+		info Create_Quote;
+		///////////////////////////////////////////////////////////////////
+		quoteid = Create_Quote.get("data").get(0).get("details").get("id");
+		info "Quote ID: " + quoteid;
+		///////////// Update Quote /////////////////
+		Quote_details = zoho.crm.getRecordById("Quotes",quoteid);
+		Autono = Quote_details.get("Quote_Auto_No");
+		Create_Date = Quote_details.get("Created_Time").toString("yyyy-MM-dd");
+		valid_till = Create_Date.addDay(30);
+		mp2 = Map();
+		mp2.put("Valid_Till",valid_till);
+		mp2.put("Subject","New Quote from " + Organization_Name + " " + Autono);
+		update = zoho.crm.updateRecord("Quotes",quoteid,mp2,{"trigger":{"workflow"}});
+		openUrl("https://crm.zoho.com/crm/org666155072/tab/Quotes/" + quoteid,"parent window");
+		return "Quote Successfully Created.";
+	}
+	else
+	{
+		return "Please select correct contact of customer and retry to create Quote.";
+	}
+}
+catch (e)
+{
+	//info e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Create New Quote / Sign Project / Button / CRM"
+		message :"ID: " + proj_id + " Root Cause: " + e
+	]
+}

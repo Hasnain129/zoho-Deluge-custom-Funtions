@@ -1,0 +1,27 @@
+///////////////////// Data of Custom Fields /////////////////////////////////
+invoice_ids = invoice_id.toList("|||");
+deal_ids = deal_id.toList("|||");
+for each  inv_id in invoice_ids
+{
+	cf_list = List();
+	cf_e_commerce = Map();
+	cf_e_commerce.put("label","E-Commerce");
+	cf_e_commerce.put("value","Yes");
+	cf_list.add(cf_e_commerce);
+	mp_Inv = Map();
+	mp_Inv.put("custom_fields",cf_list);
+	update_Inv_REC = zoho.books.updateRecord("invoices",666479573,inv_id,mp_Inv,"zoho_books");
+	//info update_REC;
+	sale_order = update_Inv_REC.get("invoice").get("salesorder_id");
+	//info sale_order;
+	update_Sale_REC = zoho.books.updateRecord("salesorders",666479573,sale_order,mp_Inv,"zoho_books");
+}
+for each  dl_id in deal_ids
+{
+	mp = Map();
+	mp.put("E_C_Status_ZB",true);
+	update_field_crm = zoho.crm.updateRecord("Woo_Orders",dl_id,mp);
+}
+//info update_Sale_REC;
+//for each SO in 
+return "updated";

@@ -1,0 +1,51 @@
+Design_info = zoho.crm.getRecordById("Designs",Design_id);
+// info Design_info;
+sp = Design_info.get("Project");
+// info sp;
+/////////
+if(sp == null || sp == "")
+{
+	Message_out = "Team folder does not exist.";
+}
+else if(sp != "" || sp != null)
+{
+	sp_id = sp.get("id");
+	info "Signproject ID: " + sp_id;
+	//////getting info ///////////
+	sign_project = zoho.crm.getRecordById("Deals",sp_id);
+	zoho_project_id = sign_project.get("Zoho_Projects_Project_ID");
+	workdrive_folder_id = sign_project.get("WorkDrive_Folder_ID");
+	Parentnewfolder = sign_project.get("WD_Folder_Parent_ID");
+	if(Parentnewfolder != null)
+	{
+		//info "if";
+		Message_out = "Opening Workdrive Folder";
+		openUrl("https://workdrive.zoho.com/home/2lto636be3147893644f593904d8744431ad8/ws/" + Parentnewfolder + "/folders/files","popup window","height=800,width=1000");
+	}
+	else if(Parentnewfolder == null)
+	{
+		////////////////Getting WD folder id from Zoho Project  ////////
+		resp = invokeurl
+		[
+			url :"https://projectsapi.zoho.com/api/v3/portal/666337121/projects/" + zoho_project_id + "/folders"
+			type :GET
+			connection:"wd_projects_test"
+		];
+		Folders = resp.get("folders");
+		for each  data in Folders
+		{
+			if(data.get("name") != "My Folder")
+			{
+				Parentnewfolder = data.get("thirdparty_folder_id");
+			}
+		}
+		Message_out = "Opening Workdrive Folder";
+		openUrl("https://workdrive.zoho.com/home/2lto636be3147893644f593904d8744431ad8/ws/" + Parentnewfolder + "/folders/files","popup window","height=800,width=1000");
+	}
+	else
+	{
+		Message_out = "Team folder does not exist.";
+	}
+}
+return Message_out;
+// return "";

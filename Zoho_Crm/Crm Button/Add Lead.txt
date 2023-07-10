@@ -1,0 +1,81 @@
+try 
+{
+	Contact_obj = zoho.crm.getRecordById("Contacts",Contact_id.toLong());
+	customer_account_id = ifnull(Contact_obj.get("Account_Name"),"").get("id");
+	if(customer_account_id != null)
+	{
+		Customer_obj = zoho.crm.getRecordById("Accounts",customer_account_id);
+		Parent_Customer = ifnull(Contact_obj.get("Parent_Customer"),"").get("id");
+		customer_name = Customer_obj.get("Account_Name");
+		customer_website = Customer_obj.get("Website");
+		down_payment = Customer_obj.get("Down_Payment");
+		invoice_term = Customer_obj.get("Terms");
+	}
+	FN = Contact_obj.get("First_Name");
+	LN = Contact_obj.get("Last_Name");
+	Email = Contact_obj.get("Email");
+	Phone = Contact_obj.get("Phone");
+	Mobile = Contact_obj.get("Secondary_Phone");
+	Ext = Contact_obj.get("Ext_Number");
+	industry = Contact_obj.get("Industry");
+	position = Contact_obj.get("Position");
+	company_type = Contact_obj.get("Customer_Type");
+	timezone = Contact_obj.get("Time_Zone");
+	street = Contact_obj.get("Mailing_Street");
+	city = Contact_obj.get("Mailing_City");
+	state = Contact_obj.get("Mailing_State");
+	country = Contact_obj.get("Mailing_Country");
+	zipcode = Contact_obj.get("Mailing_Zip");
+	//Workflow = ifnull(Contact_obj.get("Workflow"),"").get("id");
+	//------------------------------------
+	// Mapping on Leads
+	Lead_map = Map();
+	Lead_map.put("Owner",Contact_obj.get("Owner"));
+	Lead_map.put("First_Name",FN);
+	Lead_map.put("Last_Name",LN);
+	Lead_map.put("Email",Email);
+	Lead_map.put("Phone",Phone);
+	Lead_map.put("Mobile",Mobile);
+	Lead_map.put("Extension1",Ext);
+	Lead_map.put("Industry",industry);
+	Lead_map.put("Position",position);
+	Lead_map.put("Type",company_type);
+	Lead_map.put("Existing_Account",Parent_Customer);
+	Lead_map.put("Time_Zone",timezone);
+	Lead_map.put("Street",street);
+	Lead_map.put("City",city);
+	Lead_map.put("Corporate_State",state);
+	Lead_map.put("Country",country);
+	Lead_map.put("Zip_Code",zipcode);
+	Lead_map.put("Company",customer_name);
+	Lead_map.put("Company_Website",customer_website);
+	Lead_map.put("Down_Payment",down_payment);
+	Lead_map.put("Terms",invoice_term);
+	resp = zoho.crm.createRecord("Leads",Lead_map,{"trigger":{"workflow"}});
+	info resp;
+	leadid = resp.get("id");
+	if(leadid != null)
+	{
+		openUrl("https://crm.zoho.com/crm/org666155072/tab/Leads/" + leadid,"parent window");
+		message_out = "Lead is created";
+	}
+	else
+	{
+		message_out = "Lead is not created";
+	}
+	if(resp.containValue("INVALID_DATA"))
+	{
+		API_issue = resp.get("details").get("api_name");
+		message_out = message_out + ". " + API_issue + " field has incorrect data format";
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Add Lead / CRM Button Contacts"
+		message :"ID: " + Contact_id + " Root Cause: " + e
+	]
+}
+return message_out;

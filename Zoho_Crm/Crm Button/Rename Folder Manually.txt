@@ -1,0 +1,103 @@
+try 
+{
+	rep = List();
+	rep = sp_id.replaceall("|||",",",true);
+	for each  Sp_id in rep
+	{
+		crm_info = zoho.crm.getRecordById("Deals",Sp_id);
+		workdrive_folderid = crm_info.get("WD_Folder_Parent_ID");
+		proj_id = crm_info.get("Zoho_Projects_Project_ID");
+		info "wd folder id : " + workdrive_folderid;
+		info "Z proj id : " + proj_id;
+		/////////////Getting WD folder id from Zoho Project  ///////////////////////////////////
+		if(workdrive_folderid == null || workdrive_folderid == "")
+		{
+			resp = invokeurl
+			[
+				url :"https://projectsapi.zoho.com/api/v3/portal/666337121/projects/" + proj_id + "/folders"
+				type :GET
+				connection:"wd_projects_test"
+			];
+			// info resp;
+			Folders = resp.get("folders");
+			// info Folders;
+			for each  data in Folders
+			{
+				if(data.get("name") != "My Folder")
+				{
+					workdrive_folderid = data.get("thirdparty_folder_id");
+					info "WD FOLDER ID FROM PROJECTS : : " + workdrive_folderid;
+				}
+			}
+		}
+		/////////////////////////// getting proj id name //////////////////////////////
+		if(workdrive_folderid != null)
+		{
+			Proj_ID_Name = crm_info.get("Project_ID");
+			Company_Name = crm_info.get("Account_Name").get("name");
+			//////////////////////////// Proj Name Validation //////////////////////////////////////
+			New_Proj_Name = Proj_ID_Name + " / " + Company_Name;
+			info "new folder name : : " + New_Proj_Name;
+			count = New_Proj_Name.len();
+			info "Count : " + count;
+			if(count > 50)
+			{
+				New_Proj_Name = New_Proj_Name.subString(0,50);
+			}
+			info "New Project Name : : " + New_Proj_Name;
+			// // ////////////////////// RENAMING FOLDER   /////////////////////////////////////////
+			attributeMap = Map();
+			attributeMap.put("name",New_Proj_Name);
+			payLoad = Map();
+			payLoad.put("attributes",attributeMap);
+			// payLoad.put("type","files");
+			payLoad.put("type","workspaces");
+			data = Map();
+			data.put("data",payLoad);
+			//info data;
+			headersMap = Map();
+			headersMap.put("Accept","application/vnd.api+json");
+			headersMap.put("Content-Type"," application/jsoncharset=UTF-8");
+			RenameFolder = invokeurl
+			[
+				url :"https://workdrive.zoho.com/api/v1/workspaces/" + workdrive_folderid
+				type :PATCH
+				parameters:data.toString()
+				headers:headersMap
+				connection:"zoho_workdrive"
+			];
+			// 	info RenameFolder;
+			///////////////////// Updating field ///////////////////////////////
+			updateDealMap = Map();
+			updateDealMap.put("Renamed_Manually",true);
+			updateDealMap.put("WD_Folder_Parent_ID",workdrive_folderid);
+			updateDeal = zoho.crm.updateRecord("Deals",Sp_id,updateDealMap);
+			renamed = crm_info.get("Renamed_Manually");
+			info "renamed : " + renamed;
+		}
+		else
+		{
+			sendmail
+			[
+				from :zoho.adminuserid
+				to :"shehryar@erphub.com"
+				subject :"team folder not availible / Rename Manually / SIGN PROJECTS / BUTTON / CRM "
+				message :"ID: " + Sp_id
+			]
+		}
+	}
+	return "successfull";
+}
+catch (e)
+{
+	info "Catch: " + e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"shehryar@erphub.com"
+		subject :"Rename Manually / SIGN PROJECTS / BUTTON / CRM "
+		message :"ID: " + sp_id + " Root Cause: " + e
+	]
+	return "Operation Unsuccesfull";
+}
+return "";

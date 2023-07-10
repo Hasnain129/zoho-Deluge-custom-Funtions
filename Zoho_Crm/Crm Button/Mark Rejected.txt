@@ -1,0 +1,28 @@
+try 
+{
+	Quote_details = zoho.crm.getRecordById("Quotes",Quote_ID.toLong());
+	Quote_No = Quote_details.get("Quote_Auto_No");
+	mp = Map();
+	mp.put("Quote_Stage","Rejected");
+	update_quote = zoho.crm.updateRecord("Quotes",Quote_ID,mp,{"trigger":{"workflow"}});
+	//////////////////////// Create Note //////////////////////////
+	User_name = zoho.loginuser;
+	Title = "Quote Rejected Internally";
+	Content = "Quote no: \"" + Quote_No + "\" has been internally rejected by " + User_name;
+	mp = Map();
+	mp.put("Parent_Id",Quote_ID.tolong());
+	mp.put("Note_Title",Title);
+	mp.put("Note_Content",Content);
+	mp.put("$se_module","Quotes");
+	create_note = zoho.crm.createRecord("Notes",mp);
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Mark Rejected / CRM Button Quotes"
+		message :"ID: " + Quote_ID + " Root Cause: " + e
+	]
+}
+return "Quote is marked as Rejected";

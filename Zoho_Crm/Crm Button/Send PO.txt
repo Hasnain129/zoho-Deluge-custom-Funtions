@@ -1,0 +1,264 @@
+resp = zoho.crm.getRecordById("Purchase_Orders",PO_id.tolong());
+respstr = resp.toString();
+respmap = respstr.toMap();
+//////////////////////// Organization Data ////////////////////////////
+Authtoken = Map();
+Authtoken.put("Authorization","552c0259ab984406b9bde0a1ba5658df");
+response = invokeurl
+[
+	url :"https://www.zohoapis.com/crm/v2/org"
+	type :GET
+	headers:Authtoken
+];
+for each  abc in response
+{
+	Organization_data = abc.get(0);
+}
+Organization_Logo = Organization_data.get("photo_id");
+Organization_Name = Organization_data.get("company_name");
+Organization_street = Organization_data.get("street");
+Organization_City = Organization_data.get("city");
+Organization_state = Organization_data.get("state");
+Organization_country_code = Organization_data.get("country_code");
+Organization_zip = Organization_data.get("zip");
+//////////////////////// Organization Data Ends ////////////////////////////
+///////////////////  Quote Details ///////////////////////////////
+///////////////////  Quote Owner Contact Details ///////////////////////////////
+Owner_ID = respmap.get("Vendor_Name").get("id");
+Owner_Name = respmap.get("Vendor_Name").get("name");
+Vendor_obj = zoho.crm.getRecordById("Vendors",Owner_ID);
+email = Vendor_obj.get("Email");
+// // ///////////////////  Quote Owner Contact Details Ends ///////////////////////////////
+if(deal_id != "")
+{
+	Deal_obj = zoho.crm.getRecordById("deals",deal_id.toLong());
+	project_id = Deal_obj.get("Project_ID");
+	Project = respmap.get("Project").get("name");
+}
+else
+{
+	Project = "";
+}
+PO_ID = respmap.get("PO_ID");
+if(respmap.get("RFQ") != null)
+{
+	RFQ = ifnull(respmap.get("RFQ").get("name"),"");
+}
+if(respmap.get("Service_Location") != null)
+{
+	Service_location = ifnull(respmap.get("Service_Location").get("name"),"");
+}
+else
+{
+	Service_location = "";
+}
+Vendor_Data = zoho.crm.getRecordById("Vendors",Owner_ID);
+Ship_to_address = "";
+Ship_to = respmap.get("Ship_to");
+if(Ship_to == "Vendor Address")
+{
+	Street = ifnull(Vendor_Data.get("Street"),"");
+	City = ifnull(Vendor_Data.get("City"),"");
+	State = ifnull(Vendor_Data.get("State"),"");
+	Zip_Code = ifnull(Vendor_Data.get("Zip_Code"),"");
+	Country = ifnull(Vendor_Data.get("Country"),"");
+	Ship_to_address = Street + City + State + Zip_Code + Country;
+}
+else if(Ship_to == "Service Location")
+{
+	Ship_to_address = Service_location;
+}
+Grand_Total = respmap.get("Grand_Total").round(3);
+Due_Date = respmap.get("Due_Date").toDate();
+Vendor_Name = respmap.get("Vendor_Name").get("name");
+Terms = respmap.get("Terms");
+Payment_Method = respmap.get("Payment_Method1");
+Terms_and_Conditions = respmap.get("Terms_and_Conditions");
+// ///////////////////  Customer Details Ends /////////////////////////
+/////////////// Putting Data for Quote (Left Side)/////////////////////////////////////
+if(respmap.get("PO_Type") == "Non Site Survey")
+{
+	if(respmap.get("Add_Design_Files") == true)
+	{
+		if(respmap.get("Design_Associated") != null)
+		{
+			Attachements_Files = "";
+			Design_id = ifnull(respmap.get("Design_Associated").get("id"),"");
+			Design_obj = zoho.crm.getRecordById("Designs",Design_id);
+			Design_Name = ifnull(Design_obj.get("Name"),"");
+			Attachment_id = Design_obj.get("Design").get(0).get("attachment_Id");
+			Design_File = invokeurl
+			[
+				url :"https://www.zohoapis.com/crm/v2/Designs/" + Design_id + "/Attachments/" + Attachment_id
+				type :GET
+				connection:"attachfile"
+			];
+		}
+	}
+	info Design_File;
+	attachements = List();
+	if(respmap.get("Add_Manufacturing_Files") == true)
+	{
+		Manuf_files_1 = ifnull(Design_obj.get("Manufacturing_Files_1"),"");
+		attachements.addAll(Manuf_files_1);
+		Manuf_files_2 = ifnull(Design_obj.get("Manufacturing_Files_2"),"");
+		attachements.addAll(Manuf_files_2);
+	}
+	Att1 = "";
+	Att2 = "";
+	Att3 = "";
+	Att4 = "";
+	Att5 = "";
+	Att6 = "";
+	Att7 = "";
+	Att8 = "";
+	Att9 = "";
+	Att10 = "";
+	Att11 = "";
+	for each index j in attachements
+	{
+		mapvar = attachements.get(j);
+		finalMap = mapvar.toMap();
+		downloadFile = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v2/Designs/" + Design_id + "/Attachments/" + finalMap.get("attachment_Id")
+			type :GET
+			connection:"attachfile"
+		];
+		if(j == 0)
+		{
+			Att1 = downloadFile;
+		}
+		if(j == 1)
+		{
+			Att2 = downloadFile;
+		}
+		if(j == 2)
+		{
+			Att3 = downloadFile;
+		}
+		if(j == 3)
+		{
+			Att4 = downloadFile;
+		}
+		if(j == 4)
+		{
+			Att5 = downloadFile;
+		}
+		if(j == 5)
+		{
+			Att6 = downloadFile;
+		}
+		if(j == 6)
+		{
+			Att7 = downloadFile;
+		}
+		if(j == 7)
+		{
+			Att8 = downloadFile;
+		}
+		if(j == 8)
+		{
+			Att9 = downloadFile;
+		}
+		if(j == 9)
+		{
+			Att10 = downloadFile;
+		}
+		if(j == 10)
+		{
+			Att11 = downloadFile;
+		}
+	}
+}
+info Att1;
+info Att2;
+info Att3;
+info Att4;
+info Att5;
+info Att6;
+info Att7;
+info Att8;
+info Att9;
+info Att10;
+info Att11;
+////////////////////////////////////////////////////////////////////////////////////
+str = "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css'><script src='https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js'></script><script src='https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js'></script></head><table border='0' cellspacing='0' cellpadding='0' width='75%' align='center' style='background:#fff;padding:2px;'><tbody>";
+str = str + "<div><table border='0' width='100%' style='padding-right:80px; padding-left:40px;'>";
+str = str + "<tr><td align='right'><div><img src='https://drive.google.com/uc?export=view&id=1TnzC3s2AOnIwO44JQwtLo0zmYzxBTn_B'></td></tr></table></div>";
+str = str + "<table style='padding-left:38px; color:black;'><tr><td>Dear " + Vendor_Name + ",</td></tr><tr><td style='padding-top:10px; color:black; font-size:13px; padding-right:75px;'>Please review and “Accept” or “Reject” the below PO by clicking the button.</td></tr></table>";
+str = str + "<div style='padding-left:40px; padding-right:90px;'><hr style='display:block; height:1px; border:0; background-color:black;'></hr></div>";
+str = str + "<div style='display: block;'><ul style='float:left; width:100%; height:auto;'><table><tr><td><span style='font-family: Calibri; font-size: 14px; font-weight:bold; color:black;'>PURCHASE ORDER:</span></td><td valign='top'><span style='font-family: Calibri; font-size: 14px; color:black;'>" + PO_ID + "</span></td></tr></table><table><tr style='height:30px;'><td><span style='font-family: Calibri; font-size: 14px; font-weight:bold; color:black;'>DUE DATE:</span></td><td><span style='font-family: Calibri; font-size: 14px; color:black;'>" + Due_Date + "</span></td></tr></table><table style='padding-right:125px';><tr style='height:20px;'><td valign='top'><span style='font-family: Calibri; font-size: 14px; font-weight:bold; color:black;'>PROJECT:</span></td><td valign='top'><span style='font-family: Calibri; font-size: 14px; color:black;'>" + Project + "</span></td></tr></table><table style='padding-right:125px';><tr><td valign='top'><span style='font-family: Calibri; font-size: 14px; font-weight:bold; color:black;'>SHIPPING ADDRESS:</span></td><td valign='top'><span style='font-family: Calibri; font-size: 14px; color:black;'>" + Ship_to_address + "</span></td></tr></table></ul></div>";
+/////////////////////////////////////////////////////////////////////////////////////////
+str = str + "<table  border='0' cellspacing='0'cellpadding='0' width='100%' style='font-family: Calibri; font-size:13px; color:black; padding-left:40px; padding-right:80px;';><tr style='height:35px';><td style='font-weight:bold; background-color:#d9d9d9;padding:4px 10px 4px 10px; border-top:1px solid gray; border-bottom:1px solid gray; color:black'>ITEM</td><td style='font-weight:bold; padding:4px 10px 4px 10px;background-color:#d9d9d9;border-top:1px solid gray; border-bottom:1px solid gray; color:black'>DESCRIPTION</td><td style='font-weight:bold; padding:4px 10px 4px 10px;background-color:#d9d9d9;border-top:1px solid gray; border-bottom:1px solid gray; color:black'>PRICE</td><td style='font-weight:bold; padding:4px 10px 4px 10px;background-color:#d9d9d9;border-top:1px solid gray; border-bottom:1px solid gray; color:black'>QTY</td><td align='right' style='font-weight:bold; padding:4px 10px 4px 10px;background-color:#d9d9d9;border-top:1px solid gray; border-bottom:1px solid gray; color:black'>AMOUNT</td></tr>";
+//////////////////////////// Ends /////////////////////////////////////
+productmap = respmap.get("Product_Details");
+jlist = productmap.toJSONList();
+count = 0;
+for each index j in jlist
+{
+	count = count + 1;
+	mapvar = jlist.get(j);
+	finalMap = mapvar.toMap();
+	pdt = finalMap.get("product").get("name");
+	description = finalMap.get("product_description");
+	listPrice = finalMap.get("list_price");
+	qty = finalMap.get("quantity");
+	discount = finalMap.get("Discount");
+	UnitPrice = finalMap.get("unit_price");
+	TotalDis = finalMap.get("total_after_discount");
+	Tax = finalMap.get("Tax");
+	netTotal = finalMap.get("net_total");
+	Total = finalMap.get("total");
+	str = str + "<tbody><tr><td style='font-family: Calibri; padding:4px 10px 4px 10px;border-bottom:1px solid gray' valign='top'>" + pdt + "<br></td>";
+	str = str + "<td style='font-family: Calibri; padding:4px 10px 4px 10px; border-bottom:1px solid gray'>" + description + "</td>";
+	str = str + "<td style='font-family: Calibri; padding:4px 10px 4px 10px;border-bottom:1px solid gray' valign='top' color:#E0E2E5 >" + "$" + listPrice + "</td>";
+	str = str + "<td style='font-family: Calibri; padding:4px 10px 4px 10px;border-bottom:1px solid gray' valign='top' color:#E0E2E5>" + qty + "</td>";
+	str = str + "<td style='font-family: Calibri; padding:4px 10px 4px 10px;border-bottom:1px solid gray' align='right' valign='top' color:#E0E2E5>" + "$" + Total + "</td>";
+	str = str + "</tr></tbody>";
+}
+subtotal = ifnull(respmap.get("Sub_Total").round(2),"0.00");
+totaltax = ifnull(respmap.get("Tax").round(2),"0.00");
+adjustment = ifnull(respmap.get("Adjustment").round(2),"0.00");
+Grandtotal = ifnull(respmap.get("Grand_Total").round(2),"0.00");
+str = str + "</table>";
+str = str + "<div style='width:60%;float:left;padding-top:100px'> <b style='font-family: Calibri; font-size:13px; padding-left:12px; '></b></div>";
+str = str + "<div border='1' style='width:35%;float:left;'>";
+str = str + "<table border='0' cellspacing='0' cellpadding='0' width='100%' style='font-family: Calibri; font-size:13px; color:black; padding-right:48px;'>";
+str = str + "<tr><td style=' padding:4px 10px 4px 10px;border-bottom:0px solid gray'>SUB TOTAL</td>";
+str = str + "<td  style='padding:4px 10px 4px 10px;border-bottom:0px solid gray;border-top:0px solid #dadada;' align='right'>" + "$" + subtotal + "</td></tr>";
+str = str + "<tr><td  style='padding:4px 10px 4px 10px;border-bottom:1px solid gray'>SERVICE TAX</td>";
+str = str + "<td  style='padding:4px 10px 4px 10px;border-bottom:1px solid gray;border-top:0px solid #dadada;' align='right'>" + "$" + totaltax + "</td></tr>";
+str = str + "<tr><td style='border-bottom:1px solid gray; border-top:0px solid #dadada; color:#black;background:#FFFFFF;padding:4px 10px 4px 10px;'><b> GRAND TOTAL </b></td>";
+str = str + "<td  style='border-bottom:1px solid gray; border-top:0px solid #dadada; color:#000000; text-align:right; background:#FFFFFF;padding:4px 10px 4px 10px;'>" + "$" + Grand_Total + "</td></tr></table><br>";
+str = str + "<div class='row'><div class='col-md-3 col-xs-6' style='padding-right:50px; text-align:center'><a type=button href='https://forms.zohopublic.com/blinksigns/form/BlinkSignsPOApproval1/formperma/iTQ8MRfAJSXU8VDJrH33BXBQ4YvZU6RjVspTegrdWq0?Project_ID=" + project_id + "&PO_ID=" + PO_ID + "&Vendor=" + Vendor_Name + "&RFQ=" + RFQ + "'; style='-webkit-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; -moz-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; color:#FFFF; background: #4CAF50; border-radius:5px; -moz-border-radius:5px; -webkit-border-radius:5px; border:none; font-size:14px; font-weight:700; padding:8px 33px; text-shadow:rgb(255, 238, 102) 0px 1px 0px; background-color: rgb(66,168,219)'>Accept / Reject PO</a></div></div></div>";
+str = str + "<table><br><tr><td style='padding-left:38px; padding-right:75px;'><hr style='display:block; height:0px; border:1; background-color:black;'></hr></td></tr><tr><td colspan='12' style='padding:0px 75px 4px 40px; font-size:11px; font-family: Calibri; border-bottom:0px solid #ccc' align='justify'><b>Terms & Conditions : </b>" + Terms_and_Conditions + "</td></tr></table>";
+str = str + "<table border='0' cellspacing='0'cellpadding='0' width='100%' style='font-family: Calibri; font-size:12px; color:black; padding-left:43px; padding-right:75px;'><tr style='height:30px';><td style='font-weight:bold; padding:4px 10px 6px 10px; border-left:2px solid gray; color:#000000'>BlinkSigns, 1925 St. Clair Ave. Suite 100, Cleveland, Ohio, US, 44114</td><td align='right' style='padding:4px 10px 4px 10px;font-weight:bold;border-right:2px solid gray; color:#000000'>www.blinksigns.com</td></tr></table></tbody></table></html>";
+////////////////////////////////////////////////////////////////////
+if(respmap.get("PO_Type") == "Non Site Survey")
+{
+	sendmail
+	[
+		from :zoho.loginuserid
+		to :email
+		subject :"PO Details"
+		message :str
+		content type :HTML
+		Attachments :file:Design_File,file:Att1,file:Att2,file:Att3,file:Att4,file:Att5,file:Att6,file:Att7,file:Att8,file:Att9,file:Att10,file:Att11
+	]
+}
+else
+{
+	sendmail
+	[
+		from :zoho.loginuserid
+		to :email
+		subject :"PO Details"
+		message :str
+		content type :HTML
+	]
+}
+Status = Map();
+Status.put("Status","Sent");
+zoho.crm.updateRecord("Purchase_Orders",PO_id.toLong(),Status);
+return "PO Email Sent Successfully";

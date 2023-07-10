@@ -1,0 +1,10 @@
+rep = List();
+rep = locationID.replaceall("|||",",",true);
+locaions = List();
+for each  ids in rep
+{
+	serviceLocations = zoho.crm.getRecordById("Service_Locations",ids);
+	locaions.add(serviceLocations.get("Name"));
+}
+openUrl("https://www.google.com/maps/search/?api=1&query=" + locaions,"popup window","height=200,width=200");
+return "";

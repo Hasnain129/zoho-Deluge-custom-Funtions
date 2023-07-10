@@ -1,0 +1,68 @@
+try 
+{
+	PDF_Generator = zoho.crm.getRelatedRecords("Invoices","Sales_Orders",SO_id);
+	info "inv : " + PDF_Generator;
+	SO = zoho.crm.getRecordById("Sales_Orders",SO_id.toLong());
+	info "SO : " + SO;
+	Sign_Project = zoho.crm.getRecordById("Deals",PDF_Generator.get(0).get("Sign_Project_Name").get("id").toLong());
+	info "sign project : " + Sign_Project;
+	if(PDF_Generator != {})
+	{
+		if(SO.get("Account_Name").get("id") == Sign_Project.get("Account_Name").get("id"))
+		{
+			Customer_id = SO.get("Account_Name").get("id");
+			Customer_contacts = zoho.crm.getRelatedRecords("Contacts","Accounts",Customer_id);
+			Customer_Secondary_contacts = zoho.crm.getRelatedRecords("Contacts139","Accounts",Customer_id);
+			contact_id = SO.get("Contact_Name").get("id");
+			Match_contact = 0;
+			/////////////////// Checking Main Contacts ///////////////////
+			for each  contact in Customer_contacts
+			{
+				if(contact.get("id") == contact_id)
+				{
+					Match_contact = Match_contact + 1;
+				}
+			}
+			///////////// Checking Secondary Contacts /////////////
+			for each  sec_contact in Customer_Secondary_contacts
+			{
+				if(sec_contact.get("Linking_Customers").get("id") == contact_id)
+				{
+					Match_contact = Match_contact + 1;
+				}
+			}
+			if(Match_contact > 0)
+			{
+				for each  data in PDF_Generator
+				{
+					PDF_Gen_ID = data.get("id");
+				}
+				openUrl("https://crm.zoho.com/crm/org666155072/Template.do?step=previewPop&entityId=" + PDF_Gen_ID + "&module=Invoices&contactNameId=" + Contact_ID + "&action=sendMail","popup window","height=600,width=1200");
+				Message_out = "PDF is opening in the next window";
+			}
+			else
+			{
+				return "Please select correct contact of customer and retry to send Sale Order for Approval.";
+			}
+		}
+		else
+		{
+			return "Sign Project and SO Customer are not matched.";
+		}
+	}
+	else if(PDF_Generator == {})
+	{
+		Message_out = "PDF of this Sales Order is not created";
+	}
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Send SO for Approval / CRM Button Sales Orders"
+		message :"ID: " + SO_id + " Root Cause: " + e
+	]
+}
+return Message_out;

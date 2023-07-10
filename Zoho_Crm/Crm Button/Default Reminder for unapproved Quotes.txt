@@ -1,0 +1,70 @@
+try 
+{
+	Qts = List();
+	Qts = ID.replaceall("|||",",",true);
+	for each  ID in Qts
+	{
+		QuoteDetails = zoho.crm.getRecordById("Quotes",ID);
+		info QuoteDetails;
+		AutoNum = QuoteDetails.get("Quote_Auto_No");
+		PDFGenID = QuoteDetails.get("Client_Facing_Quote_ID");
+		if(PDFGenID != null)
+		{
+			Organization = QuoteDetails.get("Organization_Name");
+			ContactID = QuoteDetails.get("Contact_Name").get("id");
+			ContactDetails = zoho.crm.getRecordById("Contacts",ContactID);
+			ContactEmail = ContactDetails.get("Email");
+			if(ContactEmail != null)
+			{
+				contactFname = ContactDetails.get("First_Name");
+				contactLast = ContactDetails.get("Last_Name");
+				if(contactFname == null)
+				{
+					Contact_Full_Name = contactLast;
+				}
+				else
+				{
+					Contact_Full_Name = contactFname + " " + contactLast;
+				}
+				date = zoho.currentdate;
+				dummydate = date.toStartOfWeek();
+				dummydate1 = dummydate.addHour(10);
+				dummydate2 = dummydate1.addMinutes(20);
+				dummydate3 = dummydate2.addDay(1);
+				startdate = dummydate3.addWeek(1);
+				enddatedummy = startdate.addWeek(3);
+				enddate = enddatedummy.addHour(9);
+				info startdate;
+				info enddate;
+				dataMap = Map();
+				dataMap.put("Quote",ID);
+				dataMap.put("Type","Quote");
+				dataMap.put("Quote_Auto_Number",AutoNum);
+				dataMap.put("Contact_Person_Email",ContactEmail);
+				dataMap.put("Type_of_Reminder","Periodic");
+				dataMap.put("Status","Active");
+				dataMap.put("Reminder_Cycle","Weekly");
+				dataMap.put("Start_Date_and_Time",startdate);
+				dataMap.put("End_Date_and_Time",enddate);
+				dataMap.put("PDF_Generator_ID",PDFGenID);
+				dataMap.put("Organization_Name",Organization);
+				dataMap.put("LoginUserID",zoho.loginuserid);
+				dataMap.put("Contact_Name",Contact_Full_Name);
+				info dataMap;
+				otherMap = Map();
+				resp = zoho.creator.createRecord("blinksigns","reminders","Reminders",dataMap,otherMap,"zoho_creator");
+				info resp;
+			}
+		}
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"maaz.ansari@basecampdata.com"
+		subject :"Default Reminder"
+		message :" Root Cause: " + e
+	]
+}
+return "";

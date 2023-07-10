@@ -1,0 +1,55 @@
+try 
+{
+	//// Getting Record //////////////////////////////////
+	rep = List();
+	rep = PDF_ID.replaceall("|||",",",true);
+	for each  PDF in rep
+	{
+		Get_PDF_Details = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v2.1/Invoices/" + PDF
+			type :GET
+			connection:"zoho_crm"
+		];
+		oldtax = Get_PDF_Details.get("data").get(0).get("Tax");
+		info "oldfield:" + oldtax;
+		Getnew = Get_PDF_Details.get("data").get(0).get("Tax_N");
+		// 		info "newfield:" + Getnew;
+		//info "oldtax:" + oldtax;
+		// 		truncate = oldtax.truncate(9);
+		//info truncate;
+		/// -----------------map data-------------////
+		//return "if:" + PO_ID;
+		map_value = Map();
+		map_value.put("Tax_N",oldtax);
+		map_value.put("Refreshed",true);
+		///////list/////
+		dlist = List();
+		dlist.add(map_value);
+		////// put list in data for api /////////
+		mp2 = Map();
+		mp2.put("data",dlist);
+		info mp2;
+		////////////// --------------updating tax field-----------------////////
+		Update_PDF_Details = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v2.1/Invoices/" + PDF
+			type :PUT
+			parameters:mp2 + ""
+			connection:"zoho_crm"
+		];
+	}
+	return "Records updated successfully";
+}
+catch (e)
+{
+	info "Catch: " + e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"rabia@erphub.com"
+		subject :"TAXFIELD NOT UPDATED"
+		message :"ID: " + PDF + " Root Cause: " + e
+	]
+}
+return "";

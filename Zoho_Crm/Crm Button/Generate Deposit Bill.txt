@@ -1,0 +1,57 @@
+try 
+{
+	PO_details = zoho.crm.getRecordById("Purchase_Orders",PO_id.tolong());
+	Organization_name = PO_details.get("Organization_Name");
+	Deposit = PO_details.get("Deposit");
+	Deposit_terms = PO_details.get("Deposit_Terms");
+	Payment_method = PO_details.get("Payment_Method1");
+	Total = PO_details.get("Grand_Total");
+	Bill_details = zoho.crm.getRelatedRecords("Bills","Purchase_Orders",PO_id.tolong());
+	Generated_bill = 0;
+	for each  bill in Bill_details
+	{
+		if(bill.get("Status") != "Void" && bill.get("Generated_bill_amount") != null)
+		{
+			Generated_bill = Generated_bill + bill.get("Generated_bill_amount").toDecimal().round(2);
+		}
+	}
+	remaining = Total - Generated_bill;
+	//--------------------------------------
+	// Creating bill
+	if(remaining > 0)
+	{
+		Remain_deposit = (remaining * 100) / Total;
+		if(Deposit < Remain_deposit)
+		{
+			mp = Map();
+			mp.put("Organization_Name",Organization_name);
+			mp.put("PO",PO_id);
+			mp.put("Status","Draft");
+			mp.put("Method_of_bill_creation","Partly");
+			mp.put("How_would_you_like_to_split_the_PO","By %");
+			mp.put("to_pay",Deposit.toString());
+			mp.put("Payment_Terms",Deposit_terms);
+			mp.put("Payment_Method",Payment_method);
+			create_bill = zoho.crm.createRecord("Create_Bills",mp,{"trigger":{"workflow"}});
+			info create_bill;
+			return "Deposit Bill Successfully Created.";
+		}
+		else
+		{
+			return "Only " + Remain_deposit + "% Deposit can be converted into Bill.";
+		}
+	}
+	else
+	{
+		return "PO Grand Total amount already converted into Bills.";
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Generate Deposit Bill / CRM Button Purchase Orders"
+		message :"ID: " + PO_id + " Root Cause: " + e
+	]
+}

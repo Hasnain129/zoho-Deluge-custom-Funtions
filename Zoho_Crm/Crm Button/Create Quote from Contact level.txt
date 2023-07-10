@@ -1,0 +1,145 @@
+try 
+{
+	contact_related_proj = zoho.crm.getRelatedRecords("Deals","Contacts",contact_id.toLong());
+	related_list = contact_related_proj.toString();
+	//info related_list;
+	if(related_list != "")
+	{
+		contact_related_obj = contact_related_proj.toMap();
+		proj_id = contact_related_obj.get("id");
+		//---------------------------------------------
+		// Create Quote from details on Project
+		proj_details = zoho.crm.getRecordById("Deals",proj_id);
+		Contact_id = proj_details.get("Contact_Name").get("id");
+		//Servloc_id = ifnull(proj_details.get("Service_Locations").get("id"),"");
+		resp = zoho.crm.getRecordById("Contacts",Contact_id);
+		Customer_id = resp.get("Account_Name").get("id");
+		info Customer_id;
+		resp1 = zoho.crm.getRecordById("Accounts",Customer_id);
+		Down_Payment = resp1.get("Down_Payment");
+		if(Down_Payment == null)
+		{
+			Down_Payment = "50";
+		}
+		Terms = resp1.get("Terms");
+		if(Terms == null)
+		{
+			Terms = "Direct Debit Payment";
+		}
+		//------------Get Products ------------//
+		prodlist = List();
+		prodid = "3205780000037108825";
+		product_details = zoho.crm.getRecordById("Products",prodid.toLong());
+		listprice = product_details.get("Unit_Price");
+		description = product_details.get("Description");
+		prodmp = Map();
+		prodmp.put("product_description",description);
+		prodmp.put("product",prodid);
+		prodmp.put("quantity",1);
+		prodmp.put("Currency","USD");
+		prodmp.put("list_price",listprice);
+		prodlist.add(prodmp);
+		//------------------------------------------------------------------------
+		Terms_condition = "Deposits:" + "\n" + "A 50% deposit is required on any orders over $1000.00 unless agreed otherwise, prior to the order being placed." + "\n" + "Details:" + "\n" + "All specifications, drawing and literature are intended to give a fair description of the contract but Blink Signs reserve the right to vary the specifications, (in the event of supply difficulties or other reasons) subject always to the understanding that we would advise the customer of any such variations, and that such variations would not be structurally or functionally detrimental." + "\n" + "Delivery:" + "\n" + "Blink Signs will do everything possible to adhere to times and dates given, but cannot under any circumstances accept any liability for loss caused by failure to deliver and complete on time, whatever the cause for delay. Lead times are from the point at which the final artwork is signed off by the client.PLEASE ALLOW 14 BUSINESS DAY FOR SIGN FABRICATION FROM THE MOMENT PERMIT IS ISSUED BY THE CITY." + "\n" + "Price Variations:" + "\n" + "All prices are fixed for 14 days from quotation date. Should there be any changes in the cost, calling for an amendment to the confirmed price Blink Signs undertake to advise the customer of any such amendment prior to the start of contract." + "\n" + "Payment Terms:" + "\n" + "Full/balance payments are due on completion prior to installers leaving the site unless stated otherwise. The balance will be charged to the payment method on file upon completion of work. All materials remain the property of Blink Signs until paid for in full. Extended credit is not available. Additional charges will be incurred for late payments." + "\n" + "Management Companies &Agents:" + "\n" + "In the case of clients acting on behalf of or working for end user clients (e.g. Project Management Companies or Design Companies/ Houses) the contract will be between Blink Signs and the Management Company or Agent/Designer of whom the invoice is to be made out to. The payment terms will be as in the previous section titled PAYMENT TERMS. Blink Signs cannot except delayed payments due to the terms the Management Company or Agent/Designer has arranged with their client." + "\n" + "Artwork/Design:" + "\n" + "The first draft will be free of charge to the client. Any amendments to that draft may be subject to additional charges. Lead times may be affected due to the following: Receipt of unsuitable artwork, delays in information and relevant files being received, delays in signing off final proofs, delays in receiving deposit payments, consistent changing of designs. Blink Signs therefore cannot be held liable for delays in production deadlines due to any of the above occurring." + "\n" + "Return Policy:" + "\n" + "Blink Signs does not accept returns. All products are manufactured to customer’s specifications. Blink Signs supplies proof drawings for the customer’s final approval. Projects don’t begin production until the customers has approved the project drawing. Once the production begins the production cannot be changed without incurring additional cost. All sales are final and no return will be accepted.";
+		//---------------------------------------------------------
+		// Creating Quote
+		mp = Map();
+		mp.put("Subject","New Quote from Blink Signs ");
+		mp.put("Contact_Name",Contact_id);
+		mp.put("Account_Name",Customer_id);
+		mp.put("Quote_Stage","Draft");
+		mp.put("Down_Payment",Down_Payment);
+		mp.put("Terms",Terms);
+		mp.put("Down_Payment_Invoice_Status","Not Sent");
+		mp.put("Product_Details",prodlist);
+		mp.put("Terms_and_Conditions",Terms_condition);
+		create1 = zoho.crm.createRecord("Quotes",mp);
+		info create1;
+		//-----------------Update Quote-------------------//
+		quoteid = create1.get("id");
+		Create_Date = create1.get("Created_Time").toString("yyyy-MM-dd");
+		valid_till = Create_Date.addDay(30);
+		//--------------get Quote to fetch Auto No-----------//
+		update1 = zoho.crm.getRecordById("Quotes",quoteid);
+		Autono = update1.get("Quote_Auto_No");
+		mp2 = Map();
+		mp2.put("Valid_Till",valid_till);
+		mp2.put("Subject","New Quote from Blink Signs " + Autono);
+		update = zoho.crm.updateRecord("Quotes",quoteid,mp2);
+		openUrl("https://crm.zoho.com/crm/org666155072/tab/Quotes/" + quoteid + "/edit","parent window");
+	}
+	//------------------------------------------------------------------
+	else
+	{
+		//---------------------------------------------
+		// Create Quote from details on Project
+		resp = zoho.crm.getRecordById("Contacts",contact_id.toLong());
+		info resp;
+		Customer_id = resp.get("Account_Name").get("id");
+		resp1 = zoho.crm.getRecordById("Accounts",Customer_id);
+		Down_Payment = resp1.get("Down_Payment");
+		if(Down_Payment == null)
+		{
+			Down_Payment = "50";
+		}
+		Terms = resp1.get("Terms");
+		if(Terms == null)
+		{
+			Terms = "Direct Debit Payment";
+		}
+		//------------Get Products ------------//
+		prodlist = List();
+		prodid = "3205780000037108825";
+		product_details = zoho.crm.getRecordById("Products",prodid.toLong());
+		listprice = product_details.get("Unit_Price");
+		description = product_details.get("Description");
+		prodmp = Map();
+		prodmp.put("product_description",description);
+		prodmp.put("product",prodid);
+		prodmp.put("quantity",1);
+		prodmp.put("Currency","USD");
+		prodmp.put("list_price",listprice);
+		prodlist.add(prodmp);
+		//------------------------------------------------------------------------
+		Terms_condition = "Deposits:" + "\n" + "A 50% deposit is required on any orders over $1000.00 unless agreed otherwise, prior to the order being placed." + "\n" + "Details:" + "\n" + "All specifications, drawing and literature are intended to give a fair description of the contract but Blink Signs reserve the right to vary the specifications, (in the event of supply difficulties or other reasons) subject always to the understanding that we would advise the customer of any such variations, and that such variations would not be structurally or functionally detrimental." + "\n" + "Delivery:" + "\n" + "Blink Signs will do everything possible to adhere to times and dates given, but cannot under any circumstances accept any liability for loss caused by failure to deliver and complete on time, whatever the cause for delay. Lead times are from the point at which the final artwork is signed off by the client.PLEASE ALLOW 14 BUSINESS DAY FOR SIGN FABRICATION FROM THE MOMENT PERMIT IS ISSUED BY THE CITY." + "\n" + "Price Variations:" + "\n" + "All prices are fixed for 14 days from quotation date. Should there be any changes in the cost, calling for an amendment to the confirmed price Blink Signs undertake to advise the customer of any such amendment prior to the start of contract." + "\n" + "Payment Terms:" + "\n" + "Full/balance payments are due on completion prior to installers leaving the site unless stated otherwise. The balance will be charged to the payment method on file upon completion of work. All materials remain the property of Blink Signs until paid for in full. Extended credit is not available. Additional charges will be incurred for late payments." + "\n" + "Management Companies &Agents:" + "\n" + "In the case of clients acting on behalf of or working for end user clients (e.g. Project Management Companies or Design Companies/ Houses) the contract will be between Blink Signs and the Management Company or Agent/Designer of whom the invoice is to be made out to. The payment terms will be as in the previous section titled PAYMENT TERMS. Blink Signs cannot except delayed payments due to the terms the Management Company or Agent/Designer has arranged with their client." + "\n" + "Artwork/Design:" + "\n" + "The first draft will be free of charge to the client. Any amendments to that draft may be subject to additional charges. Lead times may be affected due to the following: Receipt of unsuitable artwork, delays in information and relevant files being received, delays in signing off final proofs, delays in receiving deposit payments, consistent changing of designs. Blink Signs therefore cannot be held liable for delays in production deadlines due to any of the above occurring." + "\n" + "Return Policy:" + "\n" + "Blink Signs does not accept returns. All products are manufactured to customer’s specifications. Blink Signs supplies proof drawings for the customer’s final approval. Projects don’t begin production until the customers has approved the project drawing. Once the production begins the production cannot be changed without incurring additional cost. All sales are final and no return will be accepted.";
+		//---------------------------------------------------------
+		// Creating Quote
+		mp = Map();
+		mp.put("Subject","New Quote from Blink Signs ");
+		//mp.put("Deal_Name",proj_id);
+		mp.put("Contact_Name",contact_id.toLong());
+		mp.put("Account_Name",Customer_id);
+		mp.put("Quote_Stage","Waiting for Approval");
+		//mp.put("Design","");
+		//mp.put("Service_location",Servloc_id);
+		mp.put("Down_Payment",Down_Payment);
+		mp.put("Terms",Terms);
+		mp.put("Down_Payment_Invoice_Status","Not Sent");
+		mp.put("Product_Details",prodlist);
+		mp.put("Terms_and_Conditions",Terms_condition);
+		create1 = zoho.crm.createRecord("Quotes",mp);
+		info create1;
+		//-----------------Update Quote-------------------//
+		quoteid = create1.get("id");
+		Create_Date = create1.get("Created_Time").toString("yyyy-MM-dd");
+		valid_till = Create_Date.addDay(30);
+		//--------------get Quote to fetch Auto No-----------//
+		update1 = zoho.crm.getRecordById("Quotes",quoteid);
+		Autono = update1.get("Quote_Auto_No");
+		mp2 = Map();
+		mp2.put("Valid_Till",valid_till);
+		mp2.put("Subject","New Quote from Blink Signs " + Autono);
+		update = zoho.crm.updateRecord("Quotes",quoteid,mp2);
+		openUrl("https://crm.zoho.com/crm/org666155072/tab/Quotes/" + quoteid + "/edit","parent window");
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Create Quote from Contact level / CRM / Button / Contacts"
+		message :"ID: " + contact_id + " Root Cause: " + e
+	]
+}
+return "Quote Created";

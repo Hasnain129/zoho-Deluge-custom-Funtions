@@ -1,0 +1,50 @@
+try 
+{
+	Bill_obj = zoho.crm.getRecordById("Create_Bills",Bill_id);
+	Bill_Generated_Amount = Bill_obj.get("Generated_bill_amount");
+	PO_obj = zoho.crm.getRecordById("Purchase_Orders",Bill_obj.get("PO").get("id"));
+	if(Bill_obj.get("Paid_Amount") > 0)
+	{
+		return "Paid Bill cannot be convert to Void.";
+	}
+	else
+	{
+		if(Bill_obj.get("Status") != "Void")
+		{
+			/////////////////////////////////// Update Bill Amount on PO ///////////////////////////////////////////////////
+			if(Bill_obj.get("Books_Bill_ID") != null && Bill_Generated_Amount > 0)
+			{
+				Mp2 = Map();
+				Mp2.put("Bill_Amount",PO_obj.get("Bill_Amount") - Bill_Generated_Amount.toDecimal());
+				zoho.crm.updateRecord("Purchase_Orders",Bill_obj.get("PO").get("id"),Mp2);
+			}
+			////////////////////////////////////////////////////////////////////////////////////////////////////////	
+			Mp = Map();
+			Mp.put("Status","Void");
+			zoho.crm.updateRecord("Create_Bills",Bill_id,Mp);
+			////////////////// Void Bill On Zoho Books /////////////////////////////////////
+			Response = invokeurl
+			[
+				url :"https://books.zoho.com/api/v3/bills/" + Bill_obj.get("Books_Bill_ID") + "/status/void?organization_id=666479573"
+				type :POST
+				connection:"zoho_books"
+			];
+			info Response;
+			return "The bill has been marked as Void";
+		}
+		else
+		{
+			return "The bill has been already marked as Void";
+		}
+	}
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Void Bill / CRM Button Create Bills"
+		message :"ID: " + Bill_id + " Root Cause: " + e
+	]
+}

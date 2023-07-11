@@ -1,0 +1,26 @@
+try 
+{
+	designsdetails = zoho.crm.getRecordById("Designs",designid);
+	projectid = ifnull(designsdetails.get("Project"),"").get("id");
+	if(projectid != null)
+	{
+		projectdetails = zoho.crm.getRecordById("Deals",projectid);
+		landlord_id = ifnull(projectdetails.get("Landlord_Contact_Information"),"").get("id");
+		if(landlord_id != null)
+		{
+			mp = Map();
+			mp.put("Landlord",landlord_id);
+			update = zoho.crm.updateRecord("Designs",designid,mp);
+		}
+	}
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :" Update landlord from Sign Project / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000002347428\" >Workflow</a>  " + "ID: " + designid + " Root Cause: " + e
+	]
+}

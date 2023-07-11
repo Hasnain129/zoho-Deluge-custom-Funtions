@@ -1,0 +1,45 @@
+try 
+{
+	SO_details = zoho.crm.getRecordById("Sales_Orders",SO_id.tolong());
+	info SO_details;
+	SO_total = ifnull(SO_details.get("Grand_Total"),0);
+	PO_total = 0.0;
+	//--------------------------------------------------
+	// Get Total of POs against a deal
+	PO_details = zoho.crm.getRelatedRecords("Purchase_Orders1","Sales_Orders",SO_id.tolong());
+	if(!PO_details.isEmpty())
+	{
+		if(PO_details.get(0) != null)
+		{
+			if(PO_details.get(0).get("message") == null)
+			{
+				for each  resp in PO_details
+				{
+					PO_id = resp.get("Purchase_Orders").get("id");
+					PO_data = zoho.crm.getRecordById("Purchase_Orders",PO_id.toLong());
+					if(PO_data.size() > 0 && PO_data.get("Status") != "Voided")
+					{
+						//info "yes";
+						PO_amount = ifnull(PO_data.get("Grand_Total"),0);
+						PO_total = PO_total + PO_amount;
+					}
+				}
+			}
+		}
+	}
+	mp = Map();
+	mp.put("SO_Total",ifnull(SO_total.round(3),0));
+	mp.put("POs_Total",ifnull(PO_total.round(3),0));
+	update = zoho.crm.updateRecord("Sales_Orders",SO_id.tolong(),mp);
+	info update;
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :" Calculate Profit Margin / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000013388314\" >Workflow</a>  " + "ID: " + SO_id + " Root Cause: " + e
+	]
+}

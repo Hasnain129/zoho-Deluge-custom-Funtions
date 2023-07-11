@@ -1,0 +1,89 @@
+PO_Obj = zoho.crm.getRelatedRecords("Purchase_Orders","Deals",project_id);
+count_POs = 0;
+count_comp_POs = 0;
+count_accept_POs = 0;
+count_sent_POs = 0;
+count_rej_POs = 0;
+count_qapass_POs = 0;
+count_fullpaid_POs = 0;
+count_draft_POs = 0;
+count_voided_POs = 0;
+count_Other_POs = 0;
+statusLis = List();
+countStatus = 0;
+try 
+{
+	if(PO_Obj != {})
+	{
+		for each  data in PO_Obj
+		{
+			if(!data.contains("Bill_Amount"))
+			{
+				break;
+			}
+			statusLis.add(data.get("Status"));
+			count_POs = count_POs + 1;
+			countStatus = countStatus + 1;
+			if(data.get("Status") == "Completed")
+			{
+				count_comp_POs = count_comp_POs + 1;
+			}
+			else if(data.get("Status") == "Accepted")
+			{
+				count_accept_POs = count_accept_POs + 1;
+			}
+			else if(data.get("Status") == "Sent")
+			{
+				count_sent_POs = count_sent_POs + 1;
+			}
+			else if(data.get("Status") == "Rejected")
+			{
+				count_rej_POs = count_rej_POs + 1;
+			}
+			else if(data.get("Status") == "QA Passed")
+			{
+				count_qapass_POs = count_qapass_POs + 1;
+			}
+			else if(data.get("Status") == "Fully Paid")
+			{
+				count_fullpaid_POs = count_fullpaid_POs + 1;
+			}
+			else if(data.get("Status") == "Draft")
+			{
+				count_draft_POs = count_draft_POs + 1;
+			}
+			else if(data.get("Status") == "Voided")
+			{
+				count_voided_POs = count_voided_POs + 1;
+			}
+			else if(data.get("Status") == "Other - Temporary")
+			{
+				count_Other_POs = count_Other_POs + 1;
+			}
+		}
+		////////////////////// Calculate No of Pos ///////////////////
+		mp = Map();
+		mp.put("Total_PO_s",count_POs);
+		mp.put("Total_Completed_PO_s",count_comp_POs);
+		mp.put("Total_Accepted_PO_s",count_accept_POs);
+		mp.put("Total_Sent_PO_s",count_sent_POs);
+		mp.put("Total_Rejected_PO_s",count_rej_POs);
+		mp.put("Total_QA_Passed_PO_s",count_qapass_POs);
+		mp.put("Total_Fully_Paid_PO_s",count_fullpaid_POs);
+		mp.put("No_of_Draft_PO_s",count_draft_POs);
+		mp.put("No_of_Voided_PO_s",count_voided_POs);
+		mp.put("No_of_Others_PO_s",count_Other_POs);
+		mp.put("No_of_Active_PO_s",count_POs - count_voided_POs);
+		update_proj = zoho.crm.updateRecord("Deals",project_id,mp);
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update project Metrics"
+		message :"Sign project ID  " + project_id + " Time:" + zoho.currenttime + " ------------   " + e + "\n Status List " + statusLis + " ---------------- \n Status Count" + countStatus + "---------------- \n Data Object " + PO_Obj
+	]
+	info "farman";
+}

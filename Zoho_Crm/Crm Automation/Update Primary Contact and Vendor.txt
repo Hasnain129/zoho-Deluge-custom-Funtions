@@ -1,0 +1,77 @@
+try 
+{
+	Accounting = false;
+	Vendor_contacts = zoho.crm.getRelatedRecords("Contacts","Vendors",Vendor_id);
+	if(!Vendor_contacts.isEmpty())
+	{
+		if(Vendor_contacts.get(0) != null)
+		{
+			if(Vendor_contacts.get(0).get("message") == null)
+			{
+				for each  data in Vendor_contacts
+				{
+					if(data.get("Position") == "Accounting")
+					{
+						Contact_id = data.get("id");
+						/////////////////// Update Primary Contact in Vendor Module /////////////////////////////////
+						Contact_obj = zoho.crm.getRecordById("Contacts",Contact_id);
+						Update_Contact = Map();
+						Update_Contact.put("Email",Contact_obj.get("Email"));
+						Update_Contact.put("Phone",Contact_obj.get("Phone"));
+						zoho.crm.updateRecord("Vendors",Vendor_id,Update_Contact);
+						////////Update Associated Vendor Checkbox and Fill Vendor Name in Contact Module ///////////////
+						Vendor_obj = zoho.crm.getRecordById("Vendors",Vendor_id);
+						Vendor_Status = Vendor_obj.get("Vendor_Status");
+						Update_Ass_check = Map();
+						Update_Ass_check.put("Vendor_Associated",true);
+						Mp = Map();
+						Mp.put("id",Vendor_id);
+						Update_Ass_check.put("Vendor_Name",Mp);
+						Update_Ass_check.put("Vendor_Status",Vendor_Status);
+						abc = zoho.crm.updateRecord("Contacts",Contact_id,Update_Ass_check);
+						info abc;
+						Accounting = true;
+					}
+				}
+				if(Accounting == false)
+				{
+					for each  data in Vendor_contacts
+					{
+						if(data.get("Primary_Contact") == true)
+						{
+							Contact_id = data.get("id");
+							info Contact_id;
+							/////////////////// Update Primary Contact in Vendor Module /////////////////////////////////
+							Contact_obj = zoho.crm.getRecordById("Contacts",Contact_id);
+							Update_Contact = Map();
+							Update_Contact.put("Email",Contact_obj.get("Email"));
+							Update_Contact.put("Phone",Contact_obj.get("Phone"));
+							zoho.crm.updateRecord("Vendors",Vendor_id,Update_Contact);
+							////////Update Associated Vendor Checkbox and Fill Vendor Name in Contact Module ///////////////
+							Vendor_obj = zoho.crm.getRecordById("Vendors",Vendor_id);
+							Vendor_Status = Vendor_obj.get("Vendor_Status");
+							Update_Ass_check = Map();
+							Update_Ass_check.put("Vendor_Associated",true);
+							Mp = Map();
+							Mp.put("id",Vendor_id);
+							Update_Ass_check.put("Vendor_Name",Mp);
+							Update_Ass_check.put("Vendor_Status",Vendor_Status);
+							abc = zoho.crm.updateRecord("Contacts",Contact_id,Update_Ass_check);
+							info abc;
+						}
+					}
+				}
+			}
+		}
+	}
+}
+ catch (e)
+{	info "sent";
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update Primary Contact and Vendor / CRM"
+		message :"ID: " + Vendor_id + " Root Cause: " + e
+	]
+}

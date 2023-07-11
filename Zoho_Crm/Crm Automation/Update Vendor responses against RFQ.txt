@@ -1,0 +1,59 @@
+try 
+{
+	wrec = zoho.crm.searchRecords("Requests_for_quote","((Name:equals:" + newvalue + "))");
+	for each  w in wrec
+	{
+		wid = ifnull(w.get("id"),"");
+	}
+	mp = Map();
+	mp.put("RFQ",wid);
+	update = zoho.crm.updateRecord("Vendor_Proposals",VP_id,mp);
+	// Update RFQ for the no of VP responses received
+	rfq_details = zoho.crm.getRecordById("Requests_for_quote",wid);
+	vendor_form = rfq_details.get("Vendor_Lookup");
+	vendor_obj = vendor_form.toList();
+	vendor_count = 0;
+	count = 0;
+	for each  ven in vendor_obj
+	{
+		Vendor_id = ven.get("Vendor").get("id");
+		//vendorInfo = zoho.crm.getRecordById("Vendors",ele.get("Vendor").get("id"));
+		//if(vendorInfo.get("Vendor_Status") != "Blacklisted")
+		//{ 
+		vendor_count = vendor_count + 1;
+		searching = zoho.crm.getRecords("Vendor_Proposals");
+		for each  VP in searching
+		{
+			h = ifnull(VP.get("RFQ"),"");
+			v = ifnull(VP.get("Vendors"),"");
+			if(h.get("id") == wid)
+			{
+				count = count + 1;
+			}
+		}
+		ALL = "ALL";
+		if(count == vendor_count)
+		{
+			rfqMap = Map();
+			rfqMap.put("RFQ_Received_Responses",ALL.toString());
+			Update = zoho.crm.updateRecord("Requests_for_quote",wid,rfqMap,{"trigger":{"workflow"}});
+		}
+		else
+		{
+			rfqMap = Map();
+			rfqMap.put("RFQ_Received_Responses",count.toString());
+			Update = zoho.crm.updateRecord("Requests_for_quote",wid,rfqMap,{"trigger":{"workflow"}});
+		}
+		count = 0;
+	}
+	//}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :" Update Vendor responses against RFQ / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000022380081\" >Workflow</a>  " + "ID: " + VP_id + " Root Cause: " + e
+	]
+}

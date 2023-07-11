@@ -1,0 +1,39 @@
+try 
+{
+	contact_details = zoho.crm.getRecordById("Contacts",contact_id);
+	Lead_id = contact_details.get("Lead_ID");
+	info Lead_id;
+	wrec = zoho.crm.searchRecords("Deals","((Lead_ID:equals:" + Lead_id + "))");
+	for each  w in wrec
+	{
+		proj_id = ifnull(w.get("id"),"");
+	}
+	if(proj_id != null)
+	{
+		project_details = zoho.crm.getRecordById("Deals",proj_id);
+		customer = project_details.get("Account_Name");
+		//---------------------------------------
+		// Update Customer in the contact
+		mp_customer = Map();
+		mp_customer.put("Account_Name",customer);
+		update_contact = zoho.crm.updateRecord("Contacts",contact_id,mp_customer);
+		//-------------------------------------
+		// Link project to the contact
+		//contact_role = zoho.crm.getRelatedRecords("Contact_Roles", "Deals", proj_id);
+		mp = Map();
+		mp.put("id",contact_id);
+		mp.put("Contact_Role","3205780000000444121");
+		contact_role = zoho.crm.updateRelatedRecord("Contact_Roles",contact_id,"Deals",proj_id,mp);
+		info contact_role;
+	}
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Get  project from lead ID on contact / Contact / Workflow / CRM"
+		message :"ID: " + contact_id + " Root Cause: " + e
+	]
+}

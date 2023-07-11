@@ -1,0 +1,75 @@
+try 
+{
+	deal = zoho.crm.getRecordById("Deals",dealid);
+	contractor_info = deal.get("Bid_Contractor_Info");
+	info contractor_info;
+	if(!contractor_info.isNull())
+	{
+		//info contractor_info;
+		contrator = contractor_info.toList();
+		for each  cont in contrator
+		{
+			con_comp_name = cont.get("Contractor_Company_Name");
+			con_cont_first_name = cont.get("Contact_First_Name");
+			con_cont_last_name = cont.get("Contact_Last_Name");
+			con_cont_title = cont.get("Contact_Title");
+			con_cont_phone = cont.get("Contact_Phone");
+			con_cont_email = cont.get("Contact_Email");
+			con_cont_selected_contractor = cont.get("Selected_Contractor");
+			if(con_cont_selected_contractor == true)
+			{
+				////////////////////// Searching Customer //////////////////////
+				customers = zoho.crm.searchRecords("Accounts","((Account_Name:equals:" + con_comp_name + "))");
+				for each  w in customers
+				{
+					customer_id = ifnull(w.get("id"),"");
+				}
+				///////////////////// Creating customer ////////////////////////
+				if(customer_id = null)
+				{
+					AccountsMap = Map();
+					AccountsMap.put("Account_Name",con_comp_name);
+					create_acc = zoho.crm.createRecord("Accounts",AccountsMap);
+					customer_id = create_acc.get("id");
+				}
+				info customer_id;
+				////////////////////// Searching contact //////////////////////
+				contacts = zoho.crm.searchRecords("Contacts","((Email:equals:" + con_cont_email + "))");
+				for each  w in contacts
+				{
+					contact_id = ifnull(w.get("id"),"");
+				}
+				/////////////////// Creating contact //////////////////////////////
+				if(contact_id == null)
+				{
+					contactMap = Map();
+					contactMap.put("First_Name",con_cont_first_name);
+					contactMap.put("Last_Name",con_cont_last_name);
+					contactMap.put("Position",con_cont_title);
+					contactMap.put("Email",con_cont_email);
+					contactMap.put("Phone",con_cont_phone);
+					contactMap.put("Type_of_contact","Client");
+					contactMap.put("Account_Name",customer_id);
+					create_cont = zoho.crm.createRecord("Contacts",contactMap);
+					contact_id = create_cont.get("id");
+				}
+				info contact_id;
+				///////////////// Updateing Project ////////////////
+				DealsMap = Map();
+				DealsMap.put("Account_Name",customer_id);
+				DealsMap.put("Contact_Name",contact_id);
+				update = zoho.crm.updateRecord("Deals",dealid,DealsMap);
+				info update;
+			}
+		}
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :" If contractor is selected update it as customer / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000007813033\" >Workflow</a>  " + "ID: " + dealid + " Root Cause: " + e + " -------- Contractor Info" + contractor_info
+	]
+}

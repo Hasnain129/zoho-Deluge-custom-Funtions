@@ -1,0 +1,34 @@
+try 
+{
+	resp1 = zoho.crm.getRecordById("Accounts",customer_id.toLong());
+	Down_Payment = resp1.get("Down_Payment");
+	if(Down_Payment == null)
+	{
+		Down_Payment = "50";
+	}
+	DP_Terms = resp1.get("Down_Payment_Terms");
+	if(DP_Terms == null)
+	{
+		DP_Terms = "Direct Debit Payment";
+	}
+	Inv_Terms = resp1.get("Terms");
+	if(Inv_Terms == null)
+	{
+		Inv_Terms = "Direct Debit Payment";
+	}
+	mp = Map();
+	mp.put("Down_Payment",Down_Payment);
+	mp.put("Down_Payment_Terms",DP_Terms);
+	mp.put("Terms",Inv_Terms);
+	update = zoho.crm.updateRecord("Sales_Orders",SO_id,mp);
+	info update;
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :" Update DP Percent and Terms on SO / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000025276308\" >Workflow</a>  " + "ID: " + SO_id + " Root Cause: " + e
+	]
+}

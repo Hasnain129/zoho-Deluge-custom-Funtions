@@ -1,0 +1,25 @@
+try 
+{
+	design_details = zoho.crm.getRecordById("Designs",Design_id);
+	Project_id = design_details.get("Project").get("id");
+	////////// Get project related list of PO ///////////
+	PO_obj = zoho.crm.getRelatedRecords("Purchase_Orders","Deals",Project_id);
+	for each  data in PO_obj
+	{
+		PO_id = data.get("id");
+		info PO_id;
+		mp = Map();
+		mp.put("Design_Associated",Design_id);
+		update_PO = zoho.crm.updateRecord("Purchase_Orders",PO_id,mp);
+		info update_PO;
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :" Update Design id on site survey PO / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000015597007\" >Workflow</a>  " + "ID: " + Design_id + " Root Cause: " + e
+	]
+}

@@ -1,0 +1,69 @@
+try 
+{
+	proj_details = zoho.crm.getRecordById("Deals",deal_id);
+	referrals_lead = proj_details.get("Referrals");
+	New_referral_List = List();
+	if(referrals_lead != null)
+	{
+		referrals = referrals_lead.toList();
+		info referrals;
+		//////////////////////////////////////////////////////////
+		for each  data in referrals
+		{
+			New_referral_List.add(data);
+		}
+	}
+	/////////////////////////////////////////////////////////
+	Customer = proj_details.get("Account_Name");
+	if(Customer != null)
+	{
+		customer_id = Customer.get("id");
+		/////////////////////////////////////////////////////////////
+		customer_details = zoho.crm.getRecordById("Accounts",customer_id);
+		Referral_cust = customer_details.get("Referral");
+		if(Referral_cust != null)
+		{
+			Referral_cust_id = Referral_cust.get("id");
+			New_referral_List.add(Referral_cust_id);
+		}
+	}
+	Distinct_list = New_referral_List.distinct();
+	if(!Distinct_list.isEmpty())
+	{
+		for each  ref in New_referral_List.distinct()
+		{
+			Referral_id = ref;
+			info Referral_id;
+			mp = Map();
+			mp.put("Referral",Referral_id);
+			mp.put("Projects_Assigned",deal_id);
+			create_ref = zoho.crm.createRecord("Referrals_X_Sign_Projects",mp,{"trigger":{"workflow"}});
+			//info create_ref;
+			// 			////////////////////////////////////////////////// Create Row on Multi Lookup Table /////////////////////////
+			// 			workspaceName = "BS_Workspace";
+			// 			tableName = "Referral_SignProject";
+			// 			ref_details = zoho.crm.getRecordById("Referrals",Referral_id);
+			// 			rowInfo = Map();
+			// 			rowInfo.put("Referral ID",Referral_id);
+			// 			rowInfo.put("Sign Project ID",deal_id);
+			// 			rowInfo.put("Sign Project Name",proj_details.get("Deal_Name"));
+			// 			rowInfo.put("Referral Name",ref_details.get("Name"));
+			// 			rowInfo.put("Created Time",zoho.currenttime);
+			// 			response = zoho.reports.createRow(workspaceName,tableName,rowInfo);
+			// 			info response;
+			// 			/////////////////// Update the check mark to true in linking module //////////////////////// 
+			// 			update_map = Map();
+			// 			update_map.put("transferred",true);
+			// 			Update = zoho.crm.updateRecord("Referrals_X_Sign_Projects",create_ref.get("id"),update_map);
+		}
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update referral in multi lookup at project / CRM"
+		message :"ID: " + deal_id + " Root Cause: " + e
+	]
+}

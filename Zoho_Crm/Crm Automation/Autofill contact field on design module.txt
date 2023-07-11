@@ -1,0 +1,29 @@
+try 
+{
+	designsdetails = zoho.crm.getRecordById("Designs",designid);
+	projectid = designsdetails.get("Project").get("id");
+	projectdetails = zoho.crm.getRecordById("Deals",projectid);
+	customerId = ifnull(projectdetails.get("Account_Name"),"").get("id");
+	if(projectdetails.get("Contact_Name") != null)
+	{
+		contactid = projectdetails.get("Contact_Name").get("id");
+		contactInfo = zoho.crm.getRecordById("Contacts",contactid);
+		contactEmail = contactInfo.get("Email");
+	}
+	mp = Map();
+	mp.put("Contact",contactid);
+	mp.put("Customer",customerId);
+	mp.put("Email",contactEmail);
+	update = zoho.crm.updateRecord("Designs",designid,mp);
+}
+ catch (e)
+{	info "farman";
+	info e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Autofill contact field on design module / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000002347351\" >Workflow</a>  " + "ID: " + designid + " Root Cause: " + e
+	]
+}

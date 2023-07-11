@@ -1,0 +1,41 @@
+try 
+{
+	wrec = zoho.crm.searchRecords("Purchase_Orders","((PO_ID:equals:" + newvalue + "))");
+	for each  w in wrec
+	{
+		wid = ifnull(w.get("id"),"");
+	}
+	PO_details = zoho.crm.getRecordById("Purchase_Orders",wid);
+	Owner = PO_details.get("Owner");
+	mp = Map();
+	mp.put("Owner",Owner);
+	mp.put("Purchase_Order",wid);
+	update = zoho.crm.updateRecord("PO_Approval",PO_app_id,mp,{"trigger":{"workflow"}});
+	//---------------------------------------
+	// Update PO status
+	resp = zoho.crm.getRecordById("PO_Approval",PO_app_id);
+	Status_Approved = resp.get("Approved");
+	info Status_Approved;
+	if(Status_Approved == "Yes")
+	{
+		status = "Accepted";
+	}
+	else
+	{
+		status = "Rejected";
+	}
+	mp2 = Map();
+	mp2.put("Status",status);
+	mp2.put("PO_Approval_ID",PO_app_id.toString());
+	po_update = zoho.crm.updateRecord("Purchase_Orders",wid,mp2,{"trigger":{"workflow"}});
+	info po_update;
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :" Update PO Name from Singleline Field and Status / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000009905069\" >Workflow</a>  " + "ID: " + PO_app_id + " Root Cause: " + e
+	]
+}

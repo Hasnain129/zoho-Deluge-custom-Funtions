@@ -1,0 +1,47 @@
+try 
+{
+	//////////////////////////////// Get Vendor related Contacts List ///////////////////////////////
+	Contact_list = List();
+	contacts_rel = zoho.crm.getRelatedRecords("Contacts","Vendors",Vendor_id);
+	if(!contacts_rel.isEmpty())
+	{
+		if(contacts_rel.get(0) != null)
+		{
+			if(contacts_rel.get(0).get("message") == null)
+			{
+				for each  j in contacts_rel
+				{
+					Contact_list.add("Name: " + j.get("Full_Name"));
+					Contact_list.add("\n" + "Phone: " + j.get("Phone"));
+					Contact_list.add("\n" + "Email: " + j.get("Email"));
+					Contact_list.add("\n\n");
+				}
+				Mp = Map();
+				Mp.put("All_Email_Addresses",Contact_list.removeLastOccurence(","));
+				zoho.crm.updateRecord("Vendors",Vendor_id,Mp);
+			}
+		}
+	}
+	////////////////////////////////////// Ends ///////////////////////////////////////////////////////
+	///////////////////// Remove Commas from Vendor List ////////////////////////////////////////////
+	Vendor_obj = zoho.crm.getRecordById("Vendors",Vendor_id);
+	ven = Vendor_obj.get("All_Email_Addresses");
+	if(ven != null)
+	{
+		info ven;
+		Mp2 = Map();
+		Mp2.put("All_Email_Addresses",ven.replaceAll(",",""));
+		zoho.crm.updateRecord("Vendors",Vendor_id,Mp2);
+	}
+	///////////////////////////////////////////////////////////////////////////////////////////////////////
+}
+ catch (e)
+{	info "created";
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update Vendor All Contacts Email / Vendors / Workflow / CRM"
+		message :"Module: Vendors, Record ID " + Vendor_id + ", Error: " + e
+	]
+}

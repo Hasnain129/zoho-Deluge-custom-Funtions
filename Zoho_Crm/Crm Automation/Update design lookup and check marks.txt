@@ -1,0 +1,89 @@
+try 
+{
+	wrec = zoho.crm.searchRecords("Designs","((Name:equals:" + newvalue + "))");
+	for each  w in wrec
+	{
+		design_id = ifnull(w.get("id"),"");
+	}
+	//////////////////////////// Get Send design for approval /////////////////
+	if(newvalue2 != "")
+	{
+		wrec_senddesign = zoho.crm.searchRecords("Send_design_for_approval","((Name:equals:" + newvalue2 + "))");
+		for each  y in wrec_senddesign
+		{
+			senddesign_id = ifnull(y.get("id"),"");
+		}
+		////////////////////////////////////////////////////////////////
+		send_design_approval = zoho.crm.getRecordById("Send_design_for_approval",senddesign_id.toLong());
+		Owner = send_design_approval.get("Owner");
+	}
+	design_details = zoho.crm.getRecordById("Designs",design_id);
+	Organization_Name = design_details.get("Organization_Name");
+	Project_id = design_details.get("Project");
+	mp = Map();
+	mp.put("Design",design_id);
+	mp.put("Owner",Owner);
+	mp.put("Send_for_Design_Approval_ID",senddesign_id);
+	mp.put("Organization_Name",Organization_Name);
+	mp.put("Project",Project_id);
+	update = zoho.crm.updateRecord("Customer_Design_Approvals",designapp_id,mp,{"trigger":{"workflow"}});
+	//----------------------------------------------------
+	resp = zoho.crm.getRecordById("Customer_Design_Approvals",designapp_id);
+	Approver_type = resp.get("Approver_Type");
+	Approved = resp.get("Approved");
+	if(Approved == "Yes")
+	{
+		if(newvalue2 != "")
+		{
+			mp_update = Map();
+			mp_update.put("Status","Approved");
+			update_send_app = zoho.crm.updateRecord("Send_design_for_approval",senddesign_id.toLong(),mp_update);
+		}
+		if(Approver_type == "Customer")
+		{
+			//--------------------------------------
+			// Update Design
+			mp = Map();
+			mp.put("Customer_Approval",true);
+			update_design = zoho.crm.updateRecord("Designs",design_id,mp,{"trigger":{"workflow"}});
+			info update_design;
+		}
+		else if(Approver_type == "Landlord")
+		{
+			//--------------------------------------
+			// Update Design
+			mp3 = Map();
+			mp3.put("Landlord_Approval",true);
+			update_design = zoho.crm.updateRecord("Designs",design_id,mp3,{"trigger":{"workflow"}});
+		}
+		else if(Approver_type == "Corporate")
+		{
+			//--------------------------------------
+			// Update Design
+			mp5 = Map();
+			mp5.put("Corporate_Approval",true);
+			update_design = zoho.crm.updateRecord("Designs",design_id,mp5,{"trigger":{"workflow"}});
+		}
+		else if(Approver_type == "Final Landlord")
+		{
+			//--------------------------------------
+			// Update Design
+			mp5 = Map();
+			mp5.put("Final_Landlord_Approval",true);
+			update_design = zoho.crm.updateRecord("Designs",design_id,mp5,{"trigger":{"workflow"}});
+		}
+		else
+		{
+			info "There is no approver type";
+		}
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :" Update design lookup and check marks / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000002313978\" >Workflow</a>  " + "ID: " + designapp_id + " Root Cause: " + e
+	]
+}

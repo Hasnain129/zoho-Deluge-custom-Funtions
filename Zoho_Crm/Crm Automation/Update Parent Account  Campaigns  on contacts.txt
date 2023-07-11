@@ -1,0 +1,21 @@
+try 
+{
+	lead_details = zoho.crm.getRecordById("Contacts",contact_id);
+	Parent_acc_name = ifnull(lead_details.get("Parent_Customer"),"").get("name");
+	if(Parent_acc_name != "")
+	{
+		mp = Map();
+		mp.put("Parent_Account_Campaigns",Parent_acc_name);
+		update = zoho.crm.updateRecord("Contacts",contact_id,mp);
+		info update;
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update Parent Account  Campaigns  on contacts / CRM"
+		message :"ID: " + contact_id + " Root Cause: " + e
+	]
+}

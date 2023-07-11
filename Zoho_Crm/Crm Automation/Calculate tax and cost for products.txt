@@ -1,0 +1,100 @@
+try 
+{
+	resp = zoho.crm.getRecordById("Designs",design_id);
+	Proj_id = resp.get("Project").get("id");
+	subinfo = resp.get("Subform_2");
+	Total = resp.get("Total");
+	Customer_id = ifnull(resp.get("Customer"),"").get("id");
+	if(Customer_id != null)
+	{
+		customer_Details = zoho.crm.getRecordById("Accounts",Customer_id);
+		cust_taxable = customer_Details.get("Taxable");
+		//------------------------------------------
+		// Get tax amount if any from Project
+		Proj_details = zoho.crm.getRecordById("Deals",Proj_id);
+		tax = Proj_details.get("Tax");
+		//-----------------------------------------
+		// Get estimate scope of work form and calculate tax
+		tax_total = 0;
+		Cost_total = 0;
+		for each  rec in subinfo
+		{
+			product_id = ifnull(rec.get("Product"),"").get("id");
+			// 	Quote_product = ifnull(rec.get("Categorize_Product"),"").get("id");
+			line_total = rec.get("Line_Total");
+			Cost = ifnull(rec.get("Cost"),0);
+			Qty = ifnull(rec.get("Qty1"),0);
+			if(Cost != 0 && product_id != null)
+			{
+				product_details = zoho.crm.getRecordById("Products",product_id);
+				if(product_details.get("Cost_Based_Product") == "Yes")
+				{
+					Cost_total = Cost_total + Cost * Qty;
+				}
+				//////////////// calculating Tax ////////////////////////////
+				if(cust_taxable == true)
+				{
+					if(product_details.get("Taxable") == true && product_details.get("Labor_or_Material") == "Material")
+					{
+						Tax_prod = line_total * tax / 100;
+						tax_total = tax_total + Tax_prod.round(3);
+					}
+				}
+			}
+		}
+		mp = Map();
+		mp.put("Cost_Total",Cost_total);
+		mp.put("Tax",tax_total);
+		update_design = zoho.crm.updateRecord("Designs",design_id,mp,{"trigger":{"workflow"}});
+		//////////////////////////// Push Estimate cost and gross margin on Project /////////////////
+		desgin_details = zoho.crm.getRecordById("Designs",design_id);
+		project_id = ifnull(desgin_details.get("Project"),"").get("id");
+		/////////////////////////////// Get Project related designs ///////////////////
+		if(project_id != null)
+		{
+			total_cost = 0;
+			total_gross_margin = 0;
+			count = 0;
+			design_obj = zoho.crm.getRelatedRecords("Designs","Deals",project_id);
+			if(design_obj != {})
+			{
+				for each  data in design_obj
+				{
+					estimate_cost = data.get("Cost_Total");
+					Gross_margin = data.get("Profit");
+					total_cost = total_cost + estimate_cost;
+					total_gross_margin = total_gross_margin + Gross_margin;
+					count = count + 1;
+				}
+			}
+			if(count > 1)
+			{
+				gross_margin = total_gross_margin / count;
+			}
+			else
+			{
+				gross_margin = total_gross_margin;
+			}
+			info gross_margin.round(2);
+			mp1 = Map();
+			mp1.put("Estimated_Cost",total_cost);
+			mp1.put("Estimated_Gross_Margin",gross_margin.round(2));
+			update = zoho.crm.updateRecord("Deals",project_id,mp1);
+			info update;
+		}
+	}
+	else
+	{
+		info "There is no customer";
+	}
+}
+ catch (e)
+{	info e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :" Calculate tax and cost for products / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000010621058\" >Workflow</a>  " + "ID: " + design_id + " Root Cause: " + e
+	]
+}

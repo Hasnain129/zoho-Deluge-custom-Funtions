@@ -1,0 +1,539 @@
+//*******************************************************************************************//
+dealDetails = zoho.crm.getRecordById("Deals",dealid);
+projectname = dealDetails.get("Deal_Name");
+//////////////////////////// Get City and Zip Codes /////////////////////////////////////////
+servicelocation_id = dealDetails.get("Service_Locations").get("id");
+Serv_loc_obj = zoho.crm.getRecordById("Service_Locations",servicelocation_id);
+City_State_Zip = Serv_loc_obj.get("City_State_Zip").get("id");
+Cities_Zip_Code = zoho.crm.getRecordById("Cities_and_Zip_Codes",Serv_loc_obj.get("City_State_Zip").get("id"));
+City_Zip = Cities_Zip_Code.get("City") + ", " + Cities_Zip_Code.get("State");
+////////////////////////////////////////////////////////////////////////////////////////
+signageneeds = dealDetails.get("Signage_Needs");
+projectId = dealDetails.get("id");
+//*******************************************************************************************//
+rfq = zoho.crm.getRecordById("Requests_for_quote",rfqid);
+rfqname = ifnull(rfq.get("Name"),"");
+service_info = rfq.get("Work_Details");
+service_obj = service_info.toMap();
+for each  service in service_obj
+{
+	service_name = service_obj.get("Service").get("name");
+	service_description = service_obj.get("Service_Description");
+	service_dateandtime_neededby = service_obj.get("Date_Time_Needed_By");
+	service_notes = ifnull(service_obj.get("Notes1"),"");
+	Budget = service_obj.get("Budget");
+}
+projectDetails = zoho.crm.getRecordById("Deals",projectId);
+projectID = projectDetails.get("Project_ID");
+vendorIdList = List();
+vendorSubform = ifnull(rfq.get("Vendor_Lookup"),"");
+for each  ele in vendorSubform
+{
+	//vendorInfo = zoho.crm.getRecordById("Vendors",ele.get("Vendor").get("id"));
+	//if(vendorInfo.get("Vendor_Status") != "Blacklisted")
+	//{  
+	vendorIdList.add(ele.get("Vendor").get("id"));
+	//	}
+}
+/////////////////////////////////Get WorkDetails Service Name //////////////////////////////////
+work_detial = rfq.get("Work_Details");
+jlist = work_detial.toJSONList();
+for each index j in jlist
+{
+	if(j == 0)
+	{
+		mapvar = jlist.get(0);
+		finalMap = mapvar.toMap();
+		service_name_1 = ifnull(finalMap.get("Service").get("name"),"none");
+		no_of_services = "1";
+	}
+	else if(j == 1)
+	{
+		mapvar = jlist.get(1);
+		finalMap = mapvar.toMap();
+		service_name_2 = ifnull(finalMap.get("Service").get("name"),"none");
+		no_of_services = "2";
+	}
+	else if(j == 2)
+	{
+		mapvar = jlist.get(2);
+		finalMap = mapvar.toMap();
+		service_name_3 = ifnull(finalMap.get("Service").get("name"),"none");
+		no_of_services = "3";
+	}
+	else if(j == 3)
+	{
+		mapvar = jlist.get(3);
+		finalMap = mapvar.toMap();
+		service_name_4 = ifnull(finalMap.get("Service").get("name"),"none");
+		no_of_services = "4";
+	}
+	else if(j == 4)
+	{
+		mapvar = jlist.get(4);
+		finalMap = mapvar.toMap();
+		service_name_5 = ifnull(finalMap.get("Service").get("name"),"none");
+		no_of_services = "5";
+	}
+}
+Services = List();
+if(service_name_1 != null)
+{
+	Services.add(service_name_1);
+}
+if(service_name_2 != null)
+{
+	Services.add(service_name_2);
+}
+if(service_name_3 != null)
+{
+	Services.add(service_name_3);
+}
+if(service_name_4 != null)
+{
+	Services.add(service_name_4);
+}
+if(service_name_5 != null)
+{
+	Services.add(service_name_5);
+}
+Characters = List({"'","*","(",")","!","@","#","$","%","+","^","&","_","-","-","=","}","{","]","[",'"',":",";",".",'\',"<",">"});
+for each  data in Services
+{
+	for each  data2 in Characters
+	{
+		if(service_name_1 != null)
+		{
+			service_name_1 = service_name_1.remove(data2);
+		}
+		if(service_name_2 != null)
+		{
+			service_name_2 = service_name_2.remove(data2);
+		}
+		if(service_name_3 != null)
+		{
+			service_name_3 = service_name_3.remove(data2);
+		}
+		if(service_name_4 != null)
+		{
+			service_name_4 = service_name_4.remove(data2);
+		}
+		if(service_name_5 != null)
+		{
+			service_name_5 = service_name_5.remove(data2);
+		}
+	}
+}
+/////////////////////////////////////////////////////////////////////////////////////////
+//*******************************************************************************************//
+fileupload = ifnull(dealDetails.get("Design"),"");
+if(fileupload.size() == 5)
+{
+	attachementId1 = fileupload.get(0).get("attachment_Id");
+	attachementId2 = fileupload.get(1).get("attachment_Id");
+	attachementId3 = fileupload.get(2).get("attachment_Id");
+	attachementId4 = fileupload.get(3).get("attachment_Id");
+	attachementId5 = fileupload.get(4).get("attachment_Id");
+	downloadFile = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2/Deals/" + dealid + "/Attachments/" + attachementId1
+		type :GET
+		connection:"attachfile"
+	];
+	downloadFile1 = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2/Deals/" + dealid + "/Attachments/" + attachementId2
+		type :GET
+		connection:"attachfile"
+	];
+	downloadFile2 = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2/Deals/" + dealid + "/Attachments/" + attachementId3
+		type :GET
+		connection:"attachfile"
+	];
+	downloadFile3 = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2/Deals/" + dealid + "/Attachments/" + attachementId4
+		type :GET
+		connection:"attachfile"
+	];
+	downloadFile4 = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2/Deals/" + dealid + "/Attachments/" + attachementId5
+		type :GET
+		connection:"attachfile"
+	];
+}
+//----------------------------------------------------------------------------------------//
+if(fileupload.size() == 4)
+{
+	attachementId1 = fileupload.get(0).get("attachment_Id");
+	attachementId2 = fileupload.get(1).get("attachment_Id");
+	attachementId3 = fileupload.get(2).get("attachment_Id");
+	attachementId4 = fileupload.get(3).get("attachment_Id");
+	downloadFile = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2/Deals/" + dealid + "/Attachments/" + attachementId1
+		type :GET
+		connection:"attachfile"
+	];
+	downloadFile1 = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2/Deals/" + dealid + "/Attachments/" + attachementId2
+		type :GET
+		connection:"attachfile"
+	];
+	downloadFile2 = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2/Deals/" + dealid + "/Attachments/" + attachementId3
+		type :GET
+		connection:"attachfile"
+	];
+	downloadFile3 = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2/Deals/" + dealid + "/Attachments/" + attachementId4
+		type :GET
+		connection:"attachfile"
+	];
+}
+//----------------------------------------------------------------------------------------//
+if(fileupload.size() == 3)
+{
+	attachementId1 = fileupload.get(0).get("attachment_Id");
+	attachementId2 = fileupload.get(1).get("attachment_Id");
+	attachementId3 = fileupload.get(2).get("attachment_Id");
+	downloadFile = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2/Deals/" + dealid + "/Attachments/" + attachementId1
+		type :GET
+		connection:"attachfile"
+	];
+	downloadFile1 = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2/Deals/" + dealid + "/Attachments/" + attachementId2
+		type :GET
+		connection:"attachfile"
+	];
+	downloadFile2 = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2/Deals/" + dealid + "/Attachments/" + attachementId3
+		type :GET
+		connection:"attachfile"
+	];
+}
+//----------------------------------------------------------------------------------------//
+if(fileupload.size() == 2)
+{
+	attachementId1 = fileupload.get(0).get("attachment_Id");
+	attachementId2 = fileupload.get(1).get("attachment_Id");
+	downloadFile = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2/Deals/" + dealid + "/Attachments/" + attachementId1
+		type :GET
+		connection:"attachfile"
+	];
+	downloadFile1 = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2/Deals/" + dealid + "/Attachments/" + attachementId2
+		type :GET
+		connection:"attachfile"
+	];
+}
+//-----------------------------------------------------------------------------------------//
+if(fileupload.size() == 1 && dealDetails.get("Add_Storefront_Images") == true)
+{
+	attachementId1 = fileupload.get(0).get("attachment_Id");
+	downloadFile = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2/Deals/" + dealid + "/Attachments/" + attachementId1
+		type :GET
+		connection:"attachfile"
+	];
+}
+//---------------------------------------------------------------------------------------//
+//---------------------------------------------------------------------------------------//
+for each  vendorId in vendorIdList
+{
+	vendorInfo = zoho.crm.getRecordById("Vendors",vendorId);
+	vendorEmail = vendorInfo.get("Email");
+	vendorName = vendorInfo.get("Vendor_Name");
+	//-------------------------------------------------------------------------------------//
+	if(fileupload.size() == 5 && rfq.get("Add_Storefront_Images") == true)
+	{
+		info "Yes";
+		/////////////////////////////////////////////////////////////////////////////////////////
+		str = "<table align='center' cellpadding='10' width='600' style='width:600px;max-width:600px; margin:auto'><tr><td><div><span style='color: rgb(35, 37, 40);'>Dear " + vendorName + ",</span></div><div><span style='color: rgb(35, 37, 40);'><br></span></div><div><span style='color: rgb(35, 37, 40);'></span></div><div><span style='color: rgb(35, 37, 40);'><br/>We are requesting your services for the following scope of work. Please review and let me know if you are able to complete within our timeline and budget. Once you have accepted, we will send a purchase order.</span><br><span style='color: rgb(255, 0, 0);'><b>Please do not proceed with the survey without a purchase order.</span></div><br><div><span style='color: rgb(35, 37, 40);'>City, State of Location : " + City_Zip + ".</span></div><br><div><span style='color: rgb(35, 37, 40);'>Site Survey Scope Document: &nbsp;<a href='https://zdrive.li/9YA' target='_blank' style='color: rgb(17, 85, 204);'>SS Scope Document Link</a></span></div></td></tr></table>";
+		/////////////////////////////////////////////////////////////////////////////////////////////
+		str = str + "<br><table  align='center' cellpadding='10' width='600' style='width:600px;max-width:600px; margin:auto' style='font-family: Arial, Helvetica,sans-serif; font-size:12px; color:#000; border-collapse:collapse;'><tr></td><td width='150' style='width:150px; max-width:150px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Service</td><td width='250' style='width:250px; max-width:250px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Description</td><td width='250' style='width:250px; max-width:250px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Budget</td><td  width='100' style='width:100px; max-width:100px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Date & Time Needed By</td><td  width='100' style='width:100px; max-width:100px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Notes</td>";
+		//////////////////////////// Ends /////////////////////////////////////
+		rfq = zoho.crm.getRecordById("Requests_for_quote",rfqid);
+		work_detial = rfq.get("Work_Details");
+		jlist = work_detial.toJSONList();
+		for each index j in jlist
+		{
+			mapvar = jlist.get(j);
+			finalMap = mapvar.toMap();
+			service_name = finalMap.get("Service").get("name");
+			service_desc = finalMap.get("Service_Description");
+			Budget = finalMap.get("Budget");
+			DateTime_Neededby = finalMap.get("Date_Time_Needed_By");
+			////////////////////////////////////////////////////////////////////////////////////
+			time1 = DateTime_Neededby.toTime("yyyy-MM-dd'T'HH:mm:ss").toString("yyyy-MM-dd'T'hh:mm:ss+05:00").toTime("yyyy-MM-dd'T'hh:mm:ss");
+			timevalue = DateTime_Neededby.toTime("yyyy-MM-dd'T'HH:mm:ss").getTime();
+			newtime = time1 + " " + timevalue.toString().getSuffix(" ");
+			/////////////////////////////////////////////////////////////////////////////
+			work_details_Notes = ifnull(finalMap.get("Notes1"),"");
+			str = str + "<tr>";
+			str = str + "<td width='150' style='width:150px; max-width:150px; border-bottom:2px solid #dadada'>" + service_name + "</td>";
+			str = str + "<td width='250' style='width:250px; max-width:250px; border-bottom:2px solid #dadada'>" + service_desc + "</td>";
+			str = str + "<td width='250' style='width:250px; max-width:250px; border-bottom:2px solid #dadada'>$ " + Budget + "</td>";
+			str = str + "<td width='100' style='width:100px; max-width:100px; border-bottom:2px solid #dadada'>" + newtime + "</td>";
+			str = str + "<td width='100' style='width:100px; max-width:100px; border-bottom:2px solid #dadada' >" + work_details_Notes + "</td>";
+			str = str + "</tr>";
+		}
+		str = str + "<tr><td colspan='4'><br/>By pressing the “Accept” button below you have accepted this job and a Purchase Order will be sent to you shortly.</td></tr><tr><td colspan='4'><a href='https://zfrmz.com/GoMclEBAh6XjS35hfCkZ?num=" + no_of_services + "&v=" + vendorName + "&rfq=" + rfqname + "&s1=" + ifnull(service_name_1,"") + "&s2=" + ifnull(service_name_2,"") + "&s3=" + ifnull(service_name_3,"") + "&s4=" + ifnull(service_name_4,"") + "&s5=" + ifnull(service_name_5,"") + "&p=" + projectname + "'; style='-webkit-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; -moz-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; color:#FFFF; background: #4CAF50; border-radius:5px; -moz-border-radius:5px; -webkit-border-radius:5px; border:none; font-size:14px; font-weight:700; padding:4px 26px; text-shadow:rgb(255, 238, 102) 0px 1px 0px; background-color: rgb(128, 128, 128);'>Accept Job</a></td></tr><tr><td colspan='4' style='padding-top:0px;padding-bottom:0px;'>Thank You,</td></tr><tr><td colspan='4'  style='padding-top:0px;padding-bottom:0px;'>Blink Signs Team</td></tr></table>";
+		/////////////////////////////////////////////////////////////////////////////////////////////
+		sendmail
+		[
+			from :zoho.loginuserid
+			to :vendorEmail
+			subject :"Blink Signs Request for Quote -RFQ"
+			message :str
+			content type :HTML
+			Attachments :file:downloadFile,file:downloadFile1,file:downloadFile2,file:downloadFile3,file:downloadFile4
+		]
+	}
+	//-------------------------------------------------------------------------------------//
+	if(fileupload.size() == 4 && rfq.get("Add_Storefront_Images") == true)
+	{
+		info "Yes";
+		/////////////////////////////////////////////////////////////////////////////////////////
+		str = "<table align='center' cellpadding='10' width='600' style='width:600px;max-width:600px; margin:auto'><tr><td><div><span style='color: rgb(35, 37, 40);'>Dear " + vendorName + ",</span></div><div><span style='color: rgb(35, 37, 40);'><br></span></div><div><span style='color: rgb(35, 37, 40);'></span></div><div><span style='color: rgb(35, 37, 40);'><br/>We are requesting your services for the following scope of work. Please review and let me know if you are able to complete within our timeline and budget. Once you have accepted, we will send a purchase order.</span><br><span style='color: rgb(255, 0, 0);'><b>Please do not proceed with the survey without a purchase order.</span></div><br><div><span style='color: rgb(35, 37, 40);'>City, State of Location : " + City_Zip + ".</span></div><br><div><span style='color: rgb(35, 37, 40);'>Site Survey Scope Document: &nbsp;<a href='https://zdrive.li/9YA' target='_blank' style='color: rgb(17, 85, 204);'>SS Scope Document Link</a></span></div></td></tr></table>";
+		/////////////////////////////////////////////////////////////////////////////////////////////
+		str = str + "<br><table  align='center' cellpadding='10' width='600' style='width:600px;max-width:600px; margin:auto' style='font-family: Arial, Helvetica,sans-serif; font-size:12px; color:#000; border-collapse:collapse;'><tr></td><td width='150' style='width:150px; max-width:150px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Service</td><td width='250' style='width:250px; max-width:250px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Description</td><td width='250' style='width:250px; max-width:250px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Budget</td><td  width='100' style='width:100px; max-width:100px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Date & Time Needed By</td><td  width='100' style='width:100px; max-width:100px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Notes</td>";
+		//////////////////////////// Ends /////////////////////////////////////
+		rfq = zoho.crm.getRecordById("Requests_for_quote",rfqid);
+		work_detial = rfq.get("Work_Details");
+		jlist = work_detial.toJSONList();
+		for each index j in jlist
+		{
+			mapvar = jlist.get(j);
+			finalMap = mapvar.toMap();
+			service_name = finalMap.get("Service").get("name");
+			service_desc = finalMap.get("Service_Description");
+			Budget = finalMap.get("Budget");
+			DateTime_Neededby = finalMap.get("Date_Time_Needed_By");
+			////////////////////////////////////////////////////////////////////////////////////
+			time1 = DateTime_Neededby.toTime("yyyy-MM-dd'T'HH:mm:ss").toString("yyyy-MM-dd'T'hh:mm:ss+05:00").toTime("yyyy-MM-dd'T'hh:mm:ss");
+			timevalue = DateTime_Neededby.toTime("yyyy-MM-dd'T'HH:mm:ss").getTime();
+			newtime = time1 + " " + timevalue.toString().getSuffix(" ");
+			/////////////////////////////////////////////////////////////////////////////
+			work_details_Notes = ifnull(finalMap.get("Notes1"),"");
+			str = str + "<tr>";
+			str = str + "<td width='150' style='width:150px; max-width:150px; border-bottom:2px solid #dadada'>" + service_name + "</td>";
+			str = str + "<td width='250' style='width:250px; max-width:250px; border-bottom:2px solid #dadada'>" + service_desc + "</td>";
+			str = str + "<td width='250' style='width:250px; max-width:250px; border-bottom:2px solid #dadada'>$ " + Budget + "</td>";
+			str = str + "<td width='100' style='width:100px; max-width:100px; border-bottom:2px solid #dadada'>" + newtime + "</td>";
+			str = str + "<td width='100' style='width:100px; max-width:100px; border-bottom:2px solid #dadada' >" + work_details_Notes + "</td>";
+			str = str + "</tr>";
+		}
+		str = str + "<tr><td colspan='4'><br/>By pressing the “Accept” button below you have accepted this job and a Purchase Order will be sent to you shortly.</td></tr><tr><td colspan='4'><a href='https://zfrmz.com/GoMclEBAh6XjS35hfCkZ?num=" + no_of_services + "&v=" + vendorName + "&rfq=" + rfqname + "&s1=" + ifnull(service_name_1,"") + "&s2=" + ifnull(service_name_2,"") + "&s3=" + ifnull(service_name_3,"") + "&s4=" + ifnull(service_name_4,"") + "&s5=" + ifnull(service_name_5,"") + "&p=" + projectname + "'; style='-webkit-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; -moz-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; color:#FFFF; background: #4CAF50; border-radius:5px; -moz-border-radius:5px; -webkit-border-radius:5px; border:none; font-size:14px; font-weight:700; padding:4px 26px; text-shadow:rgb(255, 238, 102) 0px 1px 0px; background-color: rgb(128, 128, 128);'>Accept Job</a></td></tr><tr><td colspan='4' style='padding-top:0px;padding-bottom:0px;'>Thank You,</td></tr><tr><td colspan='4'  style='padding-top:0px;padding-bottom:0px;'>Blink Signs Team</td></tr></table>";
+		/////////////////////////////////////////////////////////////////////////////////////////////
+		sendmail
+		[
+			from :zoho.loginuserid
+			to :vendorEmail
+			subject :"Blink Signs Request for Quote -RFQ"
+			message :str
+			content type :HTML
+			Attachments :file:downloadFile,file:downloadFile1,file:downloadFile2,file:downloadFile3
+		]
+	}
+	//-------------------------------------------------------------------------------------//
+	if(fileupload.size() == 3 && rfq.get("Add_Storefront_Images") == true)
+	{
+		info "Yes";
+		/////////////////////////////////////////////////////////////////////////////////////////
+		str = "<table align='center' cellpadding='10' width='600' style='width:600px;max-width:600px; margin:auto'><tr><td><div><span style='color: rgb(35, 37, 40);'>Dear " + vendorName + ",</span></div><div><span style='color: rgb(35, 37, 40);'><br></span></div><div><span style='color: rgb(35, 37, 40);'></span></div><div><span style='color: rgb(35, 37, 40);'><br/>We are requesting your services for the following scope of work. Please review and let me know if you are able to complete within our timeline and budget. Once you have accepted, we will send a purchase order.</span><br><span style='color: rgb(255, 0, 0);'><b>Please do not proceed with the survey without a purchase order.</span></div><br><div><span style='color: rgb(35, 37, 40);'>City, State of Location : " + City_Zip + ".</span></div><br><div><span style='color: rgb(35, 37, 40);'>Site Survey Scope Document: &nbsp;<a href='https://zdrive.li/9YA' target='_blank' style='color: rgb(17, 85, 204);'>SS Scope Document Link</a></span></div></td></tr></table>";
+		/////////////////////////////////////////////////////////////////////////////////////////////
+		str = str + "<br><table  align='center' cellpadding='10' width='600' style='width:600px;max-width:600px; margin:auto' style='font-family: Arial, Helvetica,sans-serif; font-size:12px; color:#000; border-collapse:collapse;'><tr></td><td width='150' style='width:150px; max-width:150px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Service</td><td width='250' style='width:250px; max-width:250px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Description</td><td width='250' style='width:250px; max-width:250px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Budget</td><td  width='100' style='width:100px; max-width:100px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Date & Time Needed By</td><td  width='100' style='width:100px; max-width:100px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Notes</td>";
+		//////////////////////////// Ends /////////////////////////////////////
+		rfq = zoho.crm.getRecordById("Requests_for_quote",rfqid);
+		work_detial = rfq.get("Work_Details");
+		jlist = work_detial.toJSONList();
+		for each index j in jlist
+		{
+			mapvar = jlist.get(j);
+			finalMap = mapvar.toMap();
+			service_name = finalMap.get("Service").get("name");
+			service_desc = finalMap.get("Service_Description");
+			Budget = finalMap.get("Budget");
+			DateTime_Neededby = finalMap.get("Date_Time_Needed_By");
+			////////////////////////////////////////////////////////////////////////////////////
+			time1 = DateTime_Neededby.toTime("yyyy-MM-dd'T'HH:mm:ss").toString("yyyy-MM-dd'T'hh:mm:ss+05:00").toTime("yyyy-MM-dd'T'hh:mm:ss");
+			timevalue = DateTime_Neededby.toTime("yyyy-MM-dd'T'HH:mm:ss").getTime();
+			newtime = time1 + " " + timevalue.toString().getSuffix(" ");
+			/////////////////////////////////////////////////////////////////////////////
+			work_details_Notes = ifnull(finalMap.get("Notes1"),"");
+			str = str + "<tr>";
+			str = str + "<td width='150' style='width:150px; max-width:150px; border-bottom:2px solid #dadada'>" + service_name + "</td>";
+			str = str + "<td width='250' style='width:250px; max-width:250px; border-bottom:2px solid #dadada'>" + service_desc + "</td>";
+			str = str + "<td width='250' style='width:250px; max-width:250px; border-bottom:2px solid #dadada'>$ " + Budget + "</td>";
+			str = str + "<td width='100' style='width:100px; max-width:100px; border-bottom:2px solid #dadada'>" + newtime + "</td>";
+			str = str + "<td width='100' style='width:100px; max-width:100px; border-bottom:2px solid #dadada' >" + work_details_Notes + "</td>";
+			str = str + "</tr>";
+		}
+		str = str + "<tr><td colspan='4'><br/>By pressing the “Accept” button below you have accepted this job and a Purchase Order will be sent to you shortly.</td></tr><tr><td colspan='4'><a href='https://zfrmz.com/GoMclEBAh6XjS35hfCkZ?num=" + no_of_services + "&v=" + vendorName + "&rfq=" + rfqname + "&s1=" + ifnull(service_name_1,"") + "&s2=" + ifnull(service_name_2,"") + "&s3=" + ifnull(service_name_3,"") + "&s4=" + ifnull(service_name_4,"") + "&s5=" + ifnull(service_name_5,"") + "&p=" + projectname + "'; style='-webkit-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; -moz-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; color:#FFFF; background: #4CAF50; border-radius:5px; -moz-border-radius:5px; -webkit-border-radius:5px; border:none; font-size:14px; font-weight:700; padding:4px 26px; text-shadow:rgb(255, 238, 102) 0px 1px 0px; background-color: rgb(128, 128, 128);'>Accept Job</a></td></tr><tr><td colspan='4' style='padding-top:0px;padding-bottom:0px;'>Thank You,</td></tr><tr><td colspan='4'  style='padding-top:0px;padding-bottom:0px;'>Blink Signs Team</td></tr></table>";
+		/////////////////////////////////////////////////////////////////////////////////////////////
+		sendmail
+		[
+			from :zoho.loginuserid
+			to :vendorEmail
+			subject :"Blink Signs Request for Quote -RFQ"
+			message :str
+			content type :HTML
+			Attachments :file:downloadFile,file:downloadFile1,file:downloadFile2
+		]
+	}
+	//-------------------------------------------------------------------------------------//
+	if(fileupload.size() == 2 && rfq.get("Add_Storefront_Images") == true)
+	{
+		info "Yes";
+		/////////////////////////////////////////////////////////////////////////////////////////
+		str = "<table align='center' cellpadding='10' width='600' style='width:600px;max-width:600px; margin:auto'><tr><td><div><span style='color: rgb(35, 37, 40);'>Dear " + vendorName + ",</span></div><div><span style='color: rgb(35, 37, 40);'><br></span></div><div><span style='color: rgb(35, 37, 40);'></span></div><div><span style='color: rgb(35, 37, 40);'><br/>We are requesting your services for the following scope of work. Please review and let me know if you are able to complete within our timeline and budget. Once you have accepted, we will send a purchase order.</span><br><span style='color: rgb(255, 0, 0);'><b>Please do not proceed with the survey without a purchase order.</span></div><br><div><span style='color: rgb(35, 37, 40);'>City, State of Location : " + City_Zip + ".</span></div><br><div><span style='color: rgb(35, 37, 40);'>Site Survey Scope Document: &nbsp;<a href='https://zdrive.li/9YA' target='_blank' style='color: rgb(17, 85, 204);'>SS Scope Document Link</a></span></div></td></tr></table>";
+		/////////////////////////////////////////////////////////////////////////////////////////////
+		str = str + "<br><table  align='center' cellpadding='10' width='600' style='width:600px;max-width:600px; margin:auto' style='font-family: Arial, Helvetica,sans-serif; font-size:12px; color:#000; border-collapse:collapse;'><tr></td><td width='150' style='width:150px; max-width:150px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Service</td><td width='250' style='width:250px; max-width:250px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Description</td><td width='250' style='width:250px; max-width:250px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Budget</td><td  width='100' style='width:100px; max-width:100px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Date & Time Needed By</td><td  width='100' style='width:100px; max-width:100px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Notes</td>";
+		//////////////////////////// Ends /////////////////////////////////////
+		rfq = zoho.crm.getRecordById("Requests_for_quote",rfqid);
+		work_detial = rfq.get("Work_Details");
+		jlist = work_detial.toJSONList();
+		for each index j in jlist
+		{
+			mapvar = jlist.get(j);
+			finalMap = mapvar.toMap();
+			service_name = finalMap.get("Service").get("name");
+			service_desc = finalMap.get("Service_Description");
+			Budget = finalMap.get("Budget");
+			DateTime_Neededby = finalMap.get("Date_Time_Needed_By");
+			////////////////////////////////////////////////////////////////////////////////////
+			time1 = DateTime_Neededby.toTime("yyyy-MM-dd'T'HH:mm:ss").toString("yyyy-MM-dd'T'hh:mm:ss+05:00").toTime("yyyy-MM-dd'T'hh:mm:ss");
+			timevalue = DateTime_Neededby.toTime("yyyy-MM-dd'T'HH:mm:ss").getTime();
+			newtime = time1 + " " + timevalue.toString().getSuffix(" ");
+			/////////////////////////////////////////////////////////////////////////////
+			work_details_Notes = ifnull(finalMap.get("Notes1"),"");
+			str = str + "<tr>";
+			str = str + "<td width='150' style='width:150px; max-width:150px; border-bottom:2px solid #dadada'>" + service_name + "</td>";
+			str = str + "<td width='250' style='width:250px; max-width:250px; border-bottom:2px solid #dadada'>" + service_desc + "</td>";
+			str = str + "<td width='250' style='width:250px; max-width:250px; border-bottom:2px solid #dadada'>$ " + Budget + "</td>";
+			str = str + "<td width='100' style='width:100px; max-width:100px; border-bottom:2px solid #dadada'>" + newtime + "</td>";
+			str = str + "<td width='100' style='width:100px; max-width:100px; border-bottom:2px solid #dadada' >" + work_details_Notes + "</td>";
+			str = str + "</tr>";
+		}
+		str = str + "<tr><td colspan='4'><br/>By pressing the “Accept” button below you have accepted this job and a Purchase Order will be sent to you shortly.</td></tr><tr><td colspan='4'><a href='https://zfrmz.com/GoMclEBAh6XjS35hfCkZ?num=" + no_of_services + "&v=" + vendorName + "&rfq=" + rfqname + "&s1=" + ifnull(service_name_1,"") + "&s2=" + ifnull(service_name_2,"") + "&s3=" + ifnull(service_name_3,"") + "&s4=" + ifnull(service_name_4,"") + "&s5=" + ifnull(service_name_5,"") + "&p=" + projectname + "'; style='-webkit-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; -moz-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; color:#FFFF; background: #4CAF50; border-radius:5px; -moz-border-radius:5px; -webkit-border-radius:5px; border:none; font-size:14px; font-weight:700; padding:4px 26px; text-shadow:rgb(255, 238, 102) 0px 1px 0px; background-color: rgb(128, 128, 128);'>Accept Job</a></td></tr><tr><td colspan='4' style='padding-top:0px;padding-bottom:0px;'>Thank You,</td></tr><tr><td colspan='4'  style='padding-top:0px;padding-bottom:0px;'>Blink Signs Team</td></tr></table>";
+		/////////////////////////////////////////////////////////////////////////////////////////////
+		sendmail
+		[
+			from :zoho.loginuserid
+			to :vendorEmail
+			subject :"Blink Signs Request for Quote -RFQ"
+			message :str
+			content type :HTML
+			Attachments :file:downloadFile,file:downloadFile1
+		]
+	}
+	//-------------------------------------------------------------------------------------//
+	if(fileupload.size() == 1 && rfq.get("Add_Storefront_Images") == true)
+	{
+		info "Yes1";
+		/////////////////////////////////////////////////////////////////////////////////////////
+		str = "<table align='center' cellpadding='10' width='600' style='width:600px;max-width:600px; margin:auto'><tr><td><div><span style='color: rgb(35, 37, 40);'>Dear " + vendorName + ",</span></div><div><span style='color: rgb(35, 37, 40);'><br></span></div><div><span style='color: rgb(35, 37, 40);'></span></div><div><span style='color: rgb(35, 37, 40);'><br/>We are requesting your services for the following scope of work. Please review and let me know if you are able to complete within our timeline and budget. Once you have accepted, we will send a purchase order.</span><br><span style='color: rgb(255, 0, 0);'><b>Please do not proceed with the survey without a purchase order.</span></div><br><div><span style='color: rgb(35, 37, 40);'>City, State of Location : " + City_Zip + ".</span></div><br><div><span style='color: rgb(35, 37, 40);'>Site Survey Scope Document: &nbsp;<a href='https://zdrive.li/9YA' target='_blank' style='color: rgb(17, 85, 204);'>SS Scope Document Link</a></span></div></td></tr></table>";
+		/////////////////////////////////////////////////////////////////////////////////////////////
+		str = str + "<br><table  align='center' cellpadding='10' width='600' style='width:600px;max-width:600px; margin:auto' style='font-family: Arial, Helvetica,sans-serif; font-size:12px; color:#000; border-collapse:collapse;'><tr></td><td width='150' style='width:150px; max-width:150px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Service</td><td width='250' style='width:250px; max-width:250px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Description</td><td width='250' style='width:250px; max-width:250px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Budget</td><td  width='100' style='width:100px; max-width:100px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Date & Time Needed By</td><td  width='100' style='width:100px; max-width:100px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Notes</td>";
+		//////////////////////////// Ends /////////////////////////////////////
+		rfq = zoho.crm.getRecordById("Requests_for_quote",rfqid);
+		work_detial = rfq.get("Work_Details");
+		jlist = work_detial.toJSONList();
+		for each index j in jlist
+		{
+			mapvar = jlist.get(j);
+			finalMap = mapvar.toMap();
+			service_name = finalMap.get("Service").get("name");
+			service_desc = finalMap.get("Service_Description");
+			Budget = finalMap.get("Budget");
+			DateTime_Neededby = finalMap.get("Date_Time_Needed_By");
+			////////////////////////////////////////////////////////////////////////////////////
+			time1 = DateTime_Neededby.toTime("yyyy-MM-dd'T'HH:mm:ss").toString("yyyy-MM-dd'T'hh:mm:ss+05:00").toTime("yyyy-MM-dd'T'hh:mm:ss");
+			timevalue = DateTime_Neededby.toTime("yyyy-MM-dd'T'HH:mm:ss").getTime();
+			newtime = time1 + " " + timevalue.toString().getSuffix(" ");
+			/////////////////////////////////////////////////////////////////////////////
+			work_details_Notes = ifnull(finalMap.get("Notes1"),"");
+			str = str + "<tr>";
+			str = str + "<td width='150' style='width:150px; max-width:150px; border-bottom:2px solid #dadada'>" + service_name + "</td>";
+			str = str + "<td width='250' style='width:250px; max-width:250px; border-bottom:2px solid #dadada'>" + service_desc + "</td>";
+			str = str + "<td width='250' style='width:250px; max-width:250px; border-bottom:2px solid #dadada'>$ " + Budget + "</td>";
+			str = str + "<td width='100' style='width:100px; max-width:100px; border-bottom:2px solid #dadada'>" + newtime + "</td>";
+			str = str + "<td width='100' style='width:100px; max-width:100px; border-bottom:2px solid #dadada' >" + work_details_Notes + "</td>";
+			str = str + "</tr>";
+		}
+		str = str + "<tr><td colspan='4'><br/>By pressing the “Accept” button below you have accepted this job and a Purchase Order will be sent to you shortly.</td></tr><tr><td colspan='4'><a href='https://zfrmz.com/GoMclEBAh6XjS35hfCkZ?num=" + no_of_services + "&v=" + vendorName + "&rfq=" + rfqname + "&s1=" + ifnull(service_name_1,"") + "&s2=" + ifnull(service_name_2,"") + "&s3=" + ifnull(service_name_3,"") + "&s4=" + ifnull(service_name_4,"") + "&s5=" + ifnull(service_name_5,"") + "&p=" + projectname + "'; style='-webkit-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; -moz-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; color:#FFFF; background: #4CAF50; border-radius:5px; -moz-border-radius:5px; -webkit-border-radius:5px; border:none; font-size:14px; font-weight:700; padding:4px 26px; text-shadow:rgb(255, 238, 102) 0px 1px 0px; background-color: rgb(128, 128, 128);'>Accept Job</a></td></tr><tr><td colspan='4' style='padding-top:0px;padding-bottom:0px;'>Thank You,</td></tr><tr><td colspan='4'  style='padding-top:0px;padding-bottom:0px;'>Blink Signs Team</td></tr></table>";
+		/////////////////////////////////////////////////////////////////////////////////////////////
+		sendmail
+		[
+			from :zoho.loginuserid
+			to :vendorEmail
+			subject :"Blink Signs Request for Quote -RFQ"
+			message :str
+			content type :HTML
+			Attachments :file:downloadFile
+		]
+	}
+	//-------------------------------------------------------------------------------------//
+	if(fileupload.size() == null || fileupload.size() != null && rfq.get("Add_Storefront_Images") == false)
+	{
+		/////////////////////////////////////////////////////////////////////////////////////////
+		str = "<table align='center' cellpadding='10' width='600' style='width:600px;max-width:600px; margin:auto'><tr><td><div><span style='color: rgb(35, 37, 40);'>Dear " + vendorName + ",</span></div><div><span style='color: rgb(35, 37, 40);'><br></span></div><div><span style='color: rgb(35, 37, 40);'></span></div><div><span style='color: rgb(35, 37, 40);'><br/>We are requesting your services for the following scope of work. Please review and let me know if you are able to complete within our timeline and budget. Once you have accepted, we will send a purchase order.</span><br><span style='color: rgb(255, 0, 0);'><b>Please do not proceed with the survey without a purchase order.</span></div><br><div><span style='color: rgb(35, 37, 40);'>City, State of Location : " + City_Zip + ".</span></div><br><div><span style='color: rgb(35, 37, 40);'>Site Survey Scope Document: &nbsp;<a href='https://zdrive.li/9YA' target='_blank' style='color: rgb(17, 85, 204);'>SS Scope Document Link</a></span></div></td></tr></table>";
+		/////////////////////////////////////////////////////////////////////////////////////////////
+		str = str + "<br><table  align='center' cellpadding='10' width='600' style='width:600px;max-width:600px; margin:auto' style='font-family: Arial, Helvetica,sans-serif; font-size:12px; color:#000; border-collapse:collapse;'><tr></td><td width='150' style='width:150px; max-width:150px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Service</td><td width='250' style='width:250px; max-width:250px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Description</td><td width='250' style='width:250px; max-width:250px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Budget</td><td  width='100' style='width:100px; max-width:100px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Date & Time Needed By</td><td  width='100' style='width:100px; max-width:100px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Notes</td>";
+		//////////////////////////// Ends /////////////////////////////////////
+		rfq = zoho.crm.getRecordById("Requests_for_quote",rfqid);
+		work_detial = rfq.get("Work_Details");
+		jlist = work_detial.toJSONList();
+		for each index j in jlist
+		{
+			mapvar = jlist.get(j);
+			finalMap = mapvar.toMap();
+			service_name = finalMap.get("Service").get("name");
+			service_desc = finalMap.get("Service_Description");
+			Budget = finalMap.get("Budget");
+			DateTime_Neededby = finalMap.get("Date_Time_Needed_By");
+			////////////////////////////////////////////////////////////////////////////////////
+			time1 = DateTime_Neededby.toTime("yyyy-MM-dd'T'HH:mm:ss").toString("yyyy-MM-dd'T'hh:mm:ss+05:00").toTime("yyyy-MM-dd'T'hh:mm:ss");
+			timevalue = DateTime_Neededby.toTime("yyyy-MM-dd'T'HH:mm:ss").getTime();
+			newtime = time1 + " " + timevalue.toString().getSuffix(" ");
+			/////////////////////////////////////////////////////////////////////////////
+			work_details_Notes = ifnull(finalMap.get("Notes1"),"");
+			str = str + "<tr>";
+			str = str + "<td width='150' style='width:150px; max-width:150px; border-bottom:2px solid #dadada'>" + service_name + "</td>";
+			str = str + "<td width='250' style='width:250px; max-width:250px; border-bottom:2px solid #dadada'>" + service_desc + "</td>";
+			str = str + "<td width='250' style='width:250px; max-width:250px; border-bottom:2px solid #dadada'>$ " + Budget + "</td>";
+			str = str + "<td width='100' style='width:100px; max-width:100px; border-bottom:2px solid #dadada'>" + newtime + "</td>";
+			str = str + "<td width='100' style='width:100px; max-width:100px; border-bottom:2px solid #dadada' >" + work_details_Notes + "</td>";
+			str = str + "</tr>";
+		}
+		str = str + "<tr><td colspan='4'><br/>By pressing the “Accept” button below you have accepted this job and a Purchase Order will be sent to you shortly.</td></tr><tr><td colspan='4'><a href='https://zfrmz.com/GoMclEBAh6XjS35hfCkZ?num=" + no_of_services + "&v=" + vendorName + "&rfq=" + rfqname + "&s1=" + ifnull(service_name_1,"") + "&s2=" + ifnull(service_name_2,"") + "&s3=" + ifnull(service_name_3,"") + "&s4=" + ifnull(service_name_4,"") + "&s5=" + ifnull(service_name_5,"") + "&p=" + projectname + "'; style='-webkit-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; -moz-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; color:#FFFF; background: #4CAF50; border-radius:5px; -moz-border-radius:5px; -webkit-border-radius:5px; border:none; font-size:14px; font-weight:700; padding:4px 26px; text-shadow:rgb(255, 238, 102) 0px 1px 0px; background-color: rgb(128, 128, 128);'>Accept Job</a></td></tr><tr><td colspan='4' style='padding-top:0px;padding-bottom:0px;'>Thank You,</td></tr><tr><td colspan='4'  style='padding-top:0px;padding-bottom:0px;'>Blink Signs Team</td></tr></table>";
+		/////////////////////////////////////////////////////////////////////////////////////////////
+		sendmail
+		[
+			from :zoho.loginuserid
+			to :vendorEmail
+			subject :"Blink Signs Request for Quote -RFQ"
+			message :str
+			content type :HTML
+		]
+	}
+}
+//////////////////////// Update RFQ Sent //////////////////////
+mp_rfq = Map();
+mp_rfq.put("RFQ_Sent",true);
+update = zoho.crm.updateRecord("Requests_for_quote",rfqid,mp_rfq);

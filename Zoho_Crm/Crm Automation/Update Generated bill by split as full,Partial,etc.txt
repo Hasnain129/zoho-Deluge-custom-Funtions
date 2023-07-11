@@ -1,0 +1,66 @@
+try 
+{
+	resp = zoho.crm.getRecordById("Create_Bills",createbill_id);
+	PO_id = resp.get("PO").get("id");
+	Method = resp.get("Method_of_bill_creation");
+	split = resp.get("How_would_you_like_to_split_the_PO");
+	po_details = zoho.crm.getRecordById("Purchase_Orders",PO_id);
+	if(Method == "Full")
+	{
+		Final_Amount = po_details.get("Grand_Total").round(2);
+		mp = Map();
+		mp.put("Generated_bill_amount",Final_Amount.toString());
+		update_bill = zoho.crm.updateRecord("Create_Bills",createbill_id,mp);
+	}
+	else if(Method == "Partly" && split == "By %")
+	{
+		percentage = resp.get("to_pay").round(2);
+		Grand_total = po_details.get("Grand_Total").round(2);
+		Final_Amount = (Grand_total * percentage / 100).round(2);
+		mp = Map();
+		mp.put("Generated_bill_amount",Final_Amount.toString());
+		update_bill = zoho.crm.updateRecord("Create_Bills",createbill_id,mp);
+	}
+	else if(Method == "Partly" && split == "By amount")
+	{
+		Final_Amount = resp.get("Amount").round(2);
+		mp = Map();
+		mp.put("Generated_bill_amount",Final_Amount.toString());
+		update_bill = zoho.crm.updateRecord("Create_Bills",createbill_id,mp);
+	}
+	else if(Method == "Partly" && split == "By line item")
+	{
+		Items_no = resp.get("Line_items").toList();
+		Product_Details = po_details.get("Product_Details").toList();
+		productlist = List();
+		itemlist = List();
+		for each  data1 in Product_Details
+		{
+			for each  data2 in Items_no
+			{
+				item_count = data2 - 1;
+				itemlist.add(item_count);
+			}
+		}
+		distinct = itemlist.distinct();
+		total = 0;
+		for each  data3 in distinct
+		{
+			shortlisted_prod = Product_Details.get(data3);
+			total = total + shortlisted_prod.get("total");
+		}
+		Final_Amount = total;
+		mp = Map();
+		mp.put("Generated_bill_amount",Final_Amount.toString());
+		update_bill = zoho.crm.updateRecord("Create_Bills",createbill_id,mp,{"trigger":{"workflow"}});
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :" Update Generated bill by split as full,Partial,etc / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000010303368\" >Workflow</a>  " + "ID: " + createbill_id + " Root Cause: " + e + "\n Final Amount: " + Final_Amount
+	]
+}

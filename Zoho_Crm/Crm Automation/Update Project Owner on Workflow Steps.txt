@@ -1,0 +1,46 @@
+try 
+{
+	Project_obj = zoho.crm.getRecordById("Deals",Sign_Project_id);
+	Project_Owner = Project_obj.get("Owner");
+	Project_Owner_id = Project_obj.get("Owner").get("id");
+	Project_Owner_name = Project_obj.get("Owner").get("name");
+	sign_Project_steps = zoho.crm.getRelatedRecords("Workflow_Step","Deals",Sign_Project_id);
+	////////////////////////////////////////////////////////
+	user_details = zoho.crm.getRecordById("users",Project_Owner_id);
+	user_obj = user_details.get("users");
+	user_map = user_obj.toMap();
+	proj_manager_email = user_map.get("email");
+	Role_name = user_map.get("role").get("name");
+	////////////////// Updating project with Role /////////////////////
+	mp2 = Map();
+	mp2.put("PM_Team_Roles",Role_name);
+	update_project = zoho.crm.updateRecord("Deals",Sign_Project_id,mp2);
+	///////////////// Updating Project workload steps //////////////////////
+	for each  data1 in sign_Project_steps
+	{
+		mp = Map();
+		mp.put("Project_Owner",Project_Owner_name);
+		mp.put("Project_Owner_Email",proj_manager_email);
+		update = zoho.crm.updateRecord("Sign_Projects_X_Step",data1.get("id").toLong(),mp);
+		// 		info update;
+	}
+	/////////////////////////////////////////////////////////
+	update_map = Map();
+	update_map.put("Owner",Project_Owner);
+	for each  data in sign_Project_steps
+	{
+		if(data.get("Status") != "Completed" && data.get("Status") != "Cancelled" && data.get("Owner_Role") == "Project Manager")
+		{
+			zoho.crm.updateRecord("Sign_Projects_X_Step",data.get("id").toLong(),update_map);
+		}
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update Project Owner on Workflow Steps / CRM"
+		message :"ID: " + Sign_Project_id + " Root Cause: " + e
+	]
+}

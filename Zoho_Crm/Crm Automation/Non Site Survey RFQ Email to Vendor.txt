@@ -1,0 +1,330 @@
+try 
+{
+	designDetails = zoho.crm.getRecordById("Designs",designid);
+	designname = designDetails.get("Name");
+	projectname = ifnull(designDetails.get("Project"),"").get("name");
+	servicelocation = designDetails.get("Service_Location").get("name");
+	signageneeds = designDetails.get("Signage_Needs");
+	//-------------------------------------------------------------
+	// RFQ Details
+	rfq = zoho.crm.getRecordById("Requests_for_quote",rfqid);
+	rfqname = ifnull(rfq.get("Name"),"");
+	//--------------------------------------------------------
+	// Project Details
+	projectId = ifnull(designDetails.get("Project"),"").get("id").toLong();
+	projectDetails = zoho.crm.getRecordById("Deals",projectId);
+	projectID = projectDetails.get("Project_ID");
+	Organization = designDetails.get("Organization_Name");
+	//-------------------------------------------------------
+	// Vendor List from RFQ
+	vendorIdList = List();
+	vendorSubform = ifnull(rfq.get("Vendor_Lookup"),"");
+	for each  ele in vendorSubform
+	{
+		// 		vendorInfo = zoho.crm.getRecordById("Vendors",ele.get("Vendor").get("id"));
+		// 		if(vendorInfo.get("Vendor_Status") != "Blacklisted")
+		//  		{
+		vendorIdList.add(ele.get("Vendor").get("id"));
+		//}
+	}
+	info vendorIdList;
+	Attachment_id = "";
+	Attachements_Files = "";
+	attachements = List();
+	Design_Attachment = List();
+	Design_Work_Att1 = List();
+	if(rfq.get("Add_Design_Files") == true)
+	{
+		if(designDetails.get("Design") != null)
+		{
+			Attachements_Files = "";
+			Design_obj = zoho.crm.getRecordById("Designs",designid);
+			Design_Name = ifnull(Design_obj.get("Name"),"");
+			Design_Attachment.addAll(Design_obj.get("Design"));
+		}
+		for each index i in Design_Attachment
+		{
+			mapvar2 = Design_Attachment.get(i);
+			finalMap2 = mapvar2.toMap();
+			if(finalMap2.containKey("file_Id") == false)
+			{
+				Design_Work_Att1.add(finalMap2.get("preview_Url") + "#" + finalMap2.get("file_Name"));
+			}
+			else
+			{
+				downloadFile2 = invokeurl
+				[
+					url :"https://www.zohoapis.com/crm/v2/Designs/" + designid + "/Attachments/" + finalMap2.get("attachment_Id")
+					type :GET
+					connection:"attachfile"
+				];
+				if(i == 0)
+				{
+					Design_Att1 = downloadFile2;
+				}
+				if(i == 1)
+				{
+					Design_Att2 = downloadFile2;
+				}
+				if(i == 2)
+				{
+					Design_Att3 = downloadFile2;
+				}
+				if(i == 3)
+				{
+					Design_Att4 = downloadFile2;
+				}
+				if(i == 4)
+				{
+					Design_Att5 = downloadFile2;
+				}
+			}
+		}
+	}
+	info Design_Att1;
+	info Design_Att2;
+	info Design_Att3;
+	info Design_Att4;
+	info Design_Att5;
+	if(rfq.get("Add_Manufacturing_Files") == true)
+	{
+		Manuf_files_1 = ifnull(designDetails.get("Manufacturing_Files_1"),"");
+		attachements.addAll(Manuf_files_1);
+		Manuf_files_2 = ifnull(designDetails.get("Manufacturing_Files_2"),"");
+		attachements.addAll(Manuf_files_2);
+	}
+	for each index j in attachements
+	{
+		mapvar = attachements.get(j);
+		finalMap = mapvar.toMap();
+		if(finalMap.containKey("file_Id") == false)
+		{
+			Design_Work_Att1.add(finalMap.get("preview_Url") + "#" + finalMap.get("file_Name"));
+		}
+		else
+		{
+			downloadFile = invokeurl
+			[
+				url :"https://www.zohoapis.com/crm/v2/Designs/" + designid + "/Attachments/" + finalMap.get("attachment_Id")
+				type :GET
+				connection:"attachfile"
+			];
+			if(j == 0)
+			{
+				Att1 = downloadFile;
+			}
+			if(j == 1)
+			{
+				Att2 = downloadFile;
+			}
+			if(j == 2)
+			{
+				Att3 = downloadFile;
+			}
+			if(j == 3)
+			{
+				Att4 = downloadFile;
+			}
+			if(j == 4)
+			{
+				Att5 = downloadFile;
+			}
+			if(j == 5)
+			{
+				Att6 = downloadFile;
+			}
+			if(j == 6)
+			{
+				Att7 = downloadFile;
+			}
+			if(j == 7)
+			{
+				Att8 = downloadFile;
+			}
+			if(j == 8)
+			{
+				Att9 = downloadFile;
+			}
+			if(j == 9)
+			{
+				Att10 = downloadFile;
+			}
+			if(j == 10)
+			{
+				Att11 = downloadFile;
+			}
+		}
+	}
+	info Att1;
+	info Att2;
+	info Att3;
+	info Att4;
+	info Att5;
+	info Att6;
+	info Att7;
+	info Att8;
+	info Att9;
+	info Att10;
+	info Att11;
+	for each  vendorId in vendorIdList
+	{
+		vendorInfo = zoho.crm.getRecordById("Vendors",vendorId);
+		vendorEmail = vendorInfo.get("Email");
+		vendorName = vendorInfo.get("Vendor_Name");
+	}
+	//info vendorEmail;
+	/////////////////////////////////Get WorkDetails Service Name //////////////////////////////////
+	work_detial = rfq.get("Work_Details");
+	jlist = work_detial.toJSONList();
+	for each index j in jlist
+	{
+		if(j == 0)
+		{
+			mapvar = jlist.get(0);
+			finalMap = mapvar.toMap();
+			service_name_1 = ifnull(finalMap.get("Service").get("name"),"none");
+			no_of_services = "1";
+		}
+		else if(j == 1)
+		{
+			mapvar = jlist.get(1);
+			finalMap = mapvar.toMap();
+			service_name_2 = ifnull(finalMap.get("Service").get("name"),"none");
+			no_of_services = "2";
+		}
+		else if(j == 2)
+		{
+			mapvar = jlist.get(2);
+			finalMap = mapvar.toMap();
+			service_name_3 = ifnull(finalMap.get("Service").get("name"),"none");
+			no_of_services = "3";
+		}
+		else if(j == 3)
+		{
+			mapvar = jlist.get(3);
+			finalMap = mapvar.toMap();
+			service_name_4 = ifnull(finalMap.get("Service").get("name"),"none");
+			no_of_services = "4";
+		}
+		else if(j == 4)
+		{
+			mapvar = jlist.get(4);
+			finalMap = mapvar.toMap();
+			service_name_5 = ifnull(finalMap.get("Service").get("name"),"none");
+			no_of_services = "5";
+		}
+	}
+	//----------------------------------------------------------
+	// Get all Vendors and there Emails to send email
+	for each  vendorId in vendorIdList
+	{
+		vendorInfo = zoho.crm.getRecordById("Vendors",vendorId);
+		vendorEmail = vendorInfo.get("Email");
+		vendorName = vendorInfo.get("Vendor_Name");
+		/////////////////////////////////////////////////////////////////////////////////////////
+		str = "<table align='center' cellpadding='10' width='600' style='width:600px;max-width:600px; margin:auto'><tr><td><div><span style='color: rgb(35, 37, 40);'>Dear " + vendorName + ",</span></div><div><span style='color: rgb(35, 37, 40);'><br></span></div><div><span style='color: rgb(35, 37, 40);'>We are requesting your bid for a sign project. </span></div><div><span style='color: rgb(35, 37, 40);'><br/>Please review the attachment for the scope of work.</span></div><br><div><span style='color: rgb(35, 37, 40);'>Service Location : " + servicelocation + ".</span></div></td></tr></table>";
+		/////////////////////////////////////////////////////////////////////////////////////////////
+		str = str + "<br><table  align='center' cellpadding='10' width='600' style='width:600px;max-width:600px; margin:auto' style='font-family: Arial, Helvetica,sans-serif; font-size:12px; color:#000; border-collapse:collapse;'><tr></td><td width='150' style='width:150px; max-width:150px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Service</td><td width='250' style='width:250px; max-width:250px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Description</td><td  width='100' style='width:100px; max-width:100px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Date & Time Needed By</td><td  width='100' style='width:100px; max-width:100px;font-weight:bold;background-color:#eaeaea;border-top:2px solid gray;border-bottom:2px solid gray;'>Notes</td>";
+		//////////////////////////// Ends /////////////////////////////////////
+		//----------------------------------------------------------
+		// Work Details from RFQ to create Email body
+		for each index j in jlist
+		{
+			mapvar = jlist.get(j);
+			finalMap = mapvar.toMap();
+			service_name = finalMap.get("Service").get("name");
+			service_desc = finalMap.get("Service_Description");
+			DateTime_Neededby = finalMap.get("Date_Time_Needed_By");
+			////////////////////////////////////////////////////////////////////////////////////
+			time1 = DateTime_Neededby.toTime("yyyy-MM-dd'T'HH:mm:ss").toString("yyyy-MM-dd'T'hh:mm:ss+05:00").toTime("yyyy-MM-dd'T'hh:mm:ss");
+			timevalue = DateTime_Neededby.toTime("yyyy-MM-dd'T'HH:mm:ss").getTime();
+			newtime = time1 + " " + timevalue.toString().getSuffix(" ");
+			/////////////////////////////////////////////////////////////////////////////
+			work_details_Notes = finalMap.get("Notes1");
+			str = str + "<tr>";
+			str = str + "<td width='150' style='width:150px; max-width:150px; border-bottom:2px solid #dadada'>" + service_name + "</td>";
+			str = str + "<td width='250' style='width:250px; max-width:250px; border-bottom:2px solid #dadada'>" + service_desc + "</td>";
+			str = str + "<td width='100' style='width:100px; max-width:100px; border-bottom:2px solid #dadada'>" + newtime + "</td>";
+			str = str + "<td width='100' style='width:100px; max-width:100px; border-bottom:2px solid #dadada' >" + work_details_Notes + "</td>";
+			str = str + "</tr>";
+		}
+		Services = List();
+		if(service_name_1 != null)
+		{
+			Services.add(service_name_1);
+		}
+		if(service_name_2 != null)
+		{
+			Services.add(service_name_2);
+		}
+		if(service_name_3 != null)
+		{
+			Services.add(service_name_3);
+		}
+		if(service_name_4 != null)
+		{
+			Services.add(service_name_4);
+		}
+		if(service_name_5 != null)
+		{
+			Services.add(service_name_5);
+		}
+		Characters = List({"'","*","(",")","!","@","#","$","%","+","^","&","_","-","-","=","}","{","]","[",'"',":",";",".",'\',"<",">"});
+		for each  data in Services
+		{
+			for each  data2 in Characters
+			{
+				if(service_name_1 != null)
+				{
+					service_name_1 = service_name_1.remove(data2);
+				}
+				if(service_name_2 != null)
+				{
+					service_name_2 = service_name_2.remove(data2);
+				}
+				if(service_name_3 != null)
+				{
+					service_name_3 = service_name_3.remove(data2);
+				}
+				if(service_name_4 != null)
+				{
+					service_name_4 = service_name_4.remove(data2);
+				}
+				if(service_name_5 != null)
+				{
+					service_name_5 = service_name_5.remove(data2);
+				}
+			}
+		}
+		str = str + "<tr><td colspan='4'><br/>Please provide your quote below:</td></tr><tr><td colspan='4'><a href='https://zfrmz.com/GoMclEBAh6XjS35hfCkZ?&num=" + no_of_services + "&d=" + designname + "&p=" + projectname + "&v=" + vendorName + "&rfq=" + rfqname + "&s1=" + ifnull(service_name_1,"") + "&s2=" + ifnull(service_name_2,"") + "&s3=" + ifnull(service_name_3,"") + "&s4=" + ifnull(service_name_4,"") + "&s5=" + ifnull(service_name_5,"") + "'; style='-webkit-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; -moz-box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; box-shadow:rgba(0,0,0,0.2) 0 1px 0 0; color:#FFFF; background: #4CAF50; border-radius:5px; -moz-border-radius:5px; -webkit-border-radius:5px; border:none; font-size:14px; font-weight:700; padding:4px 26px; text-shadow:rgb(255, 238, 102) 0px 1px 0px; background-color: rgb(128, 128, 128);'>Submit The Quote</a></td></tr><tr><td colspan='4' style='padding-top:0px;padding-bottom:0px;'>Thank You</td></tr><tr><td colspan='4'  style='padding-top:0px;padding-bottom:0px;'>BlinkSigns Team</td></tr></table><br><br><b>Attachment Files: </b><br><br>";
+		for each  attachments in Design_Work_Att1
+		{
+			prefix = attachments.getPrefix("#");
+			Postfix = attachments.getSuffix("#");
+			str = str + "File link: <a href='" + prefix + "'>" + Postfix + "</a><br>";
+		}
+		/////////////////////////////////////////////////////////////////////////////////////////////
+		sendmail
+		[
+			from :zoho.loginuserid
+			to :vendorEmail
+			subject :"Blink Signs Request for Quote -RFQ"
+			message :str
+			content type :HTML
+			Attachments :file:Design_Att1,file:Design_Att2,file:Design_Att3,file:Design_Att4,file:Design_Att5,file:Att1,file:Att2,file:Att3,file:Att4,file:Att5,file:Att6,file:Att7,file:Att8,file:Att9,file:Att10,file:Att11
+		]
+	}
+	//////////////////////// Update RFQ Sent //////////////////////
+	mp_rfq = Map();
+	mp_rfq.put("RFQ_Sent",true);
+	update = zoho.crm.updateRecord("Requests_for_quote",rfqid,mp_rfq);
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.loginuserid
+		to :"erp@blinksigns.com"
+		subject :"Non Site Survey RFQ Email to Vendor / CRM"
+		message :"ID: " + rfqid + " Root Cause: " + e
+	]
+}

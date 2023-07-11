@@ -1,0 +1,50 @@
+try 
+{
+	PO_Data = zoho.crm.getRecordById("Purchase_Orders",PO_ID);
+	Vendor_Info = PO_Data.get("Vendor_Name");
+	Vendor_ID = Vendor_Info.get("id");
+	Vendor_Data = zoho.crm.getRecordById("Vendors",Vendor_ID);
+	Payment_Terms = Vendor_Data.get("Payment_Terms");
+	Payment_Method = Vendor_Data.get("Payment_Method");
+	Deposit_Terms = Vendor_Data.get("Deposit_Terms");
+	Deposit_Percentage = Vendor_Data.get("Deposit");
+	Ship_to = PO_Data.get("Ship_to");
+	if(Ship_to == "Vendor Address")
+	{
+		Street = Vendor_Data.get("Street");
+		City = Vendor_Data.get("City");
+		State = Vendor_Data.get("State");
+		Zip_Code = Vendor_Data.get("Zip_Code");
+		Country = Vendor_Data.get("Country");
+		Address = ifnull(Street + ", " + City + ", " + State + ", " + Zip_Code + ", " + Country,"");
+	}
+	else if(Ship_to == "Service Location" && PO_Data.get("Service_Location") != null)
+	{
+		Address = ifnull(PO_Data.get("Service_Location").get("name"),"");
+	}
+	else
+	{
+		Address = "";
+	}
+	UpdateData = Map();
+	UpdateData.put("Bill_Amount",0);
+	UpdateData.put("Paid_Amount",0);
+	UpdateData.put("Terms",Payment_Terms);
+	UpdateData.put("Payment_Method1",Payment_Method);
+	UpdateData.put("Deposit",Deposit_Percentage);
+	UpdateData.put("Deposit_Terms",Deposit_Terms);
+	UpdateData.put("Ship_to_address",Address);
+	UpdateResponse = zoho.crm.updateRecord("Purchase_Orders",PO_ID,UpdateData);
+	info UpdateResponse;
+	info "udpated";
+}
+ catch (e)
+{	info e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :" Update Terms and payment method in PO / Purchase Order / Workflow / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000009867096\" >Workflow</a>  " + "ID: " + PO_ID + " Root Cause: " + e
+	]
+}

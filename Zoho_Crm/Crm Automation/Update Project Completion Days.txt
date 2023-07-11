@@ -1,0 +1,28 @@
+try 
+{
+	Sign_project_obj = zoho.crm.getRecordById("Deals",Sign_Project_id);
+	if(Sign_project_obj.get("Stage") == "Project Completed" || Sign_project_obj.get("Stage") == "Fully Paid")
+	{
+		Created_Date = Sign_project_obj.get("Created_Time").toDate();
+		Today = zoho.currentdate;
+		Completion_date = (Today - Created_Date) / (1000 * 60 * 60 * 24);
+		mp = Map();
+		mp.put("Project_Completion_days",Completion_date.toLong());
+		update = zoho.crm.updateRecord("Deals",Sign_Project_id,mp);
+	}
+	else if(Sign_project_obj.get("Stage") != "Project Completed" || Sign_project_obj.get("Stage") != "Fully Paid")
+	{
+		mp = Map();
+		mp.put("Project_Completion_days",0);
+		update = zoho.crm.updateRecord("Deals",Sign_Project_id,mp);
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update Project Completion Days / CRM"
+		message :"ID: " + Sign_Project_id + " Root Cause: " + e
+	]
+}

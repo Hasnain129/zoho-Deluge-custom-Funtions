@@ -1,0 +1,48 @@
+try 
+{
+	if(cust_id != 3205780000031199130 && cust_id != 3205780000032237325)
+	{
+		customer = zoho.crm.getRecordById("Accounts",cust_id);
+		parentcust1_id = ifnull(customer.get("Parent_Customer"),"").get("id");
+		Project_manager = customer.get("Project_Manager");
+		if(parentcust1_id != null)
+		{
+			parent_customer1 = zoho.crm.getRecordById("Accounts",parentcust1_id);
+			Project_manager = parent_customer1.get("Project_Manager");
+			parentcust2_id = ifnull(parent_customer1.get("Parent_Customer"),"").get("id");
+			if(Project_manager == null)
+			{
+				if(parentcust2_id != null)
+				{
+					parent_customer2 = zoho.crm.getRecordById("Accounts",parentcust2_id);
+					Project_manager = parent_customer2.get("Project_Manager");
+					parentcust3_id = ifnull(parent_customer2.get("Parent_Customer"),"").get("id");
+					if(Project_manager == null)
+					{
+						if(parentcust3_id != null)
+						{
+							parent_customer3 = zoho.crm.getRecordById("Accounts",parentcust3_id);
+							Project_manager = parent_customer3.get("Project_Manager");
+						}
+					}
+				}
+			}
+		}
+		if(Project_manager != null)
+		{
+			mp1 = Map();
+			mp1.put("Project_Manager",Project_manager);
+			update1 = zoho.crm.updateRecord("Accounts",cust_id,mp1);
+		}
+	}
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update Project manager on customer / CRM"
+		message :"ID: " + cust_id + " Root Cause: " + e
+	]
+}

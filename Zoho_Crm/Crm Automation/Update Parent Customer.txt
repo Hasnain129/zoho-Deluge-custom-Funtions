@@ -1,0 +1,23 @@
+try 
+{
+	lead_obj = zoho.crm.getRecordById("Leads",lead_id);
+	if(lead_obj.get("Existing_Account") != null)
+	{
+		abc = lead_obj.get("Existing_Account").get("id");
+		Parent_Account_obj = Map();
+		Parent_Account_obj.put("id",abc);
+		Parent_Account_obj.put("Parent_Account",Parent_Account_obj);
+		zoho.crm.updateRecord("Accounts",Account_id,Parent_Account_obj);
+	}
+}
+catch (e)
+{
+	mp = Map();
+	mp.put("Record_ID",lead_id);
+	mp.put("Function_Name","Update Parent Customer");
+	mp.put("Module","Leads");
+	mp.put("Workflow_Link","https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000008186234");
+	mp.put("Error_details",e);
+	creatRecord = zoho.creator.v1.createRecord("blinksigns","failure-functions","Failure_Functions",mp);
+	info creatRecord;
+}

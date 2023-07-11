@@ -1,0 +1,32 @@
+try 
+{
+	var = zoho.crm.getRecordById("Service_Locations",id);
+	if(var.get("City_State_Zip") != null)
+	{
+		field = var.get("City_State_Zip").get("name");
+		name = var.get("Name");
+		mp = Map();
+		if(name.getPrefix(",") == null)
+		{
+			con = name + "," + " " + field;
+			mp.put("Name",con);
+		}
+		else
+		{
+			fix = name.getPrefix(",");
+			con = fix + "," + " " + field;
+			mp.put("Name",con);
+		}
+		resp = zoho.crm.updateRecord("Service_Locations",id,mp);
+		info resp;
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update street address / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000001691264\" >Workflow</a>  " + "ID: " + id + " Root Cause: " + e
+	]
+}

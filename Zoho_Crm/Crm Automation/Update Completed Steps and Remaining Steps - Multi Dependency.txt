@@ -1,0 +1,660 @@
+try 
+{
+	Sign_Project_obj = zoho.crm.getRecordById("Deals",Sign_Project_id);
+	Start_Date = Sign_Project_obj.get("Created_Time").toString("yyyy-MM-dd");
+	Project_Owner = Sign_Project_obj.get("Owner");
+	Projet_manager = Sign_Project_obj.get("Owner").get("name");
+	Projet_manager_id = Sign_Project_obj.get("Owner").get("id");
+	workflow_Name = Sign_Project_obj.get("Workflow").get("name");
+	user_details = zoho.crm.getRecordById("users",Projet_manager_id);
+	user_obj = user_details.get("users");
+	user_map = user_obj.toMap();
+	proj_manager_email = user_map.get("email");
+	//------------------------------------------------------
+	// Create sorted List
+	All_Steps = List();
+	resp = zoho.crm.getRelatedRecords("Workflow_Step","Deals",Sign_Project_id);
+	if(!resp.isEmpty())
+	{
+		if(resp.get(0) != null)
+		{
+			if(resp.get(0).get("message") == null)
+			{
+				for each  data in resp
+				{
+					Step_id = data.get("Completed_Steps").get("id");
+					Step_details = zoho.crm.getRecordById("Step",Step_id);
+					Pro = Step_details.get("Priority_no");
+					All_Steps.add(Pro.toString());
+				}
+			}
+		}
+	}
+	Sorted_Project = List();
+	All_Steps.sort(true);
+	for each  j in All_Steps
+	{
+		response = zoho.crm.searchRecords("Step","(Priority_no:equals:" + j + ")");
+		Sorted_Project.add(response.toString());
+	}
+	//------------------------------------------------------
+	//Update Related list steps Various Dates 
+	count = 0;
+	comp_count = 0;
+	sign_Project_steps = zoho.crm.getRelatedRecords("Workflow_Step","Deals",Sign_Project_id);
+	for each  data1 in Sorted_Project
+	{
+		for each  data2 in sign_Project_steps
+		{
+			if(data1.get("Name") == data2.get("Completed_Steps").get("name"))
+			{
+				Entry_id = data2.get("id");
+				Step_id = data2.get("Completed_Steps").get("id");
+				Step_name = data2.get("Completed_Steps").get("name");
+				Step_details = zoho.crm.getRecordById("Step",Step_id);
+				Days_to_complete = Step_details.get("Days_to_complete");
+				Owner_role = Step_details.get("Owner_Role");
+				//info Owner_role;
+				Plain_Reporting_Category = Step_details.toString().get("Plain_Reporting_Category");
+				High_level_reporting_category = Step_details.toString().get("High_Level_Reporting_Category");
+				DS_list = List();
+				Dependant_step1 = ifnull(Step_details.get("Dependent_Step1"),"").get("name");
+				Dependant_step2 = ifnull(Step_details.get("Dependent_Step2"),"").get("name");
+				Dependant_step3 = ifnull(Step_details.get("Dependent_Step3"),"").get("name");
+				Dependant_step4 = ifnull(Step_details.get("Dependent_Step4"),"").get("name");
+				Dependant_step5 = ifnull(Step_details.get("Dependent_Step5"),"").get("name");
+				dp_mp1 = Map();
+				dp_mp1.put("name",Dependant_step1);
+				dp_mp2 = Map();
+				dp_mp2.put("name",Dependant_step2);
+				dp_mp3 = Map();
+				dp_mp3.put("name",Dependant_step3);
+				dp_mp4 = Map();
+				dp_mp4.put("name",Dependant_step4);
+				dp_mp5 = Map();
+				dp_mp5.put("name",Dependant_step5);
+				DS_list.add(dp_mp1);
+				DS_list.add(dp_mp2);
+				DS_list.add(dp_mp3);
+				DS_list.add(dp_mp4);
+				DS_list.add(dp_mp5);
+				if(Dependant_step1 == null)
+				{
+					Est_Start_Date = Start_Date.addDay(0);
+					Est_Due_Date = Est_Start_Date.addBusinessDay(Days_to_complete);
+					Status = ifnull(data2.get("Status"),"");
+					Act_Start_Date = ifnull(data2.get("Actual_Start_Date"),"");
+					Comp_Date = ifnull(data2.get("Completed_Date"),"");
+					Cancelled_Date = ifnull(data2.get("Cancelled_Date"),"");
+					Next_cont_date = ifnull(data2.get("Next_Contact_Date"),"");
+					DD_Update_Manually = data2.get("Due_Date_Updated_Manually");
+					if(Act_Start_Date == "")
+					{
+						Dyn_Due_Date = Est_Due_Date;
+					}
+					else
+					{
+						Dyn_Due_Date = Act_Start_Date.addBusinessDay(Days_to_complete);
+					}
+					//------------------------
+					if(Status == "")
+					{
+						Status = "Active";
+						Step_Active_Time = zoho.currenttime.toString("yyyy-MM-dd'T'HH:mm:ss");
+					}
+					//------------------------
+					if(Comp_Date != "" && Cancelled_Date == "")
+					{
+						Status = "Completed";
+					}
+					else if(Comp_Date == "" && Cancelled_Date != "")
+					{
+						Status = "Cancelled";
+					}
+					if(DD_Update_Manually == true)
+					{
+						Dyn_Due_Date = data2.get("Dynamic_Due_Date");
+					}
+					if(Next_cont_date == "")
+					{
+						Next_cont_date = Est_Start_Date;
+					}
+					mp8 = Map();
+					mp8.put("Estimated_Start_Date",Est_Start_Date);
+					mp8.put("Estimated_Due_Date",Est_Due_Date);
+					mp8.put("Actual_Start_Date",Est_Start_Date);
+					mp8.put("Next_Contact_Date",Next_cont_date);
+					mp8.put("Dynamic_Due_Date",Dyn_Due_Date);
+					mp8.put("Completed_Date",Comp_Date);
+					mp8.put("Step_Active_Time",Step_Active_Time);
+					mp8.put("Project_Owner",Projet_manager);
+					mp8.put("Project_Owner_Email",proj_manager_email);
+					mp8.put("Project_Workflow",workflow_Name);
+					mp8.put("Owner_Role",Owner_role);
+					mp8.put("Plain_Reporting_Category",Plain_Reporting_Category);
+					mp8.put("High_Level_Reporting_Category",High_level_reporting_category);
+					mp8.put("Status",Status);
+					update_step = zoho.crm.updateRecord("Sign_Projects_X_Step",Entry_id,mp8);
+				}
+				//-----------------------------------------------------
+				else if(Dependant_step1 != null)
+				{
+					Next_cont_date = ifnull(data2.get("Next_Contact_Date"),"");
+					Actual_Start_date_1 = data2.get("Actual_Start_Date");
+					Marked_Pending_Manually = data2.get("Marked_Pending_Manually");
+					DD_Update_Manually = data2.get("Due_Date_Updated_Manually");
+					if(Marked_Pending_Manually == false)
+					{
+						if(Actual_Start_date_1 == null || Actual_Start_date_1 == "")
+						{
+							sign_Project_steps2 = zoho.crm.getRelatedRecords("Workflow_Step","Deals",Sign_Project_id);
+							Date_list = List();
+							Dep_Due_Date = List();
+							Completed_date = List();
+							count = 0;
+							comp_count = 0;
+							for each  step in DS_list
+							{
+								for each  data3 in sign_Project_steps2
+								{
+									if(data3.get("Completed_Steps").get("name") == step.get("name"))
+									{
+										count = count + 1;
+										entry_id = data3.get("id");
+										Est_Start_Date = data3.get("Estimated_Due_Date");
+										Dyn_Due_Date = data3.get("Dynamic_Due_Date");
+										Dep_status = data3.get("Status");
+										Completed_date = ifnull(data3.get("Completed_Date"),"");
+										if(Completed_date == "")
+										{
+											Completed_date = ifnull(data3.get("Cancelled_Date"),"");
+										}
+										if(Dep_status == "Completed" || Dep_status == "Cancelled")
+										{
+											comp_count = comp_count + 1;
+										}
+										Date_list.add(Est_Start_Date);
+										Dep_Due_Date.add(Dyn_Due_Date);
+										Completed_date.add(Completed_date);
+									}
+								}
+							}
+							//info count;
+							//info comp_count;
+							if(!Date_list.isEmpty())
+							{
+								sort_list = ifnull(Date_list.sort(false),"");
+								Biggest_date = ifnull(sort_list.get(0),"");
+							}
+							Est_Start_Date = Biggest_date;
+							Est_Due_Date = ifnull(Est_Start_Date.addBusinessDay(Days_to_complete),"");
+							Dyn_Due_Date = Est_Due_Date;
+							Status = ifnull(data2.get("Status"),"");
+							Comp_Date = ifnull(data2.get("Completed_Date"),"");
+							Cancelled_Date = ifnull(data2.get("Cancelled_Date"),"");
+							Step_Active_Time = "";
+							//------------------------
+							if(Status == "")
+							{
+								Status = "Pending";
+							}
+							//------------------------
+							if(comp_count == count)
+							{
+								if(!Completed_date.isEmpty())
+								{
+									sort_comp_list = ifnull(Completed_date.sort(false),"");
+									Biggest_Comp_date = ifnull(sort_comp_list.get(0),"");
+								}
+								Act_Start_Date = Biggest_Comp_date;
+								Step_Active_Time = zoho.currenttime.toString("yyyy-MM-dd'T'HH:mm:ss");
+								Status = "Active";
+							}
+							else
+							{
+								Act_Start_Date = "";
+							}
+							//-------------------------------
+							if(Act_Start_Date == "")
+							{
+								sort_due_list = ifnull(Dep_Due_Date.sort(false),"");
+								Biggest_due_date = ifnull(sort_due_list.get(0),"");
+								Dep_Due_Date = ifnull(Biggest_due_date.addBusinessDay(Days_to_complete),"");
+								Dyn_Due_Date = Dep_Due_Date;
+							}
+							else
+							{
+								if(Act_Start_Date != null)
+								{
+									info "act busssiness day " + Act_Start_Date;
+									Dyn_Due_Date = Act_Start_Date.addBusinessDay(Days_to_complete);
+								}
+							}
+							//------------------------
+							if(Comp_Date != "" && Cancelled_Date == "")
+							{
+								Status = "Completed";
+							}
+							else if(Comp_Date == "" && Cancelled_Date != "")
+							{
+								Status = "Cancelled";
+							}
+						}
+						else if(Actual_Start_date_1 != null || Actual_Start_date_1 != " " || Actual_Start_date_1 != "")
+						{
+							Est_Start_Date = data2.get("Estimated_Start_Date");
+							Act_Start_Date = Actual_Start_date_1.addDay(0);
+							Est_Due_Date = data2.get("Estimated_Due_Date");
+							Dyn_Due_Date = Act_Start_Date.addBusinessDay(Days_to_complete);
+							Comp_Date = data2.get("Completed_Date");
+							Step_Active_Time = data2.get("Step_Active_Time");
+							Status = data2.get("Status");
+						}
+					}
+					else if(Marked_Pending_Manually == true)
+					{
+						Est_Start_Date = data2.get("Estimated_Start_Date");
+						Act_Start_Date = data2.get("Actual_Start_Date");
+						Est_Due_Date = data2.get("Estimated_Due_Date");
+						Dyn_Due_Date = data2.get("Dynamic_Due_Date");
+						Comp_Date = data2.get("Completed_Date");
+						Step_Active_Time = data2.get("Step_Active_Time");
+						Status = data2.get("Status");
+					}
+					/////////////////////////////////////////////////////////
+					if(DD_Update_Manually == true)
+					{
+						Dyn_Due_Date = data2.get("Dynamic_Due_Date");
+					}
+					////////////////////////////////////////////////////////
+					if(Next_cont_date == "" || Next_cont_date == null)
+					{
+						Next_cont_date = Act_Start_Date;
+					}
+					////////////////////////////////////////////////////////
+					mp8 = Map();
+					mp8.put("Estimated_Start_Date",Est_Start_Date);
+					mp8.put("Estimated_Due_Date",Est_Due_Date);
+					mp8.put("Actual_Start_Date",Act_Start_Date);
+					mp8.put("Next_Contact_Date",Next_cont_date);
+					mp8.put("Dynamic_Due_Date",Dyn_Due_Date);
+					mp8.put("Completed_Date",Comp_Date);
+					mp8.put("Step_Active_Time",Step_Active_Time);
+					mp8.put("Owner_Role",Owner_role);
+					mp8.put("Project_Owner",Projet_manager);
+					mp8.put("Project_Owner_Email",proj_manager_email);
+					mp8.put("Project_Workflow",workflow_Name);
+					mp8.put("Plain_Reporting_Category",Plain_Reporting_Category);
+					mp8.put("High_Level_Reporting_Category",High_level_reporting_category);
+					mp8.put("Status",Status);
+					update_step = zoho.crm.updateRecord("Sign_Projects_X_Step",Entry_id,mp8);
+				}
+			}
+		}
+	}
+	//info mp8;
+	/////---------------Upate Completed, remaining and Cancelled steps field-----------------------
+	Active_steps = "";
+	Complete_Steps = "";
+	Remaining_Steps = "";
+	Cancelled_Steps = "";
+	Active_Step = Map();
+	Complete_Step = Map();
+	Remaining_Step = Map();
+	Cancelled_Step = Map();
+	Step_workflow_obj = zoho.crm.getRelatedRecords("Workflow_Step","Deals",Sign_Project_id);
+	Project_obj = zoho.crm.getRecordById("Deals",Sign_Project_id);
+	if(!Step_workflow_obj.isEmpty())
+	{
+		if(Step_workflow_obj.get(0) != null)
+		{
+			if(Step_workflow_obj.get(0).get("message") == null)
+			{
+				for each  Step_workflow in Step_workflow_obj
+				{
+					if(Step_workflow.get("Status") == "Active" || Step_workflow.get("Status") == "Overdue")
+					{
+						Active_steps = Active_steps + Step_workflow.get("Completed_Steps").get("name") + ", ";
+					}
+					if(Step_workflow.get("Status") == "Completed")
+					{
+						Complete_Steps = Complete_Steps + Step_workflow.get("Completed_Steps").get("name") + ", ";
+					}
+					if(Step_workflow.get("Status") == "Pending" || Step_workflow.get("Status") == "Active" || Step_workflow.get("Status") == "Overdue")
+					{
+						Remaining_Steps = Remaining_Steps + Step_workflow.get("Completed_Steps").get("name") + ", ";
+					}
+					if(Step_workflow.get("Status") == "Cancelled")
+					{
+						Cancelled_Steps = Cancelled_Steps + Step_workflow.get("Completed_Steps").get("name") + ", ";
+					}
+				}
+			}
+		}
+	}
+	Active_Step.put("Active_Steps",Active_steps.removeLastOccurence(","));
+	update1 = zoho.crm.updateRecord("Deals",Sign_Project_id,Active_Step);
+	Complete_Step.put("Completed_Steps1",Complete_Steps.removeLastOccurence(","));
+	update2 = zoho.crm.updateRecord("Deals",Sign_Project_id,Complete_Step);
+	Remaining_Step.put("Remaining_Steps",Remaining_Steps.removeLastOccurence(","));
+	update3 = zoho.crm.updateRecord("Deals",Sign_Project_id,Remaining_Step);
+	Cancelled_Step.put("Cancelled_Steps",Cancelled_Steps.removeLastOccurence(","));
+	update4 = zoho.crm.updateRecord("Deals",Sign_Project_id,Cancelled_Step);
+	// //////////////
+	/////////////////////////////// Update Step Metrics Fields///////////////////////////////////
+	counts = 0;
+	Active_Steps = List();
+	Complete_Stepss = List();
+	Cancelled_Stepss = List();
+	Pending_Stepss = List();
+	Overdue_stepss = List();
+	Active_Step_Name = List();
+	Sign_Project_objs = zoho.crm.getRelatedRecords("Workflow_Step","Deals",Sign_Project_id.toLong());
+	Sign_Projects = zoho.crm.getRecordById("deals",Sign_Project_id.toLong());
+	if(Sign_Projects.get("Status") != "Cancelled" && Sign_Project_objs.size() != 0)
+	{
+		if(!Sign_Project_objs.isEmpty())
+		{
+			if(Sign_Project_objs.get(0) != null)
+			{
+				if(Sign_Project_objs.get(0).get("message") == null)
+				{
+					for each  datas in Sign_Project_objs
+					{
+						Step_objs = zoho.crm.getRecordById("Sign_Projects_X_Step",datas.get("id"));
+						if(Step_objs.get("Status") == "Active")
+						{
+							Active_Steps.add("Active");
+							Active_Step_Name.add(Step_objs.get("Completed_Steps").get("name") + " ");
+						}
+						if(Step_objs.get("Status") == "Overdue")
+						{
+							Overdue_stepss.add("Overdue");
+						}
+						if(Step_objs.get("Status") == "Completed")
+						{
+							Complete_Stepss.add("Completed");
+						}
+						if(Step_objs.get("Status") == "Cancelled")
+						{
+							Cancelled_Stepss.add("Cancelled");
+						}
+						if(Step_objs.get("Status") == "Pending")
+						{
+							Pending_Stepss.add("Pending");
+						}
+						counts = counts + 1;
+					}
+				}
+			}
+		}
+		//info Active_Steps.size();
+		Steps_Metrics = Map();
+		Steps_Metrics.put("No_of_Active_Steps",Active_Steps.size());
+		Steps_Metrics.put("No_of_Overdue_Steps",Overdue_stepss.size());
+		Steps_Metrics.put("No_of_Completed_Steps",Complete_Stepss.size());
+		Steps_Metrics.put("No_of_Pending_Steps",Pending_Stepss.size());
+		Steps_Metrics.put("No_of_Cancelled_Steps",Cancelled_Stepss.size());
+		Completition = ((Cancelled_Stepss.size() + Complete_Stepss.size()) * 100) / Sign_Project_objs.size();
+		//info Completition;
+		Steps_Metrics.put("Completion",Completition.toLong());
+		ree = zoho.crm.updateRecord("Deals",Sign_Project_id,Steps_Metrics);
+		////////////// Update Status of Project ////////////////////////////////////////////////////////////////
+		if(Active_Steps.size() != 0 || Overdue_stepss.size() != 0)
+		{
+			Update_Status = Map();
+			Update_Status.put("Status","Active");
+		}
+		else if(Pending_Stepss.size() != 0 && (Active_Steps.size() == 0 || Overdue_stepss.size() != 0))
+		{
+			Update_Status = Map();
+			Update_Status.put("Status","On-Hold");
+		}
+		else if(Active_Steps.size() == 0 && Overdue_stepss.size() == 0 && Complete_Stepss.size() + Cancelled_Stepss.size() == counts)
+		{
+			////////////////////// Check All invoice and SO amount are equal to each other /////////////////////
+			Update_Status = Map();
+			Update_Paid_Date = Map();
+			SO_Total = 0;
+			Production_count = 0;
+			count = 0;
+			SO_obj = zoho.crm.getRelatedRecords("SalesOrders","Deals",Sign_Project_id);
+			for each  SOs in SO_obj
+			{
+				if(SOs.get("Status") != "Cancelled")
+				{
+					Production_obj = zoho.crm.getRelatedRecords("Production","Sales_Orders",SOs.get("id"));
+					Production_count = Production_count + Production_obj.size();
+					for each  production in Production_obj
+					{
+						if(production.get("PO_SKU_Status") == "Completed")
+						{
+							count = count + 1;
+						}
+					}
+					SO_Total = SO_Total + SOs.get("Grand_Total");
+				}
+			}
+			///////////////////////
+			////////////////////// Check All PO's and Bills amount are equal to each other /////////////////////
+			PO_totals = 0;
+			Bills_totals = 0;
+			Paid_Bills = 0;
+			PO_Obj = zoho.crm.getRelatedRecords("Purchase_Orders","Deals",Sign_Project_id);
+			for each  PO_data in PO_Obj
+			{
+				if(PO_data.get("Status") != "Draft" && PO_data.get("Status") != "Rejected" && PO_data.get("Status") != "Voided")
+				{
+					PO_totals = PO_totals + PO_data.get("Grand_Total");
+					Bills = zoho.crm.getRelatedRecords("Bills","Purchase_Orders",PO_data.get("id"));
+					for each  Bill in Bills
+					{
+						if(Bill.get("Books_Bill_ID") != null)
+						{
+							Books_bill = zoho.books.getRecordsByID("bills","666479573",Bill.get("Books_Bill_ID"));
+							if(Books_bill.get("bill") != {})
+							{
+								if(Books_bill.get("bill").get("status") == "paid")
+								{
+									Paid_Bills = Paid_Bills + Books_bill.get("bill").get("total");
+								}
+								if(Books_bill.get("bill").get("status") != "void" && Books_bill.get("bill").get("status") != "draft")
+								{
+									Bills_totals = Bills_totals + Books_bill.get("bill").get("total");
+								}
+							}
+						}
+					}
+				}
+			}
+			info SO_Total.round(2);
+			info Sign_Project_obj.get("Invoices_Total");
+			info Production_count;
+			info count;
+			info PO_totals.toLong();
+			info Bills_totals.toLong();
+			info Paid_Bills.toLong();
+			info Sign_Project_obj.get("Invoices_Total").toLong();
+			info Sign_Project_obj.get("Paid_Invoices_Total").toLong();
+			//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			if((SO_Total.round(2) - Sign_Project_obj.get("Invoices_Total").round(2) == 0 || SO_Total.round(2) - Sign_Project_obj.get("Invoices_Total").round(2) < 0.1 || Sign_Project_obj.get("Invoices_Total").round(2) - SO_Total.round(2) < 0.1 || SO_obj.size() == 0 && (Sign_Project_obj.get("Paid_Invoices_Total") == 0 || Sign_Project_obj.get("Paid_Invoices_Total") == "")) && (PO_totals.toLong() == Bills_totals.toLong() || PO_Obj.size() == 0))
+			{
+				info "Project Completed";
+				// 		if((SO_Total.toLong() == Sign_Project_obj.get("Invoices_Total").toLong() || SO_obj.size() == 0 && (Sign_Project_obj.get("Paid_Invoices_Total") == 0 || Sign_Project_obj.get("Paid_Invoices_Total") == "")) && (PO_totals.toLong() == Bills_totals.toLong() || PO_Obj.size() == 0))
+				// 		{
+				if(SO_obj.size() != 0)
+				{
+					for each  SO in SO_obj
+					{
+						if(SO.get("Status") != "Cancelled")
+						{
+							SO_Mp = Map();
+							SO_Mp.put("Status","Completed");
+							zoho.crm.updateRecord("Sales_Orders",SO.get("id"),SO_Mp,{"trigger":{"workflow"}});
+						}
+					}
+				}
+				Update_Status.put("Status","Completed");
+			}
+			else
+			{
+				Update_Paid_Date.put("Fully_Paid_Date","");
+				Update_Status.put("Status","Active");
+				Update_Status.put("Stage",mp8.get("High_Level_Reporting_Category"));
+			}
+			// 			info SO_Total.round(2);
+			// 			info Sign_Project_obj.get("Invoices_Total").round(2);
+			// 			info Sign_Project_obj.get("Paid_Invoices_Total").round(2);
+			// 			info PO_totals.toLong();
+			// 			info Paid_Bills.toLong();
+			if(SO_Total != 0 && (SO_Total.round(2) - Sign_Project_obj.get("Invoices_Total").round(2) == 0 || SO_Total.round(2) - Sign_Project_obj.get("Invoices_Total").round(2) < 0.1 || Sign_Project_obj.get("Invoices_Total").round(2) - SO_Total.round(2) < 0.1) && (PO_totals.toLong() == Paid_Bills.toLong() || PO_Obj.size() == 0) && Sign_Project_obj.get("Invoices_Total").round(2) == Sign_Project_obj.get("Paid_Invoices_Total").round(2))
+			{
+				info "Invoice Paid";
+				Update_Status.put("Status","Invoices Paid");
+				if(Sign_Project_obj.get("Fully_Paid_Date") == null)
+				{
+					Update_Paid_Date.put("Fully_Paid_Date",today);
+				}
+			}
+			zoho.crm.updateRecord("Deals",Sign_Project_id.toLong(),Update_Status,{"trigger":{"workflow"}});
+			zoho.crm.updateRecord("Deals",Sign_Project_id.toLong(),Update_Paid_Date,{"trigger":{"workflow"}});
+		}
+		if(counts == Cancelled_Stepss.size())
+		{
+			Update_Status = Map();
+			Update_Status.put("Status","Cancelled");
+		}
+	}
+	///////////// Update stage from status ////////////////////////////////
+	Update_Stage = Map();
+	if(Update_Status.get("Status") == "Cancelled")
+	{
+		Update_Stage.put("Stage","Lost");
+	}
+	else if(Update_Status.get("Status") == "Completed")
+	{
+		Update_Stage.put("Stage","Project Completed");
+	}
+	else if(Update_Status.get("Status") == "On-Hold")
+	{
+		Update_Stage.put("Stage","No Active Step");
+	}
+	else if(Update_Status.get("Status") == "Invoices Paid")
+	{
+		Update_Stage.put("Stage","Fully Paid");
+	}
+	update_stag = zoho.crm.updateRecord("Deals",Sign_Project_id,Update_Stage,{"trigger":{"workflow"}});
+	// ----------------------   create auto journal --------------------------
+	resp = "";
+	selected_po_id = "";
+	po_status = "true";
+	po_update_map = Map();
+	PO_related = zoho.crm.getRelatedRecords("Purchase_Orders","Deals",Sign_Project_id);
+	if(!PO_related.isEmpty())
+	{
+		if(PO_related.get(0) != null)
+		{
+			if(PO_related.get(0).get("message") == null)
+			{
+				for each  po_data in PO_related
+				{
+					selected_po_id = po_data.get("id");
+					po_status = po_data.get("Create_Journal");
+				}
+			}
+		}
+	}
+	if(selected_po_id != "")
+	{
+		if(po_status == "true")
+		{
+			po_update_map.put("Create_Journal",false);
+			info po_update_map;
+			resp = zoho.crm.updateRecord("Purchase_Orders",selected_po_id,po_update_map,{"trigger":{"workflow"}});
+		}
+		else
+		{
+			po_update_map.put("Create_Journal",true);
+			info po_update_map;
+			resp = zoho.crm.updateRecord("Purchase_Orders",selected_po_id,po_update_map,{"trigger":{"workflow"}});
+		}
+	}
+	else
+	{
+		resp = "no PO Found";
+	}
+	// ----------------------------------------------------------------------------
+	info Update_Stage;
+	//////////////-------------------------------------------------------------
+	////////////////// Update Stage from workflow steps////////////////
+	Project_details = zoho.crm.getRecordById("Deals",Sign_Project_id);
+	Proj_Stage = Project_details.get("Stage");
+	resp = zoho.crm.getRelatedRecords("Workflow_Step","Deals",Sign_Project_id);
+	All_Steps = List();
+	if(!resp.isEmpty())
+	{
+		if(resp.get(0) != null)
+		{
+			if(resp.get(0).get("message") == null)
+			{
+				for each  data in resp
+				{
+					Pro = data.get("Name");
+					All_Steps.add(Pro);
+				}
+			}
+		}
+	}
+	All_Steps.sort(true);
+	Sorted_Project = List();
+	Sorted_Steps = List();
+	for each  j in All_Steps
+	{
+		response = zoho.crm.searchRecords("Sign_Projects_X_Step","(Name:equals:" + j + ")");
+		Sorted_Steps.add(response.toString());
+	}
+	for each  get_step in Sorted_Steps
+	{
+		if(get_step.get("Completed_Steps") != null)
+		{
+			Step_id = get_step.get("Completed_Steps").get("id");
+			Step_details = zoho.crm.getRecordById("Step",Step_id);
+			Category = Step_details.get("High_Level_Reporting_Category");
+			if(get_step.get("Status") == "Active" || get_step.get("Status") == "Overdue")
+			{
+				Stage = Map();
+				Stage.put("Stage",Category);
+				break;
+			}
+		}
+	}
+	update = zoho.crm.updateRecord("Deals",Sign_Project_id,Stage,{"trigger":{"workflow"}});
+	/////////////// Update Estimate Due and Actual Start Date Project Level ////////////////////////
+	Para = Map();
+	Para.put("Sign_Project_id",Sign_Project_id);
+	responed = invokeurl
+	[
+		url :"https://crm.zoho.com/crm/v2/functions/count_all_steps_and_overdue_steps/actions/execute?auth_type=apikey&zapikey=1003.92bd8627e27fde976f5cecde483425d6.4247c26ba87331570834d7fb4d0ff618"
+		type :GET
+		parameters:Para
+	];
+	// ///////////////////////////////////////////////////////////////////////////////////////////////
+	Para2 = Map();
+	Para2.put("Sign_Project_id",Sign_Project_id);
+	responed_2 = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2/functions/update/actions/execute?auth_type=apikey&zapikey=1003.92bd8627e27fde976f5cecde483425d6.4247c26ba87331570834d7fb4d0ff618"
+		type :GET
+		parameters:Para2
+	];
+}
+ catch (e)
+{	info e;
+	// 	sendmail
+	// 	[
+	// 		from :zoho.adminuserid
+	// 		to :"erp@blinksigns.com"
+	// 		subject :"Update Completed Steps and Remaining Steps - Multi Dependency / CRM"
+	// 		message :"ID: " + Sign_Project_id + " Root Cause: " + e
+	// 	]
+}

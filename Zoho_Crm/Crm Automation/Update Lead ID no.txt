@@ -1,0 +1,4 @@
+mp = Map();
+mp.put("Lead_ID_no",lead_id.toString());
+update_lead = zoho.crm.updateRecord("Leads",lead_id,mp);
+info update_lead;

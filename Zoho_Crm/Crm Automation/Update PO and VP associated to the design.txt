@@ -1,0 +1,32 @@
+try 
+{
+	SO_details = zoho.crm.getRecordById("Sales_Orders",SO_id);
+	design_id = SO_details.get("Design").get("id");
+	PO_related = zoho.crm.getRelatedRecords("Purchase_Orders","Designs",design_id);
+	for each  data1 in PO_related
+	{
+		PO_id = data1.get("id");
+		mp1 = Map();
+		mp1.put("Sales_Orders",SO_id);
+		mp1.put("Purchase_Orders",PO_id);
+		create1 = zoho.crm.createRecord("SO_PO",mp1);
+	}
+	VP_related = zoho.crm.getRelatedRecords("Vendor_Proposal","Designs",design_id);
+	for each  data2 in VP_related
+	{
+		VP_id = data2.get("id");
+		mp2 = Map();
+		mp2.put("Sales_Orders",SO_id);
+		mp2.put("Vendor_Proposals",VP_id);
+		create2 = zoho.crm.createRecord("SO_VP",mp2);
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :" Update PO and VP associated to the design / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000010537131\" >Workflow</a>  " + "ID: " + SO_id + " Root Cause: " + e
+	]
+}

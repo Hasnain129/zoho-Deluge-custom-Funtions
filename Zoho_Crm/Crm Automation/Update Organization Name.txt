@@ -1,0 +1,36 @@
+try 
+{
+	if(design_id != null)
+	{
+		design_details = zoho.crm.getRecordById("Designs",design_id);
+		Project_id_design = ifnull(design_details.get("Project"),"").get("id");
+		if(Project_id_design != null && Project_id_design != "")
+		{
+			Project_obj = zoho.crm.getRecordById("Deals",Project_id_design);
+			Organization = Project_obj.get("Organization_Name");
+			mp = Map();
+			mp.put("Organization_Name",Organization);
+			createResp = zoho.crm.updateRecord("Requests_for_quote",rfq_id,mp);
+		}
+	}
+	else if(design_id == null)
+	{
+		if(Project_id != null)
+		{
+			Project_obj = zoho.crm.getRecordById("Deals",Project_id);
+			Organization = Project_obj.get("Organization_Name");
+			mp = Map();
+			mp.put("Organization_Name",Organization);
+			createResp = zoho.crm.updateRecord("Requests_for_quote",rfq_id,mp);
+		}
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :" Update Organization Name / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000014771340\" >Workflow</a>  " + "ID: " + design_id + " Root Cause: " + e
+	]
+}

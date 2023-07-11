@@ -1,0 +1,26 @@
+try 
+{
+	Designs_obj = zoho.crm.getRelatedRecords("Designs","Deals",Sign_project_id);
+	if(!Designs_obj.contains("INVALID_DATA") && !Designs_obj.contains("TOO_MANY_REQUESTS"))
+	{
+		count = Designs_obj.size() + 1;
+		for each index version in Designs_obj
+		{
+			count = count - 1;
+			Mp = Map();
+			Mp.put("Version",count);
+			response = zoho.crm.updateRecord("Designs",Designs_obj.get(version).get("id"),Mp);
+		}
+	}
+}
+catch (e)
+{
+	info e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :" Update Design Version / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000031176526\" >Workflow</a>  " + "ID: " + Design_id + " Project ID: " + Sign_project_id + " Root Cause: " + e
+	]
+}

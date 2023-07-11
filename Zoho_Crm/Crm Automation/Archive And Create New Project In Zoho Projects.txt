@@ -1,0 +1,307 @@
+try 
+{
+	deal_data = zoho.crm.getRecordById("Deals",Sp_Id);
+	Project_ID = deal_data.get("Project_ID");
+	ZProj_id = deal_data.get("Zoho_Projects_Project_ID");
+	// 	TransitionsIDs = deal_data.get("Blueprint_Transitions_IDs").toMap();
+	CheckTransitionsIDs = ifnull(deal_data.get("Blueprint_Transitions_IDs"),"");
+	if(ZProj_id != null)
+	{
+		/////////////// Marking project as Cancelled and Arching the project ///////////////////////----
+		webhookResp = invokeurl
+		[
+			url :"https://flow.zoho.com/666479262/flow/webhook/incoming?zapikey=1001.de27ae9f1825540d9ffad1798fceb1b8.464815f5b66d53a6bca55b52f9a4b6f3&isdebug=false"
+			type :POST
+			parameters:{"Project_ID":ZProj_id}
+		];
+		info webhookResp;
+		/////////////// Marking project as Cancelled and Arching the project ///////////////////////----
+		// 		update_map = Map();
+		// 		update_map.put("status","archived");
+		// 		update_map.put("custom_status","1264527000001694005");
+		// 		info update_map;
+		// 		resp = invokeurl
+		// 		[
+		// 			url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProj_id + "/"
+		// 			type :POST
+		// 			parameters:update_map
+		// 			connection:"zohoprojectcall"
+		// 		];
+		// 		info "Archived Project: " + resp;
+		//////////////// Creating New project from the workflow --------------------------------------------------------
+		Deal_name = deal_data.get("Deal_Name");
+		Bid_Deal = deal_data.get("Bid_Project");
+		workflow_id = deal_data.get("Workflow").get("id");
+		work_setup = zoho.crm.getRecordById("Workflow_Setup",workflow_id);
+		Selected_template = work_setup.get("Template_ID");
+		info "Template ID: " + Selected_template;
+		if(Selected_template != null)
+		{
+			name_P_ID = deal_data.get("Project_ID").toString();
+			customer = deal_data.get("Account_Name");
+			if(customer != null)
+			{
+				name_customer = customer.get("name");
+				location = deal_data.get("Service_Locations");
+				if(location != null)
+				{
+					location_name = location.get("name");
+					street_address = location_name.getPrefix(",");
+					if(street_address != null)
+					{
+						if(street_address.len() > 50)
+						{
+							street_address = street_address.subString(0,50);
+						}
+					}
+					else
+					{
+						if(location_name.len() > 50)
+						{
+							street_address = location_name.subString(0,50);
+						}
+						else
+						{
+							street_address = location_name;
+						}
+					}
+				}
+				else
+				{
+					street_address = "";
+				}
+				////////////////////////////////////////////////////////////
+				if(name_customer.len() > 20)
+				{
+					name_customer = name_customer.subString(0,20);
+				}
+				///////////////////////////////////////////////////////////////////
+				if(Bid_Deal == true)
+				{
+					project_name = Deal_name;
+					if(project_name.len() > 100)
+					{
+						project_name = project_name.subString(0,99);
+					}
+					else
+					{
+						project_name = project_name;
+					}
+				}
+				else
+				{
+					project_name = name_customer + " / " + street_address + " / " + name_P_ID;
+				}
+				info project_name;
+				Projet_manager = zoho.crm.getRecordById("users",deal_data.get("Owner").get("id")).get("users").toMap().get("zuid");
+				Production_Manager_id = deal_data.get("Production_Manager");
+				if(Production_Manager_id != null)
+				{
+					Production_Manager_i = Production_Manager_id.get("id");
+					Production_Manager = zoho.crm.getRecordById("users",Production_Manager_i).get("users").toMap().get("zuid");
+				}
+				sales_Rep_id = deal_data.get("Lead_Owner");
+				if(sales_Rep_id != null)
+				{
+					sales_Rep_id_i = sales_Rep_id.get("id");
+					sales_Rep = zoho.crm.getRecordById("users",sales_Rep_id_i).get("users").toMap().get("zuid");
+				}
+				info "project manager : " + Projet_manager;
+				info "prod manager : " + Production_Manager;
+				info "sales rep : " + sales_Rep;
+				proj_map = Map();
+				// ---------------------------------------------  Project Fields
+				proj_map.put("name",project_name);
+				proj_map.put("owner",Projet_manager);
+				proj_map.put("description",deal_data.get("Description"));
+				proj_map.put("show_project_overview","yes");
+				proj_map.put("template_id",Selected_template);
+				proj_map.put("entityId",Sp_Id);
+				proj_map.put("start_date",deal_data.get("Created_Time").toDate().toString("MM-dd-yyyy"));
+				if(deal_data.get("Closing_Date") == null)
+				{
+					info "Closing Date is Empty";
+				}
+				else
+				{
+					dt = deal_data.get("Closing_Date");
+					dt1 = dt.toString("MM-dd-yyyy");
+					proj_map.put("end_date",dt1);
+				}
+				// ------------------------------------------- Custom Fields ---------
+				proj_map.put("UDF_CHAR1",Sp_Id);
+				proj_map.put("UDF_USER2",Production_Manager);
+				proj_map.put("UDF_USER4",Projet_manager);
+				proj_map.put("UDF_USER3",sales_Rep);
+				proj_map.put("UDF_CHAR3",deal_data.get("Project_ID"));
+				//------------------------------------------Create Project------------------------------------
+				info "Project map : " + proj_map;
+				resp = invokeurl
+				[
+					url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/"
+					type :POST
+					parameters:proj_map
+					connection:"zohoprojectcall"
+				];
+				info "New project Created: " + resp;
+				//info resp.get("projects").get("id");
+				// --------------------------------------    -------------------------
+				Created_Project_data = resp.get("projects").toMap();
+				ZProj_id = Created_Project_data.get("id_string");
+				info "Zoho Project ID: " + ZProj_id;
+				//--------------------------------------- Get Customer details
+				customer_id = deal_data.get("Account_Name").get("id");
+				customer_data = zoho.crm.getRecordById("Accounts",customer_id);
+				info "Client ID: " + customer_data.get("zp_client_id");
+				if(customer_data.get("zp_client_id") == null)
+				{
+					//----------------------------------- Create a Client Company
+					param_Clint_Update = Map();
+					param_Clint_Update.put("name",deal_data.get("Account_Name").get("name"));
+					get_client_Update = invokeurl
+					[
+						url :"https://projectsapi.zoho.com/restapi/portal/666337121/clients/"
+						type :POST
+						parameters:param_Clint_Update
+						connection:"zohoprojectcall"
+					];
+					client_id = get_client_Update.get("clients").get(0).get("id");
+					////////////////// Updating ZP Client ID in CRM ////////////////////
+					update_account_map = Map();
+					update_account_map.put("zp_client_id",client_id.tostring());
+					update_account_resp = zoho.crm.updateRecord("Accounts",customer_id,update_account_map);
+				}
+				else
+				{
+					client_id = customer_data.get("zp_client_id");
+				}
+				/////////////////////////////////------- Add Client Company to Project
+				param_Clint_Update = Map();
+				param_Clint_Update.put("company_id",client_id);
+				param_Clint_Update.put("primary_client","yes");
+				get_client_Update = invokeurl
+				[
+					url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProj_id + "/clients/"
+					type :POST
+					parameters:param_Clint_Update
+					connection:"zohoprojectcall"
+				];
+				//info "Link  client company with Project" + get_client_Update;
+				// ---------------------------------------------- Link Project To Deals -----------
+				mp = Map();
+				mp.put("name",project_name);
+				datalist = List();
+				datalist.add(mp);
+				datamp = Map();
+				datamp.put("data",datalist);
+				resp = invokeurl
+				[
+					url :"https://www.zohoapis.com/crm/v2/Potentials/" + Sp_Id + "/Zoho_Projects/" + ZProj_id
+					type :POST
+					parameters:datamp.toString()
+					connection:"zohoprojectcall"
+				];
+				//info "Link Deal and ZProject" + resp;
+				// ------------------------------------------------------------------------------------------
+				update_map = Map();
+				update_map.put("owner",Projet_manager);
+				update_map.put("owner_id",Projet_manager);
+				Update_resp = invokeurl
+				[
+					url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProj_id + "/"
+					type :POST
+					parameters:update_map
+					connection:"zohoprojectcall"
+				];
+				//info "Update project " + Update_resp;
+				// --------------------------------------    -------------------------
+				// 	// info resp.get("data").get(0).get(1).get("id");
+				update_crm_project = Map();
+				update_crm_project.put("Zoho_Projects_Project_ID",ZProj_id);
+				update_crm_project.put("Estimated_Due_Date","");
+				update_crm_project.put("Task_Owner_Assignment",false);
+				update_crm_project.put("Task_Assignment_Done",false);
+				update_crm_project.put("Tasks_Map","");
+				update_crm_project.put("ZP_Main_Tasks","");
+				update_crm_project.put("ZP_Sub_Tasks","");
+				update_crm_project.put("ZP_ALL_Tasks","");
+				//update_crm_project.put("Stage","Pre-Production");
+				resp = zoho.crm.updateRecord("Deals",Sp_Id,update_crm_project);
+				info resp;
+				///////////////////////// Updating transition /////////////////////
+				if(CheckTransitionsIDs != "")
+				{
+					TransitionsIDs = deal_data.get("Blueprint_Transitions_IDs").toMap();
+					info zoho.crm.updateRecord("Deals",Sp_Id,{"Disable_Transition":false});
+					dataMap = Map();
+					blueprint1 = Map();
+					blueprint1.put("transition_id",TransitionsIDs.get("Pre-Production"));
+					blueprint1.put("data",dataMap);
+					blueprintList = List();
+					blueprintList.add(blueprint1);
+					param = Map();
+					param.put("blueprint",blueprintList);
+					response = invokeurl
+					[
+						url :"https://www.zohoapis.com/crm/v2/deals/" + Sp_Id + "/actions/blueprint"
+						type :PUT
+						parameters:param.toString()
+						connection:"zoho_crm"
+					];
+					info response;
+				}
+				else
+				{
+					sendmail
+					[
+						from :zoho.adminuserid
+						to :"erp@blinksigns.com"
+						subject :"Archive And Create New Project In Zoho Projects / CRM"
+						message :"ID: " + Sp_Id + " Root Cause: Function executed successfully but the Transition IDs are missing.\n IDs: " + CheckTransitionsIDs
+					]
+				}
+			}
+			//////////////////////////////////////// if customer is null /////////////////////////////////////////
+			else
+			{
+				Subj = "Project ID: " + Project_ID + " Customer is not assigned to the Projects";
+				Email_Message = "Team, <br><br>The workflow on your Sign Project ID: " + Project_ID + " does not have a customer assigned to it, hence the Project is not created on Zoho Projects. <br>Please assign a customer to the project and use the RESET button on you Sign Project.<br><br>Project Link: <a href=\"https://crm.zoho.com/crm/org666155072/tab/Potentials/" + Sp_Id + "\">Link</a><br><br>Please wait for few mintues so all the tasks are created against your project. After confirmation, you may close this ticket.<br><br>Thank You!";
+				//////////////////////////////// Create Ticket on Zoho Desk /////////////////////////////////////////////////////
+				mp = Map();
+				mp.put("departmentId",274337000002252223);
+				mp.put("contactId",274337000002270007);
+				mp.put("channel","Email");
+				mp.put("priority","High");
+				mp.put("classification","Problem");
+				mp.put("subject",Subj);
+				mp.put("description",Email_Message);
+				Data = zoho.desk.create("666335187","Tickets",mp);
+			}
+		}
+		else
+		{
+			Subj = "Project ID: " + Project_ID + " Workflow does not have a template on Zoho Projects";
+			Email_Message = "Team, <br><br>The workflow on your Sign Project ID: " + Project_ID + " does not have a template created on Zoho Porjects hence the Project is not created on Zoho Projects. <br>Please contact your supervisor to either create a template on Zoho project for the selected workflow and then use the RESET button on you Sign Project.<br><br>Project Link: <a href=\"https://crm.zoho.com/crm/org666155072/tab/Potentials/" + Sp_Id + "\">Link</a><br><br>Please wait for few mintues so all the tasks are created against your project. After confirmation, you may close this ticket.<br><br>Thank You!";
+			//////////////////////////////// Create Ticket on Zoho Desk /////////////////////////////////////////////////////
+			mp = Map();
+			mp.put("departmentId",274337000002252223);
+			mp.put("contactId",274337000002270007);
+			mp.put("channel","Email");
+			mp.put("priority","High");
+			mp.put("classification","Problem");
+			mp.put("subject",Subj);
+			mp.put("description",Email_Message);
+			Data = zoho.desk.create("666335187","Tickets",mp);
+		}
+	}
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Archive And Create New Project In Zoho Projects / CRM"
+		message :"ID: " + Sp_Id + " Root Cause: " + e
+	]
+}

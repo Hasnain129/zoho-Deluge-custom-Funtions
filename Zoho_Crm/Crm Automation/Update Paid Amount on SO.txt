@@ -1,0 +1,49 @@
+try 
+{
+	retainer_detail = zoho.crm.getRecordById("Down_Payment_Invoices",Ret_id);
+	SO_id = retainer_detail.get("Sales_Order").get("id");
+	Retainer_details = zoho.crm.getRelatedRecords("Retainer_Invoice","Sales_Orders",SO_id);
+	Total = 0;
+	if(!Retainer_details.isEmpty())
+	{
+		for each  data in Retainer_details
+		{
+			if(data.get("Paid") == "Paid")
+			{
+				Total_amount = ifnull(data.get("Down_Payment_Amount"),0);
+				Total = Total + Total_amount;
+			}
+		}
+		////////////////////////////////////////////////////////////////////
+		SO_data = zoho.crm.getRecordById("Sales_Orders",SO_id);
+		INvoice_id = SO_data.get("Invoice_ID");
+		/////////////////////////////////////////////////////////////////////////
+		Paid_amt = 0;
+		if(INvoice_id != null)
+		{
+			invoice_data = zoho.books.getRecordsByID("invoices","666479573",INvoice_id);
+			Inv_Total = invoice_data.geT("invoice").get("total");
+			balance = invoice_data.geT("invoice").get("balance");
+			Paid_amt = Inv_Total - balance;
+		}
+		if(Paid_amt > Total)
+		{
+			Total = Paid_amt;
+		}
+		info Total;
+		mp = Map();
+		mp.put("Paid_Retainer_Amount",Total.round(2));
+		update = zoho.crm.updateRecord("Sales_Orders",SO_id,mp,{"trigger":{"workflow"}});
+		info update;
+	}
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :" Update Paid Amount on SO / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000050720871\" >Workflow</a>  " + "ID: " + Ret_id + " Root Cause: " + e
+	]
+}

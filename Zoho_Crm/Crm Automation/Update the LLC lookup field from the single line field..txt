@@ -1,0 +1,29 @@
+try 
+{
+	wrec = zoho.crm.searchRecords("Landlord_Criteria_Form","((Name:equals:" + newvalue + "))");
+	for each  w in wrec
+	{
+		wid = ifnull(w.get("id"),"");
+	}
+	LLC = zoho.crm.getRecordById("Landlord_Criteria_Form",wid);
+	owner = LLC.get("Owner");
+	mp = Map();
+	mp.put("Owner",owner);
+	mp.put("Landlord_Criteria",wid);
+	update = zoho.crm.updateRecord("Landlord_Criteria_Request",LLR_id,mp,{"trigger":{"workflow"}});
+	//---------------------------------------
+	// Update Response field on Landlord Criteria Module
+	mp2 = Map();
+	mp2.put("Status","Response Received");
+	llcriteria_update = zoho.crm.updateRecord("Landlord_Criteria_Form",wid,mp2,{"trigger":{"workflow"}});
+	info llcriteria_update;
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update the LLC lookup field from the single line field. / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000006923381\" >Workflow</a>  " + "ID: " + LLR_id + " Root Cause: " + e
+	]
+}

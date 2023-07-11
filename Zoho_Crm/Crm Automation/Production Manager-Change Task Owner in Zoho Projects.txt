@@ -1,0 +1,275 @@
+try 
+{
+	deal_data = zoho.crm.getRecordById("Deals",Sp_Id);
+	//info deal_data;
+	Project_ID = deal_data.get("Project_ID");
+	ZProj_id = deal_data.get("Zoho_Projects_Project_ID");
+	Task_Assg_Done = deal_data.get("Task_Assignment_Done");
+	if(ZProj_id != null)
+	{
+		////////////////////////////////////Getting Production Manager Data /////////////////////////////////////////
+		Production_Manager_id = deal_data.get("Production_Manager");
+		if(Production_Manager_id != null)
+		{
+			Production_Manager = Production_Manager_id.get("id");
+			Production_Manger_name = Production_Manager_id.get("name");
+			info "prod name : " + Production_Manger_name;
+			Production_Manger_zoho_id = zoho.crm.getRecordById("users",Production_Manager).get("users").toMap().get("zuid");
+			//////////////////////////////////// Getting Zoho Projects Users details ///////////////////////
+			user_info = invokeurl
+			[
+				url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProj_id + "/users/"
+				type :Get
+				connection:"zohoprojectcall"
+			];
+			///////////////////////////////////////////
+			Production_Manger_Id = null;
+			say = user_info.toMap().get("users");
+			for each  data in say
+			{
+				data = data.toMap();
+				if(data.get("id") == Production_Manger_zoho_id)
+				{
+					Production_Manger_Id = data.get("id");
+				}
+			}
+		}
+		else
+		{
+			Production_Manger_Id = null;
+		}
+		info Production_Manger_Id;
+		////////////////// Updating Production manager on Overview of Zoho Project //////////
+		if(Production_Manger_Id == null)
+		{
+			Production_Manger = "";
+		}
+		else
+		{
+			Production_Manger = Production_Manger_Id;
+		}
+		update_proj_map = Map();
+		update_proj_map.put("UDF_USER2",Production_Manger);
+		update_proj_resp = invokeurl
+		[
+			url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProj_id + "/"
+			type :POST
+			parameters:update_proj_map
+			connection:"zohoprojectcall"
+		];
+		//info update_proj_resp;
+		////////////////////////////////////// Getting Tasks ///////////////////////////////////////////////////////////////////
+		if(Task_Assg_Done == true)
+		{
+			// 			getmap = Map();
+			// 			getmap.put("flag","internal");
+			// 			All_Tasks_list = invokeurl
+			// 			[
+			// 				url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProj_id + "/tasklists/"
+			// 				type :GET
+			// 				parameters:getmap
+			// 				connection:"zohoprojectcall"
+			// 			];
+			// 			info All_Tasks_list;
+			// 			tasks_list_id = All_Tasks_list.get("tasklists").get(0).get("id_string");
+			// 			// info tasks_list_id;
+			// 			pram_map = Map();
+			// 			pram_map.put("range",200);
+			// 			All_Tasks_resp = invokeurl
+			// 			[
+			// 				url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProj_id + "/tasklists/" + tasks_list_id + "/tasks/"
+			// 				type :GET
+			// 				parameters:pram_map
+			// 				connection:"zohoprojectcall"
+			// 			];
+			// 			// info All_Tasks_resp; 
+			// 			All_tasks_live = All_Tasks_resp.get("tasks");
+			//////////////////////////////////// Getting all incomplete tasks///////////////////////////////////
+			getmap = Map();
+			getmap.put("status","notcompleted");
+			All_Tasks_resp = invokeurl
+			[
+				url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProj_id + "/tasks/"
+				type :GET
+				parameters:getmap
+				connection:"zohoprojectcall"
+			];
+			All_tasks_live = All_Tasks_resp.get("tasks");
+			// 			info All_tasks_live;
+			////////////////////////////////// Creating Tickets if Managers are not added on zoho projects ////////////////////////////
+			if(Production_Manger_Id == null && Production_Manger_name != null)
+			{
+				Subj = "Project ID: " + Project_ID + ", Production Manager not added under Zoho Project Users";
+				Email_Message = "Team, <br><br>" + Production_Manger_name + " is not currently added under your Zoho project. Hence Tasks cannot be assigned to the production manager. <br>Please open the related Zoho project and add the user under that specific project. After adding the user, please update the production manager again from your Sign Project on you CRM.<br><br>Project Link: <a href=\"https://crm.zoho.com/crm/org666155072/tab/Potentials/" + Sp_Id + "\">Link</a><br><br>Please wait for few mintues. After confirmation, you may close this ticket.<br><br>Thank You!";
+				//////////////////////////////// Create Ticket on Zoho Desk /////////////////////////////////////////////////////
+				mp = Map();
+				mp.put("departmentId",274337000002252223);
+				mp.put("contactId",274337000002270007);
+				mp.put("channel","Email");
+				mp.put("priority","High");
+				mp.put("classification","Problem");
+				mp.put("subject",Subj);
+				mp.put("description",Email_Message);
+				Data = zoho.desk.create("666335187","Tickets",mp);
+			}
+			else
+			{
+				All_Tasks = deal_data.get("ZP_ALL_Tasks");
+				Error_list = List();
+				for each  Tasks in All_tasks_live
+				{
+					main_id = Tasks.get("id");
+					Live_status = Tasks.get("status").get("name");
+					if(Live_status == "Completed" || Live_status == "Cancelled")
+					{
+					}
+					else
+					{
+						//info Live_status;
+						for each  main_task in All_Tasks
+						{
+							Task_id = main_task.get("Task_id");
+							if(main_id == Task_id)
+							{
+								Owner_role = main_task.get("Owner_Role");
+								if(Owner_role == "Production Management")
+								{
+									if(Production_Manger_Id == "666154080" || Production_Manger_Id = 0)
+									{
+										update_task_map = Map();
+										update_task_map.put("person_responsible",0);
+										Update_detail = zoho.projects.update("666337121",ZProj_id,"Tasks",Task_id,update_task_map);
+										//info Update_detail;	
+										////////////////////////////////////////////// Checking for error on Update ///////////////////////////////
+										Tasks_updateerror = Update_detail.get("error");
+										if(Tasks_updateerror != null)
+										{
+											Error_Message = Tasks_updateerror.get("title");
+											Error_list.add(Error_Message);
+										}
+										///////////////////////////////////////////////////////////////////////////////////////////////////////////
+									}
+									else
+									{
+										update_task_map = Map();
+										update_task_map.put("person_responsible",Production_Manger_Id);
+										Update_detail = zoho.projects.update("666337121",ZProj_id,"Tasks",Task_id,update_task_map);
+										//info "Main update:" + Update_detail;
+										////////////////////////////////////////////// Checking for error on Update ///////////////////////////////
+										Tasks_updateerror = Update_detail.get("error");
+										if(Tasks_updateerror != null)
+										{
+											Error_Message = Tasks_updateerror.get("title");
+											Error_list.add(Error_Message);
+										}
+										///////////////////////////////////////////////////////////////////////////////////////////////////////////
+									}
+								}
+							}
+						}
+						///////////////////////////////// Assignment for subtasks ////////////////////////////////////////////
+						subtasks = Tasks.get("subtasks");
+						This_Task_id = Tasks.get("id");
+						if(subtasks)
+						{
+							info "subtask exist";
+							sub_task_info = invokeurl
+							[
+								url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProj_id + "/tasks/" + This_Task_id + "/subtasks/"
+								type :Get
+								connection:"zohoprojectcall"
+							];
+							// 		info sub_task_info;
+							sub_Tasks = sub_task_info.get("tasks");
+							for each  Sub_task in sub_Tasks
+							{
+								Sub_Task_role = "";
+								Subtask_HL_reproting = "";
+								Subtask_Status = "";
+								subTaskId = Sub_task.get("id");
+								info "SubTask ID: " + subTaskId;
+								//SubTaskList.add(subTaskId);
+								task_custom_flds = Sub_task.get("custom_fields");
+								Subtask_Status = Sub_task.get("status").get("name");
+								///////////////////////////////////////////////////////
+								for each  custm_fld in task_custom_flds
+								{
+									if(custm_fld.get("label_name") == "Owner Role")
+									{
+										Sub_Task_role = custm_fld.get("value");
+										info "Sub_Task_role : " + Sub_Task_role;
+									}
+									if(custm_fld.get("label_name") == "High Level Reporting Category")
+									{
+										Subtask_HL_reproting = custm_fld.get("value");
+										info "Subtask_HL_reproting : " + Subtask_HL_reproting;
+									}
+								}
+								/////////////////////////////////////////////////////
+								Perosn_Rep_ID = null;
+								if(Sub_Task_role == "Production Management")
+								{
+									Perosn_Rep_ID = Production_Manger_zoho_id;
+								}
+								//////////////////////////////////////////////////////////////////////////////////////////
+								if(Perosn_Rep_ID == null || Perosn_Rep_ID == "666154080")
+								{
+									//	Info "Owner is: " + Perosn_Rep_ID;
+								}
+								else
+								{
+									/////////////////////////////////////////////////////////////////////////////
+									Sub_Task_update_map = Map();
+									Sub_Task_update_map.put("person_responsible",Perosn_Rep_ID);
+									// 												info "person resp id : " + Perosn_Rep_ID + "subTask Id : " + subTaskId + "Sub_Task_update_map : " + Sub_Task_update_map ;
+									subtask = zoho.projects.update("666337121",ZProj_id,"Tasks",subTaskId,Sub_Task_update_map);
+									info "Updated sub task " + subtask;
+									////////////////////////////////////////////// Checking for error on Update ///////////////////////////////
+									sub_Tasks_updateerror = subtask.get("error");
+									//info sub_Tasks_updateerror;
+									if(sub_Tasks_updateerror != null)
+									{
+										Error_Message = sub_Tasks_updateerror.get("title");
+										Error_list.add(Error_Message);
+									}
+								}
+							}
+						}
+						/////////////////////////////////////////////////////////////////////////////////////////////////////
+					}
+				}
+				/////////////////////////////Creating Ticking if API limit is exceeded on Updating of Tasks //////////////////////////////////////
+				//info Error_list.distinct();
+				if(Error_list.distinct().size() != 0)
+				{
+					for each  error in Error_list.distinct()
+					{
+						Subj_error = "Project ID: " + Project_ID + " API Limit Exceeded";
+						Email_Message = "Team, <br><br>Zoho Projects API Limit call has exceeded for your Sign Project ID: " + Project_ID + ". <br>Production Manager Task Assignment Action has not been executed. Please wait for 30 mins and re-update your Prodcution Manager on your Sign Project.<br><br>Project Link: <a href=\"https://crm.zoho.com/crm/org666155072/tab/Potentials/" + Sp_Id + "\">Link</a><br><br>Thank You!";
+						mp = Map();
+						mp.put("departmentId",274337000002252223);
+						mp.put("contactId",274337000002270007);
+						mp.put("channel","Email");
+						mp.put("priority","High");
+						mp.put("classification","Problem");
+						mp.put("subject",Subj_error);
+						mp.put("description",Email_Message);
+						Data = zoho.desk.create("666335187","Tickets",mp);
+					}
+				}
+			}
+			////////////////////////////////////////////////////////////////////////
+		}
+	}
+}
+catch (e)
+{
+	info e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"N- Prod Manager update on Task - Zoho Projects/ Sign Projects/ Workflow / CRM"
+		message :"ID: " + Sp_Id + " Root Cause: " + e
+	]
+}

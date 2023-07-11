@@ -1,0 +1,175 @@
+try 
+{
+	info "Sign Project ID: " + Sp_Id;
+	Sign_Project_obj = zoho.crm.getRecordById("Deals",Sp_Id);
+	ZProject_ID = Sign_Project_obj.get("Zoho_Projects_Project_ID");
+	////////////////////// Check All invoice and SO amount are equal to each other /////////////////////
+	Update_Status = Map();
+	Update_Paid_Date = Map();
+	Production_count = 0;
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////
+	SO_Total = 0;
+	SO_obj = zoho.crm.getRelatedRecords("SalesOrders","Deals",Sp_Id);
+	for each  SOs in SO_obj
+	{
+		if(SOs.get("Status") != "Cancelled")
+		{
+			SO_Total = SO_Total + SOs.get("Grand_Total");
+		}
+	}
+	/////////////////////////////////////// Invoices Total /////////////////////////////////////
+	INV_Total = 0;
+	Paid_INV_Total = 0;
+	searchParam = {"zcrm_potential_id":Sp_Id};
+	BooksInvoices = zoho.books.getRecords("invoices","666479573",searchParam);
+	All_Books_Invoice = BooksInvoices.get("invoices");
+	for each  Invoice in All_Books_Invoice
+	{
+		if(Invoice.get("status") != "void")
+		{
+			INV_Total = INV_Total + Invoice.get("total");
+			if(Invoice.get("status") == "paid")
+			{
+				Paid_INV_Total = Paid_INV_Total + Invoice.get("total");
+			}
+		}
+	}
+	////////////////////// Check All PO's and Bills amount are equal to each other /////////////////////
+	PO_totals = 0;
+	Bills_totals = 0;
+	Paid_Bills = 0;
+	PO_Obj = zoho.crm.getRelatedRecords("Purchase_Orders","Deals",Sp_Id);
+	for each  PO_data in PO_Obj
+	{
+		if(PO_data.get("Status") != "Draft" && PO_data.get("Status") != "Rejected" && PO_data.get("Status") != "Voided")
+		{
+			PO_totals = PO_totals + PO_data.get("Grand_Total");
+			Bills = zoho.crm.getRelatedRecords("Bills","Purchase_Orders",PO_data.get("id"));
+			for each  Bill in Bills
+			{
+				Bill_id = Bill.get("Books_Bill_ID");
+				Books_bill = zoho.books.getRecordsByID("bills","666479573",Bill_id);
+				//info "books bills" + Books_bill;
+				if(Books_bill != null)
+				{
+					if(Books_bill.get("bill").get("status") == "paid")
+					{
+						Paid_Bills = Paid_Bills + Books_bill.get("bill").get("total");
+					}
+					if(Books_bill.get("bill").get("status") != "void" && Books_bill.get("bill").get("status") != "draft")
+					{
+						Bills_totals = Bills_totals + Books_bill.get("bill").get("total");
+					}
+				}
+			}
+		}
+	}
+	info "SO Total: " + SO_Total.round(2);
+	info "Invoice Total: " + INV_Total.round(2);
+	info "Paid Invoice Total: " + Paid_INV_Total.round(2);
+	info "PO Total: " + PO_totals.round(2);
+	info "Bills Total: " + Bills_totals.round(2);
+	info "Paid Bills: " + Paid_Bills.round(2);
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	if((SO_Total.round(2) - INV_Total.round(2) == 0 || SO_Total.round(2) - INV_Total.round(2) < 0.1 || INV_Total.round(2) - SO_Total.round(2) < 0.1 || SO_obj.size() == 0) && INV_Total.round(2) != Paid_INV_Total.round(2) && (PO_totals.round(2) == Bills_totals.round(2) || PO_Obj.size() == 0))
+	{
+		info "Yes 1";
+		Status = "Completed";
+		if(SO_obj.size() != 0)
+		{
+			for each  SO in SO_obj
+			{
+				if(SO.get("Status") != "Cancelled")
+				{
+					SO_Mp = Map();
+					SO_Mp.put("Status","Completed");
+					zoho.crm.updateRecord("Sales_Orders",SO.get("id"),SO_Mp,{"trigger":{"workflow"}});
+				}
+			}
+		}
+	}
+	//////////////////////////////////////////////////////////////////////
+	else if(SO_Total != 0 && (SO_Total.round(2) - INV_Total.round(2) == 0 || (SO_Total.round(2) - INV_Total.round(2)).abs() < 0.1 || (INV_Total.round(2) - SO_Total.round(2)).abs() < 0.1) && (PO_totals.round(2) == Bills_totals.round(2) || PO_Obj.size() == 0) && INV_Total.round(2) == Paid_INV_Total.round(2))
+	{
+		Status = "Invoices Paid";
+		if(Sign_Project_obj.get("Fully_Paid_Date") == null)
+		{
+			Fully_Paid_Date = today;
+		}
+	}
+	//////////////////////////////////////////////////////////////////
+	else
+	{
+		info "Yes 3";
+		Fully_Paid_Date = "";
+		Status = "Active";
+		//Update_Status.put("Stage","");
+	}
+	/////////////////////////////////////////////////////////////////////////////////
+	// 		Update = Map();
+	// 		Update.put("Fully_Paid_Date",Fully_Paid_Date);
+	// 		//Update.put("Status",Status);
+	// 		Deal_Update = zoho.crm.updateRecord("Deals",Sp_Id.toLong(),Update,{"trigger":{"workflow"}});
+	///////////////// Update stage from status ////////////////////////////////
+	info Status;
+	Update_Stage = Map();
+	if(Status == "Completed")
+	{
+		Update_Stage.put("Fully_Paid_Date",Fully_Paid_Date);
+		Update_Stage.put("Stage","Project Completed");
+	}
+	// 	else if(Update_Status.get("Status") == "On-Hold")
+	else if(Status == "Invoices Paid")
+	{
+		Update_Stage.put("Fully_Paid_Date",Fully_Paid_Date);
+		Update_Stage.put("Stage","Fully Paid");
+	}
+	update_stag = zoho.crm.updateRecord("Deals",Sp_Id,Update_Stage,{"trigger":{"workflow"}});
+	/////////////////////////// Updating Project Status on Zoho Projects ////////////////
+	Proj_details = zoho.crm.getRecordById("Deals",Sp_Id);
+	Project_ID = Proj_details.get("Project_ID");
+	ZProject_ID = Proj_details.get("Zoho_Projects_Project_ID");
+	Stage = Proj_details.get("Stage");
+	info "Project Stage: " + Stage;
+	//////////////////////////////////////////////////////////////////////
+	if(ZProject_ID != null && (Stage == "Fully Paid" || Stage == "Project Completed"))
+	{
+		update_map = Map();
+		update_map.put("custom_status","1264527000000212116");
+		resp = invokeurl
+		[
+			url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProject_ID + "/"
+			type :POST
+			parameters:update_map
+			connection:"zohoprojectcall"
+		];
+		//info resp;
+	}
+	///////////////////////////////////// Marking Sales Orders as Completed ////////////////////////////////////////////////
+	if(Stage == "Fully Paid" || Stage == "Project Completed")
+	{
+		SO_related_proj = zoho.crm.getRelatedRecords("SalesOrders","Deals",Sp_Id);
+		//info SO_related_proj;
+		for each  data in SO_related_proj
+		{
+			SO_id = data.get("id");
+			if(data.get("Status") == "Active")
+			{
+				mp = Map();
+				mp.put("Status","Completed");
+				update_SO = zoho.crm.updateRecord("Sales_Orders",SO_id,mp);
+				info update_SO;
+			}
+		}
+	}
+	////////////////////////////////////////////////////////////////////////////////////////////////////////
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.loginuserid
+		to :"erp@blinksigns.com"
+		subject :"N_Project_Stage_selection / CRM"
+		message :"Sign Project ID: " + Sp_Id + " Root Cause: " + e + "  Line Number 40:" + PO_Obj
+	]
+}

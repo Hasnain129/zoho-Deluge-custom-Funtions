@@ -1,0 +1,98 @@
+try 
+{
+	Sign_Pro_Obj = zoho.crm.getRecordById("Deals",Sign_Pro_id);
+	if(Sign_Pro_Obj.get("Lead_Owner") != null)
+	{
+		if(Sign_Pro_Obj.get("Commission_Paid_Date") == "" || Sign_Pro_Obj.get("Commission_Paid_Date") == null)
+		{
+			if(Sign_Pro_Obj.get("Lead_Owner").get("name") != "Blink Signs" && Sign_Pro_Obj.get("Sales_Rep_Commission") == null)
+			{
+				Sale_Rep_Obj = zoho.crm.getRecordById("users",Sign_Pro_Obj.get("Lead_Owner").get("id").toLong());
+				for each  user in Sale_Rep_Obj.get("users")
+				{
+					Commission = user.get("Commission");
+				}
+				if(Commission != null)
+				{
+					Mp = Map();
+					Mp.put("Sales_Rep_Commission",Commission);
+					res = zoho.crm.updateRecord("Deals",Sign_Pro_id,Mp);
+				}
+				else
+				{
+					Mp = Map();
+					Mp.put("Sales_Rep_Commission",0);
+					res = zoho.crm.updateRecord("Deals",Sign_Pro_id,Mp);
+				}
+			}
+		}
+		//////////////////////// Calculate Sales Rep Commission //////////////////////////////////////////
+		Sign_Pro_Obj = zoho.crm.getRecordById("Deals",Sign_Pro_id);
+		if(Sign_Pro_Obj.get("Commission_Paid_Date") == "" || Sign_Pro_Obj.get("Commission_Paid_Date") == null)
+		{
+			Bills_totals = 0;
+			PO_Obj = zoho.crm.getRelatedRecords("Purchase_Orders","Deals",Sign_Pro_id);
+			if(PO_Obj.size() > 0)
+			{
+				for each  PO_data in PO_Obj
+				{
+					if(PO_data.get("Status") != "Draft" && PO_data.get("Status") != "Rejected" && PO_data.get("Status") != "Voided")
+					{
+						Bills = zoho.crm.getRelatedRecords("Bills","Purchase_Orders",PO_data.get("id"));
+						if(Bills.size() > 0)
+						{
+							for each  Bill in Bills
+							{
+								Books_bill = getUrl("https://books.zoho.com/api/v3/bills?organization_id=666479573&authtoken=af908161b079b35a056e260f5142b0a7&bill_number=" + Bill.get("Name") + "");
+								if(Books_bill.get("bills").size() > 0)
+								{
+									for each  data in Books_bill.get("bills")
+									{
+										if(data.get("status") != "void" && data.get("status") != "draft")
+										{
+											Bills_totals = Bills_totals + data.get("total");
+											info Bills_totals;
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			if(Sign_Pro_Obj.get("Paid_Invoices_Total") > 0 && Bills_totals > 0)
+			{
+				Gross_Profit = Sign_Pro_Obj.get("Paid_Invoices_Total").toDecimal() - Bills_totals;
+				Actual_Gross_Margin = (Gross_Profit * 100) / Sign_Pro_Obj.get("Paid_Invoices_Total").toDecimal();
+				if(Commission > 0 && Gross_Profit > 0)
+				{
+					Sale_Rep_Commission = Commission / 100 * Gross_Profit;
+					Mp = Map();
+					Mp.put("Commission",Sale_Rep_Commission.toString());
+					res = zoho.crm.updateRecord("Deals",Sign_Pro_id,Mp);
+				}
+				else
+				{
+					Mp = Map();
+					Mp.put("Commission","0");
+					res = zoho.crm.updateRecord("Deals",Sign_Pro_id,Mp);
+				}
+			}
+			else
+			{
+				Mp = Map();
+				Mp.put("Commission","0");
+				res = zoho.crm.updateRecord("Deals",Sign_Pro_id,Mp);
+			}
+		}
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Sales Rep Commission / CRM / Workflow / Sign Project"
+		message :"ID: " + Sign_Pro_Obj.get("id") + " Root Cause: " + e
+	]
+}

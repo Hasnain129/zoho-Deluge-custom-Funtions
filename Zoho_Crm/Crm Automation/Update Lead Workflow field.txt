@@ -1,0 +1,25 @@
+try 
+{
+	info newvalue;
+	wrec = zoho.crm.searchRecords("Workflow_Setup","((Name:equals:" + newvalue + "))");
+	info wrec;
+	for each  w in wrec
+	{
+		wid = ifnull(w.get("id"),"");
+	}
+	info wid;
+	mp = Map();
+	mp.put("Workflow",wid);
+	update = zoho.crm.updateRecord("Leads",leadid.toLong(),mp);
+	info update;
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update Lead Workflow field / CRM"
+		message :"Lead ID: " + leadid + " Root Cause: " + e
+	]
+}

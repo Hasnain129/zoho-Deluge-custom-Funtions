@@ -1,0 +1,44 @@
+Auth = Map();
+Auth.put("Authorization","552c0259ab984406b9bde0a1ba5658df");
+Designs_obj = zoho.crm.getRecords("Designs",Design_Page);
+for each  data in Designs_obj
+{
+	Notes_Obj = zoho.crm.getRelatedRecords("Notes","Designs",data.get("id"));
+	for each  note in Notes_Obj
+	{
+		Created_Date = note.get("Created_Time").toDateTime("yyyy-MM-dd'T'HH:mm:ss");
+		Days = (zoho.currenttime - Created_Date) / (1000 * 60 * 60 * 24);
+		if(Days.toLong() == 0)
+		{
+			Design_obj = zoho.crm.getRecordById("Designs",note.get("Parent_Id").get("id"));
+			str = "Created by : " + note.get("Created_By").get("name") + "\n";
+			str = str + "Module : Design" + "\n\n";
+			str = str + "Content : " + note.get("Note_Content") + "\n\n";
+			str = str + "Link of record : " + "\n";
+			str = str + "https://crm.zoho.com/crm/org666155072/tab/CustomModule32/" + data.get("id") + "\n";
+			Mp = Map();
+			Mp.put("Note_Title",note.get("Note_Title"));
+			Mp.put("Note_Content",str);
+			Mp2 = Map();
+			Mp2.put("data",Mp.toList());
+			info Mp2;
+			Resp = invokeurl
+			[
+				url :"https://www.zohoapis.com/crm/v2/Deals/" + Design_obj.get("Project").get("id").toLong() + "/Notes"
+				type :POST
+				parameters:Mp2 + ""
+				headers:Auth
+			];
+		}
+	}
+}
+Designs_obj_2 = zoho.crm.getRecords("Designs",Design_Page + 1);
+design = zoho.crm.getRecordById("Designs",Designs_obj_2.get(0).get("id"));
+////////////////////////////Remove Page number from Last Page ////////////////////////////////////////////////////////////////
+Page = Map();
+Page.put("Pages",Design_Page);
+resp = zoho.crm.updateRecord("Designs",Designs_obj_2.get(0).get("id"),Page);
+//////////////////////////////////////////////////////////////////////////////////////////////
+Page = Map();
+Page.put("Pages",Design_Page + 1);
+resp = zoho.crm.updateRecord("Designs",Designs_obj_2.get(0).get("id"),Page);

@@ -1,0 +1,25 @@
+try 
+{
+	designsdetails = zoho.crm.getRecordById("Designs",designid);
+	projectinfo = designsdetails.get("Project");
+	projectid = projectinfo.get("id");
+	projectdetails = zoho.crm.getRecordById("Deals",projectid);
+	servicelocationinfo = projectdetails.get("Service_Locations");
+	if(servicelocationinfo != null)
+	{
+		servicelocationid = servicelocationinfo.get("id");
+		mp = Map();
+		mp.put("Service_Location",servicelocationid);
+		update = zoho.crm.updateRecord("Designs",designid,mp);
+	}
+}
+ catch (e)
+{	info e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :" Update service location field / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000002347537\" >Workflow</a>  " + "ID: " + designid + " Root Cause: " + e + "\nDesign Details:" + designsdetails
+	]
+}

@@ -1,0 +1,55 @@
+try 
+{
+	searchParam = {"zcrm_account_id":Vendor_id};
+	BooksVendor = zoho.books.getRecords("contacts","666479573",searchParam);
+	info BooksVendor;
+	//////////////////////////////// Get Vendor related Contacts List ///////////////////////////////
+	if(BooksVendor.size() > 0)
+	{
+		Contact_list = List();
+		BooksVendor_id = BooksVendor.get("contacts").get(0).get("contact_id");
+		contacts_rel = zoho.crm.getRelatedRecords("Contacts","Vendors",Vendor_id);
+		if(!contacts_rel.isEmpty())
+		{
+			if(contacts_rel.get(0) != null)
+			{
+				if(contacts_rel.get(0).get("message") == null)
+				{
+					for each  j in contacts_rel
+					{
+						searchParam = {"zcrm_contact_id":j.get("id")};
+						BooksContact = zoho.books.getRecords("contacts","666479573",searchParam);
+						//	info BooksContact;
+						if(BooksVendor.size() > 0)
+						{
+							Contact_Persons = Map();
+							Contact_Persons.put("contact_id",BooksVendor_id);
+							//Contact_Persons.put("email",BooksContact.get("contacts").get(0).get("email"));
+							JsonString_2 = Map();
+							JsonString_2.put("JSONString",Contact_Persons);
+							Create_Contact = invokeurl
+							[
+								url :"https://books.zoho.com/api/v3/contacts/contactpersons/" + BooksContact.get("contacts").get(0).get("contact_id") + "?organization_id=666479573"
+								type :PUT
+								parameters:JsonString_2
+								connection:"zoho_books"
+							];
+							info Create_Contact;
+						}
+					}
+				}
+			}
+		}
+	}
+	////////////////////////////////////// Ends ///////////////////////////////////////////////////////
+}
+ catch (e)
+{	info "created";
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update Vendor All Contacts Email / CRM"
+		message :"Module: Vendors, Record ID " + Vendor_id + ", Error: " + e
+	]
+}

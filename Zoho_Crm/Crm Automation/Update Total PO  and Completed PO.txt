@@ -1,0 +1,38 @@
+try 
+{
+	Sales_obj = zoho.crm.getRelatedRecords("Purchase_Orders1","Sales_Orders",Sales_id);
+	total_PO = 0;
+	completed_PO = 0;
+	if(!Sales_obj.isEmpty())
+	{
+		if(Sales_obj.get(0) != null)
+		{
+			if(Sales_obj.get(0).get("message") == null)
+			{
+				for each  data in Sales_obj
+				{
+					PO_obj = zoho.crm.getRecordById("Purchase_Orders",data.get("Purchase_Orders").get("id").toLong());
+					if(PO_obj.get("Status") == "Completed" || PO_obj.get("Status") == "Fully Paid")
+					{
+						completed_PO = completed_PO + 1;
+					}
+					total_PO = total_PO + 1;
+					info "yes";
+				}
+			}
+		}
+		Update_mp = Map();
+		Update_mp.put("No_of_POs",total_PO);
+		Update_mp.put("No_of_POs_Completed",completed_PO);
+		zoho.crm.updateRecord("Sales_Orders",Sales_id,Update_mp);
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :" Update Total PO  and Completed PO / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000011469411\" >Workflow</a>  " + "ID: " + Sales_id + " Root Cause: " + e
+	]
+}

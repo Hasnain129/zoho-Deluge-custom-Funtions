@@ -1,0 +1,99 @@
+try 
+{
+	customerA = zoho.crm.getRecordById("Accounts",cust_id);
+	ParentcustB_id = ifnull(ifnull(customerA.get("Parent_Customer"),"").get("id"),null);
+	if(ParentcustB_id != null)
+	{
+		customerB = zoho.crm.getRecordById("Accounts",ParentcustB_id);
+		if(customerB.get("Type") == "Brands")
+		{
+			Brand_Type = customerB.get("Account_Name");
+		}
+		ParentcustC_id = ifnull(ifnull(customerB.get("Parent_Customer"),"").get("id"),null);
+		ParentcustC_name = ifnull(ifnull(customerB.get("Parent_Customer"),"").get("name"),"");
+		if(ParentcustC_id != null)
+		{
+			CustomerC = zoho.crm.getRecordById("Accounts",ParentcustC_id.toLong());
+			if(CustomerC.get("Type") == "Brands")
+			{
+				Brand_Type = CustomerC.get("Account_Name");
+			}
+			ParentcustD_id = ifnull(ifnull(CustomerC.get("Parent_Customer"),"").get("id"),null);
+			ParentcustD_name = ifnull(ifnull(CustomerC.get("Parent_Customer"),"").get("name"),"");
+			if(ParentcustD_id != null)
+			{
+				CustomerD = zoho.crm.getRecordById("Accounts",ParentcustD_id);
+				if(CustomerD.get("Type") == "Brands")
+				{
+					Brand_Type = CustomerD.get("Account_Name");
+				}
+			}
+		}
+	}
+	info Brand_Type;
+	//-----------------------------------------------
+	// Update customers (Grand Parent and Great grand Parent)
+	mp1 = Map();
+	mp1.put("Grandparent_Customer",ParentcustC_name);
+	mp1.put("Great_Grandparent_Customer",ParentcustD_name);
+	update_customer = zoho.crm.updateRecord("Accounts",cust_id,mp1);
+	//------------------------------------------------------------
+	// Update contacts realted to this customer (Parent, grand parent, and great grand parent)
+	contact_details = zoho.crm.getRelatedRecords("Contacts","Accounts",cust_id);
+	if(!contact_details.isEmpty())
+	{
+		if(contact_details.get(0) != null)
+		{
+			if(contact_details.get(0).get("message") == null)
+			{
+				for each  contact in contact_details
+				{
+					contact_id = contact.get("id");
+					mp2 = Map();
+					if(ParentcustB_id != null)
+					{
+						mp2.put("Parent_Customer",ParentcustB_id.toLong());
+					}
+					mp2.put("Grandparent_Customer",ParentcustC_name);
+					mp2.put("Great_Grandparent_Customer",ParentcustD_name);
+					update_contact = zoho.crm.updateRecord("Contacts",contact_id,mp2);
+				}
+			}
+		}
+	}
+	//------------------------------------------------------------
+	// Update projects realted to this customer (Parent, grand parent, and great grand parent)
+	project_details = zoho.crm.getRelatedRecords("Deals","Accounts",cust_id);
+	if(!project_details.isEmpty())
+	{
+		if(project_details.get(0) != null)
+		{
+			if(project_details.get(0).get("message") == null)
+			{
+				for each  project in project_details
+				{
+					project_id = project.get("id");
+					mp3 = Map();
+					if(ParentcustB_id != null)
+					{
+						mp3.put("Parent_Company",ParentcustB_id.toLong());
+					}
+					mp3.put("Grandparent_Customer",ParentcustC_name);
+					mp3.put("Great_Grandparent_Customer",ParentcustD_name);
+					mp3.put("Brand_Type",Brand_Type);
+					update_project = zoho.crm.updateRecord("Deals",project_id,mp3);
+				}
+			}
+		}
+	}
+}
+ catch (e)
+{	info e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update Parent, Grand Parent and Great Grand parent customers fields / CRM"
+		message :"ID: " + cust_id + " Root Cause: " + e
+	]
+}

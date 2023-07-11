@@ -1,0 +1,32 @@
+try 
+{
+	Lead_obj = zoho.crm.getRelatedRecords("Referrals23","Leads",lead_id.tolong());
+	info "Lead_obj    =  " + Lead_obj;
+	Referral_list = List();
+	info "Referral_list    = " + Referral_list;
+	if(Lead_obj != {} || Lead_obj.isEmpty() == false)
+	{
+		info "inside if condition ";
+		for each  data in Lead_obj
+		{
+			info "inside for loop";
+			Referral_list.add(data.get("Referral").get("id"));
+			info "Referral_list    = " + Referral_list;
+		}
+		mp = Map();
+		mp.put("Referrals",Referral_list.toString());
+		info "mp      = " + mp;
+		update = zoho.crm.updateRecord("Leads",lead_id,mp);
+		info "update    =  " + update;
+	}
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Push Referral Data / Leads / Workflow / CRM"
+		message :"ID: " + lead_id + " Root Cause: " + e
+	]
+}

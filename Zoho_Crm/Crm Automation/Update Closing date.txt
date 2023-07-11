@@ -1,0 +1,6 @@
+Proj_details = zoho.crm.getRecordById("Deals",Proj_id);
+Hard_open_date = Proj_details.get("Hard_Open_Date");
+mp = Map();
+mp.put("Closing_Date",Hard_open_date);
+update = zoho.crm.updateRecord("Deals",Proj_id,mp);
+info update;

@@ -1,0 +1,370 @@
+try 
+{
+	SO_details = zoho.crm.getRecordById("Sales_Orders",SO_id);
+	Quote_id = SO_details.get("Quote_Name").get("id");
+	SO_autono = SO_details.get("SO_No");
+	////////////////////// Quote Details ///////////////////////////
+	Quote_details = zoho.crm.getRecordById("Quotes",Quote_id);
+	Downpayment = Quote_details.get("Down_Payment");
+	if(Downpayment != 0 && Downpayment != "" && Downpayment != null)
+	{
+		Quote_Owner = Quote_details.get("Owner");
+		Quote_Owner_name = Quote_details.get("Owner").get("name");
+		Quote_Owner_id = Quote_details.get("Owner").get("id");
+		Quote_Owner_email = Quote_details.get("Owner").get("email");
+		customer_id = Quote_details.get("Account_Name").get("id");
+		customerName = Quote_details.get("Account_Name").get("name");
+		contact_id = Quote_details.get("Contact_Name").get("id");
+		contact_name = Quote_details.get("Contact_Name").get("name");
+		Quote_autono = Quote_details.get("Quote_Auto_No");
+		orderNumber = Quote_details.get("Quote_Number");
+		Project_id = ifnull(Quote_details.get("Deal_Name"),"").get("id");
+		Project_name = ifnull(Quote_details.get("Deal_Name"),"").get("name");
+		Design_id = ifnull(Quote_details.get("Design"),"").get("id");
+		dueDate = Quote_details.get("Valid_Till");
+		Inv_Terms = Quote_details.get("Terms");
+		Balance_due = Quote_details.get("Balance_Due");
+		Quote_total = Quote_details.get("Grand_Total");
+		Organization_Name = Quote_details.get("Organization_Name");
+		Currency = Quote_details.get("Currency");
+		////////////////////////////// Quote Owner Details ///////////////////////////////
+		Quote_Owner_details = zoho.crm.getRecordById("users",Quote_Owner_id);
+		Quote_Owner_Data = Quote_Owner_details.get("users").tomap();
+		Quote_Owner_email = Quote_Owner_Data.get("email");
+		//////////////////////////////// Contact Data ///////////////////////////////
+		Contact_details = zoho.crm.getRecordById("Contacts",contact_id);
+		crm_contact_email = Contact_details.get("Email");
+		////////////////////////////////////////////////////////////////////////////////////
+		Project_obj = zoho.crm.getRecordById("Deals",Project_id);
+		Project_owner = Project_obj.get("Owner");
+		PO_ID = Project_obj.get("Project_ID");
+		PO_Ref = ifnull(Project_obj.get("PO_Reference"),"");
+		Invoice_recipient_email = ifnull(Project_obj.get("Invoice_Recipient_Email"),"");
+		info Invoice_recipient_email;
+		///////////////////////////////////////// Importing Customer and Contact ///////////////
+		Import_account = invokeurl
+		[
+			url :"https://books.zoho.com/api/v3/crm/account/" + customer_id + "/import?organization_id=666479573"
+			type :POST
+			connection:"zoho_books"
+		];
+		// info Import_account;
+		// //////////////////////////// Fetch Books Customer ID /////////////////////////
+		searchParam = {"zcrm_account_id":customer_id};
+		BooksContact = zoho.books.getRecords("contacts","666479573",searchParam);
+		Books_contact_Info = BooksContact.get("contacts").get(0);
+		Book_contact_ID = Books_contact_Info.get("contact_id");
+		//info Book_contact_ID;
+		////////////////////////////////Fetch Books User ID //////////////////////////
+		// 		searchParam = {"email":Quote_Owner_email};
+		// 		BooksUsers = zoho.books.getRecords("users","666479573",searchParam);
+		// 		info BooksUsers;
+		// 		Books_User_Info = BooksUsers.get("users").get(0);
+		// 		Book_User_ID = Books_User_Info.get("user_id");
+		// 		Book_User_email = Books_User_Info.get("email");
+		//info Book_User_ID;
+		////////////////Get contact details via customer id /////////////////////////////////////
+		contact_persons = invokeurl
+		[
+			url :"https://books.zoho.com/api/v3/contacts/" + Book_contact_ID + "/contactpersons?organization_id=666479573"
+			type :GET
+			connection:"zoho_books"
+		];
+		// 		info contact_persons;
+		//contactdetails = zoho.books.getRecordsByID("contacts","666479573",Book_contact_ID);
+		//Contact_obj = contactdetails.get("contact").get("contact_persons");
+		contact_Fname = "";
+		contact_Lname = "";
+		contact_email = "";
+		count = 0;
+		for each  data_contact in contact_persons.get("contact_persons")
+		{
+			if(Invoice_recipient_email == "")
+			{
+				if(data_contact.get("email") == crm_contact_email)
+				{
+					contact_email = data_contact.get("email");
+					contact_Fname = data_contact.get("first_name");
+					contact_Lname = data_contact.get("last_name");
+					Inv_contact_id = data_contact.get("contact_person_id");
+				}
+			}
+			else
+			{
+				if(data_contact.get("email") == Invoice_recipient_email)
+				{
+					contact_email = data_contact.get("email");
+					contact_Fname = data_contact.get("first_name");
+					contact_Lname = data_contact.get("last_name");
+					Inv_contact_id = data_contact.get("contact_person_id");
+					search_contacts = zoho.crm.searchRecords("Contacts","((Email:equals:" + Invoice_recipient_email + "))");
+					for each  w in search_contacts
+					{
+						contact_id = ifnull(w.get("id"),"");
+					}
+				}
+			}
+		}
+		////////////////////////////////////////////////////////////////////
+		if(contact_email == "" && contact_Fname == "" && contact_Lname == "")
+		{
+			info Invoice_recipient_email;
+			search_contacts = zoho.crm.searchRecords("Contacts","(Email:equals:" + Invoice_recipient_email + ")");
+			info "error: " + search_contacts;
+			for each  w in search_contacts
+			{
+				contact_id = ifnull(w.get("id"),"");
+				contact_email = Invoice_recipient_email;
+				contact_Fname = w.get("First_Name");
+				contact_Lname = w.get("Last_Name");
+			}
+		}
+		info contact_email;
+		info Inv_contact_id;
+		///////////////////////////////// Create Retainer Invoice if Downpayment is not Zero //////////////////////////////////
+		info "Downpayment Not Zero";
+		////////////////////////////////////////////Create Retainer Invoice ////////////////////////////////
+		////////////////////// Terms and conditions and template //////////////////
+		if(Organization_Name == "Blink Signs")
+		{
+			terms_and_conditions = Quote_details.get("Terms_and_Conditions");
+			Template_id = "1316483000000030003";
+		}
+		else if(Organization_Name == "Blink Swag")
+		{
+			terms_and_conditions = Quote_details.get("Terms_and_Conditions_Swag");
+			Template_id = "1316483000009817035";
+		}
+		else if(Organization_Name == "Blink Sourcing")
+		{
+			terms_and_conditions = Quote_details.get("Terms_and_Conditions");
+			Template_id = "1316483000017238436";
+		}
+		/////////////////////// Creating a product details map  ///////////////////////////////
+		Description = Downpayment + "% Downpayment for Quote No: " + Quote_autono;
+		item = Map();
+		//item.put("item_id",item_id);
+		item.put("description",Description);
+		item.put("rate",Balance_due);
+		///////////////////// Data of Custom Fields /////////////////////////////////
+		cf_list = List();
+		cf_org_name = Map();
+		cf_org_name.put("label","Organization Name");
+		cf_org_name.put("value",Organization_Name);
+		cf_list.add(cf_org_name);
+		/////////////////////////////////////////////////
+		cf_contact = Map();
+		cf_contact.put("label","Contact");
+		cf_contact.put("value",contact_name);
+		cf_list.add(cf_contact);
+		/////////////////////////////////////////////////
+		cf_project = Map();
+		cf_project.put("label","Project Name");
+		cf_project.put("value",Project_name);
+		cf_list.add(cf_project);
+		/////////////////////////////////////////////////
+		cf_project = Map();
+		cf_project.put("label","Project ID");
+		cf_project.put("value",PO_ID);
+		cf_list.add(cf_project);
+		/////////////////////////////////////////////////
+		cf_quote = Map();
+		cf_quote.put("label","Quote #");
+		cf_quote.put("value",Quote_autono);
+		cf_list.add(cf_quote);
+		//////////////////////////////////////////////////
+		cf_po_So = Map();
+		cf_po_So.put("label","SO #");
+		cf_po_So.put("value",SO_autono);
+		cf_list.add(cf_po_So);
+		//////////////////////////////////////////////////
+		// 		cf_po_quote_owner = Map();
+		// 		cf_po_quote_owner.put("label","Quote Owner");
+		// 		cf_po_quote_owner.put("value",Book_User_ID);
+		// 		cf_list.add(cf_po_quote_owner);
+		//////////////////////////////////////////////////
+		cf_po_reference = Map();
+		cf_po_reference.put("label","Client PO");
+		cf_po_reference.put("value",PO_Ref);
+		cf_list.add(cf_po_reference);
+		//////////////////////////////////////////////////
+		cf_po_owner_email = Map();
+		cf_po_owner_email.put("label","Owner Email");
+		cf_po_owner_email.put("value",Quote_Owner_email);
+		cf_list.add(cf_po_owner_email);
+		/////////////////////Configuring Payment ///////////////////////////////
+		/////////////////////////// Selecting Currency //////////////////
+		info "Currency: " + Currency;
+		if(Currency == "USD")
+		{
+			currency_id = 1316483000000000097;
+			///////////////Configuring Authorize.net /////////////////////////
+			payment_getway = Map();
+			payment_getway.put("configured",true);
+			payment_getway.put("can_show_billing_address",false);
+			payment_getway.put("is_bank_account_applicable",true);
+			payment_getway.put("gateway_name","authorize_net");
+			payment_options = Map();
+			payment_options.put("payment_gateways",{payment_getway});
+		}
+		else if(Currency == "CAD")
+		{
+			currency_id = 1316483000000000101;
+			///////////////Configuring Paypal /////////////////////////
+			payment_getway = Map();
+			payment_getway.put("configured",true);
+			payment_getway.put("can_show_billing_address",false);
+			payment_getway.put("additional_field1","standard");
+			payment_getway.put("is_bank_account_applicable",true);
+			payment_getway.put("can_pay_using_new_card",true);
+			payment_getway.put("gateway_name","paypal");
+			payment_options = Map();
+			payment_options.put("payment_gateways",{payment_getway});
+		}
+		///////////////////////Create Invoice in books ////////////////////////////////
+		Ret_Invoice_Data = Map();
+		Ret_Invoice_Data.put("customer_id",Book_contact_ID);
+		Ret_Invoice_Data.put("reference_number",Quote_autono);
+		Ret_Invoice_Data.put("date",zoho.currentdate);
+		Ret_Invoice_Data.put("line_items",{item});
+		Ret_Invoice_Data.put("terms",terms_and_conditions);
+		Ret_Invoice_Data.put("template_id",Template_id);
+		//Ret_Invoice_Data.put("payment_terms_label",Terms);
+		Ret_Invoice_Data.put("contact_persons",{Inv_contact_id});
+		Ret_Invoice_Data.put("payment_options",payment_options);
+		Ret_Invoice_Data.put("is_emailed",true);
+		Ret_Invoice_Data.put("custom_fields",cf_list);
+		Ret_Invoice_Data.put("currency_id",currency_id);
+		retainer_invoice = zoho.books.createRecord("retainerinvoices","666479573",Ret_Invoice_Data);
+		info retainer_invoice;
+		Retainer_Invoice_ID = retainer_invoice.get("retainerinvoice").get("retainerinvoice_id");
+		info Retainer_Invoice_ID;
+		if(Retainer_Invoice_ID != null)
+		{
+			Status = "Created but not sent to customer";
+			mp7 = Map();
+			mp7.put("Down_Payment_Invoice_Status",Status);
+			resp1 = zoho.crm.updateRecord("Quotes",Quote_id,mp7);
+		}
+		/////////////////////Email body for the retainer invoice //////////////////////////////////////
+		retainerinvoices = zoho.books.getRecordsByID("retainerinvoices","666479573",Retainer_Invoice_ID);
+		resp = retainerinvoices.get("retainerinvoice").toMap();
+		invoice_Number = resp.get("retainerinvoice_number");
+		invoice_Date = resp.get("date");
+		invoice_total = resp.get("total");
+		contact_ID = resp.get("customer_id");
+		contact_Name = resp.get("customer_name");
+		Currency_code = resp.get("currency_code");
+		invoice_url = resp.get("invoice_url");
+		//////////////////////////////////// Organization Data ////////////////////////////////////
+		Org_Data = zoho.books.getRecords("organizations","666479573");
+		Organization = Org_Data.get("organizations").toMap();
+		Org_Name = Organization.get("name");
+		Owner_Name = Organization.get("contact_name");
+		/////////////////////////// Mail subject and body /////////////////////////////////////////////////////
+		subject_Data = "Down Payment Invoice from " + Org_Name + " (" + invoice_Number + ")" + "- Project Name" + " (" + Project_name + ") & Project# " + "(" + PO_ID + ")";
+		////////////////////////////////////////////////////////////////////////////////////////////////////////
+		para = Map();
+		para.put("accept","pdf");
+		invoice_file = invokeurl
+		[
+			url :"https://books.zoho.com/api/v3/retainerinvoices/" + Retainer_Invoice_ID + "?organization_id=666479573"
+			type :GET
+			parameters:para
+			connection:"zoho_books"
+		];
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		body = "Dear " + contact_Fname + " " + contact_Lname + ",<br><br>Thanks for your business.<br><br>The Down Payment invoice " + invoice_Number + " is attached with this email. You can choose the easy way out and <a href='" + invoice_url + "'>pay online for this invoice.</a><br>Here is an overview of the invoice for your reference.<br><br>Retainer Invoice Overview:<br>Invoice: " + invoice_Number + "<br>Date : " + invoice_Date + "<br>Amount : $" + invoice_total + "<br><br>It was great working with you. Looking forward to working with you again.<br><br>Regards,<br>Blink Signs LLC";
+		/////////////////////////////////// Mark Invoice as Sent ////////////////////////////////////////
+		Mark_status_sent = zoho.books.markStatus("retainerinvoices","666479573",Retainer_Invoice_ID,"sent");
+		//////////////// Create Comment on the Retainer Invoice /////////////////////////////////
+		Comment = Map();
+		Comment.put("description","Retainer Invoice emailed to " + contact_email);
+		Comment.put("show_comment_to_clients",false);
+		JsonString4 = Map();
+		JsonString4.put("JSONString",Comment);
+		//////////////////////////////////////////////////////////////////////////////////////////////////////////
+		resp4 = invokeurl
+		[
+			url :"https://books.zoho.com/api/v3/retainerinvoices/" + Retainer_Invoice_ID + "/comments?organization_id=666479573"
+			type :POST
+			parameters:JsonString4
+			connection:"zoho_books"
+		];
+		//////////////////////////// creating Down Payment Invoice in DPI module ///////////////////////////////////////////
+		mp = Map();
+		mp.put("Organization_Name",Organization_Name);
+		mp.put("Owner",Project_owner);
+		mp.put("Name",invoice_Number);
+		mp.put("Quote",Quote_id);
+		mp.put("Sales_Order",SO_id);
+		mp.put("Quote_No",orderNumber);
+		mp.put("Project",Project_id);
+		mp.put("Contact",contact_id);
+		mp.put("Customer",customer_id);
+		mp.put("Retainer_by","%");
+		mp.put("Percent",Downpayment);
+		mp.put("Retainer_Type","Deposit");
+		mp.put("Retainer_Invoice_Generated",true);
+		mp.put("Down_Payment_Amount",invoice_total);
+		mp.put("Retainer_Invoice_ID",Retainer_Invoice_ID);
+		mp.put("Invoice_Date",invoice_Date);
+		mp.put("Invoice_URL",invoice_url);
+		mp.put("Contact_First_Name",contact_Fname);
+		mp.put("Contact_Last_Name",contact_Lname);
+		mp.put("Subject",subject_Data);
+		mp.put("Email",contact_email);
+		mp.put("Paid","Active");
+		mp.put("Currency",Currency);
+		create_dpi = zoho.crm.createRecord("Down_Payment_Invoices",mp,{"trigger":{"workflow"}});
+		dpi_id = create_dpi.get("id");
+		///////////////////////////////// Uploading attachment in the DPI module entry////////////////////////
+		attach_dpi_pd = zoho.crm.attachFile("Down_Payment_Invoices",dpi_id,invoice_file);
+		if(dpi_id != null)
+		{
+			Status = "Emailed to customer";
+			mp8 = Map();
+			mp8.put("Down_Payment_Invoice_Status",Status);
+			resp1 = zoho.crm.updateRecord("Quotes",Quote_id,mp8);
+			////////////////////////////////// Create reminder //////////////////////
+			Ret_Details = zoho.crm.getRecordById("Down_Payment_Invoices",dpi_id);
+			Ret_Inv_Num = Ret_Details.get("Name");
+			Organization = Ret_Details.get("Organization_Name");
+			Owner = Ret_Details.get("Owner").get("name");
+			ContactName = Ret_Details.get("Contact").get("name");
+			ContactEmail = Ret_Details.get("Email");
+			date = zoho.currentdate;
+			dummydate = date.addDay(1);
+			dummydate1 = dummydate.addHour(8);
+			startdate = dummydate1.addDay(1);
+			enddatedummy = startdate.addMonth(2);
+			enddate = enddatedummy;
+			dataMap = Map();
+			dataMap.put("Retainer_ID",dpi_id);
+			dataMap.put("Type","Retainer");
+			dataMap.put("Retainer_Invoice_No",Ret_Inv_Num);
+			dataMap.put("Contact_Name",ContactName);
+			dataMap.put("Retainer_Contact_Email",ContactEmail);
+			dataMap.put("Type_of_Reminder","Periodic");
+			dataMap.put("Status","Active");
+			dataMap.put("Reminder_Cycle","Two Days");
+			dataMap.put("Start_Date_and_Time",startdate);
+			dataMap.put("End_Date_and_Time",enddate);
+			dataMap.put("Organization_Name",Organization);
+			otherMap = Map();
+			resp = zoho.creator.createRecord("blinksigns","reminders","Reminders",dataMap,otherMap,"zoho_creator");
+			info "Created: " + resp;
+		}
+	}
+}
+catch (e)
+{
+	info e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Down payment invoice creation / Sales Order / Workflow / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000022569051\" >Workflow</a>  " + " SO ID: " + SO_id + " Retainer ID: " + Retainer_Invoice_ID + " Root Cause: " + e + " Retainer Response: " + retainer_invoice
+	]
+}

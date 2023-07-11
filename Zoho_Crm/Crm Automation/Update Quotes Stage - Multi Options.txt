@@ -1,0 +1,34 @@
+try 
+{
+	Quotes_details = zoho.crm.getRelatedRecords("Quotes","Deals",proj_id.toLong());
+	if(Quotes_details != {})
+	{
+		for each  data in Quotes_details
+		{
+			Quote_id = data.get("id");
+			if(data.get("Quote_Stage") = "Draft")
+			{
+				stage = Map();
+				stage.put("Quote_Stage","Voided");
+				update_design_stage = zoho.crm.updateRecord("Quotes",Quote_id,stage,{"trigger":{"workflow"}});
+			}
+			//////////////////////////////////////////////////////////
+			if(data.get("Quote_Stage") = "Waiting for Approval")
+			{
+				stage = Map();
+				stage.put("Quote_Stage","Rejected");
+				update_design_stage = zoho.crm.updateRecord("Quotes",Quote_id,stage,{"trigger":{"workflow"}});
+			}
+		}
+	}
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update Quotes Stage - Multi Options"
+		message :"ID: " + proj_id + " Root Cause: " + e
+	]
+}

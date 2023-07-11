@@ -1,0 +1,51 @@
+contact_roles = zoho.crm.getRelatedRecords("Contact_Roles","Deals",Proj_id);
+//info contact_roles;
+contactRolesLis = List();
+countContactRoles = 0;
+try 
+{
+	if(!contact_roles.isEmpty())
+	{
+		if(contact_roles.get(0) != null)
+		{
+			if(contact_roles.get(0).get("message") == null)
+			{
+				Email = "";
+				for each  data in contact_roles
+				{
+					contact_role = ifnull(data.get("Contact_Role"),null);
+					contactRolesLis.add(contact_role);
+					countContactRoles = countContactRoles + 1;
+					if(contact_role == 3205780000026410268)
+					{
+						Email = ifnull(data.get("Email"),"");
+					}
+				}
+				info Email;
+				mp = Map();
+				mp.put("Invoice_Recipient_Email",Email);
+				update = zoho.crm.updateRecord("Deals",Proj_id,mp);
+				info update;
+			}
+			else
+			{
+				sendmail
+				[
+					from :zoho.loginuserid
+					to :zoho.adminuserid
+					subject :"Update Contact Role Email on Project"
+					message :"Success"
+				]
+			}
+		}
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :zoho.adminuserid
+		subject :"Update Contact Role Email on Project"
+		message :"Project ID " + Proj_id + "Error " + e + "\n Contacts Roles " + contactRolesLis + " ---------------- \n contact role Count" + countContactRoles + "---------------- \n Contact Roles " + contact_roles
+	]
+}

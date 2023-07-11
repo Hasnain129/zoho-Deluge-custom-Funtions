@@ -1,0 +1,77 @@
+try 
+{
+	Quote_details = zoho.crm.getRecordById("Quotes",Quote_id);
+	project_id = ifnull(Quote_details.get("Deal_Name"),"").get("id");
+	CheckCustomerVal = ifnull(Quote_details.get("Account_Name"),"");
+	if(CheckCustomerVal != "")
+	{
+		Customer_id = CheckCustomerVal.get("id");
+		Customer_obj = zoho.crm.getRecordById("Accounts",Customer_id);
+		Service_loc_id = ifnull(Quote_details.get("Service_location"),"").get("id");
+		if(Service_loc_id != null)
+		{
+			service_loc_details = zoho.crm.getRecordById("Service_Locations",Service_loc_id);
+			Street_address = service_loc_details.get("Name").getPrefix(",");
+			City_sata_zip = ifnull(service_loc_details.get("City_State_Zip"),"").get("id");
+			if(City_sata_zip != null)
+			{
+				City_state_details = zoho.crm.getRecordById("Cities_and_Zip_Codes",City_sata_zip);
+				City = City_state_details.get("City");
+				State = City_state_details.get("State");
+				Code = City_state_details.get("Zip_Code");
+				Country = City_state_details.get("Country");
+			}
+		}
+		else if(Service_loc_id == null && project_id != null)
+		{
+			Project_details = zoho.crm.getRecordById("Deals",project_id);
+			Service_loc_id = ifnull(Project_details.get("Service_Locations"),"").get("id");
+			if(Service_loc_id != null)
+			{
+				service_loc_details = zoho.crm.getRecordById("Service_Locations",Service_loc_id);
+				Street_address = service_loc_details.get("Name").getPrefix(",");
+				City_sata_zip = ifnull(service_loc_details.get("City_State_Zip"),"").get("id");
+				if(City_sata_zip != null)
+				{
+					City_state_details = zoho.crm.getRecordById("Cities_and_Zip_Codes",City_sata_zip);
+					City = City_state_details.get("City");
+					State = City_state_details.get("State");
+					Code = City_state_details.get("Zip_Code");
+					Country = City_state_details.get("Country");
+				}
+			}
+		}
+		mp = Map();
+		if(Customer_obj.get("Billing_Street") != null && Customer_obj.get("Billing_City") != null && Customer_obj.get("Billing_State") != null && Customer_obj.get("Billing_Code") != null && Customer_obj.get("Billing_Country") != null)
+		{
+			mp.put("Billing_Street",Customer_obj.get("Billing_Street"));
+			mp.put("Billing_City",Customer_obj.get("Billing_City"));
+			mp.put("Billing_State",Customer_obj.get("Billing_State"));
+			mp.put("Billing_Code",Customer_obj.get("Billing_Code"));
+			mp.put("Billing_Country",Customer_obj.get("Billing_Country"));
+		}
+		else
+		{
+			mp.put("Billing_Street",Street_address);
+			mp.put("Billing_City",City);
+			mp.put("Billing_State",State);
+			mp.put("Billing_Code",Code);
+			mp.put("Billing_Country",Country);
+		}
+		mp.put("Shipping_Street",Street_address);
+		mp.put("Shipping_City",City);
+		mp.put("Shipping_State",State);
+		mp.put("Shipping_Code",Code);
+		mp.put("Shipping_Country",Country);
+		update_quote = zoho.crm.updateRecord("Quotes",Quote_id,mp);
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update Shipping Address / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000038884093\" >Workflow</a>  " + "ID: " + Quote_id + " Root Cause: " + e + "\nCustomer Object " + Customer_obj + "\nService Location Resp: " + service_loc_details
+	]
+}

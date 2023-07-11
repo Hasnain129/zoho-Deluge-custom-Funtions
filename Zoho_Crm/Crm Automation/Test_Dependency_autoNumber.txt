@@ -1,0 +1,35 @@
+try 
+{
+	Specific_task = zoho.crm.getRecordById("Tasks",T_Id);
+	info Specific_task;
+	if(Specific_task.get("Step") == "True")
+	{
+		// info Specific_task ;
+		// records = zoho.crm.searchRecords("Tasks", )
+		// records =  zoho.crm.searchRecords(<module>, <TEXT>)
+		// project = zoho.crm.getRecordById("Deals", "3205780000043688001");
+		all_Tasks = zoho.crm.getRelatedRecords("Tasks",Specific_task.get("$se_module"),Specific_task.get("What_Id").get("id"));
+		number = 0;
+		for each  task in all_Tasks
+		{
+			if(task.get("Step") == "True")
+			{
+				number = number + 1;
+			}
+		}
+		// info number ; 
+		data = {"Step_Number":"Step " + number};
+		resp = zoho.crm.updateRecord("Tasks",T_Id,data);
+		info resp;
+	}
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Test_Dependency_autoNumber / CRM"
+		message :"ID: " + T_Id + " Root Cause: " + e
+	]
+}

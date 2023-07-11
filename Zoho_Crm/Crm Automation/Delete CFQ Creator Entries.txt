@@ -1,0 +1,85 @@
+try 
+{
+	NewAccessTokenRequest = invokeurl
+	[
+		url :"https://accounts.zoho.com/oauth/v2/token?refresh_token=1000.734d71bc8c4f674e37a0a917a8e4c293.0754e0b5bd7ffe8fb783af0e6dc58b1b&client_id=1000.ATIZKND5E1GREUQP1F5K1EAOD9XNAF&client_secret=ac00e6ba115bf49c47b1cf4bf0d2f6e0509567c031&grant_type=refresh_token"
+		type :POST
+	];
+	info NewAccessTokenRequest;
+	NewAccessToken = NewAccessTokenRequest.get("access_token");
+	//---------------------------Authtoken---------------------------------------
+	AuthToken = Map();
+	AuthToken.put("Authorization","Zoho-oauthtoken " + NewAccessToken + "");
+	////////////////////////////////Delete CFQ////////////////////////////
+	if(!CFQID.isNull())
+	{
+		deleteRecordMap = Map();
+		deleteRecordMap.put("module","Invoices");
+		deleteRecordMap.put("id",CFQID);
+		deleteCFQ = zoho.crm.invokeConnector("crm.delete",deleteRecordMap);
+		info deleteCFQ;
+	}
+	/////////////////// Delete Line Items Creator Entries ///////////////////////
+	creator_data = zoho.creator.getRecords("blinksigns","line-items","All_Line_Items","Quote==\"" + Quote_id + "\"",1,100,"zoho_creator");
+	CheckCode = creator_data.get("code");
+	if(CheckCode == 3000)
+	{
+		creator_entries = creator_data.get("data");
+		for each  data in creator_entries
+		{
+			Record_ID = data.get("ID");
+			recdelete = invokeurl
+			[
+				url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/All_Line_Items/" + Record_ID + ""
+				type :DELETE
+				headers:AuthToken
+			];
+			info recdelete;
+		}
+	}
+	////////////////// Delete Cost Items Creator Entries ///////////////////////////
+	creator_data_cost = zoho.creator.getRecords("blinksigns","line-items","All_Cost_Items","Quote_1==\"" + Quote_id + "\"",1,100,"zoho_creator");
+	CheckCodeCost = creator_data_cost.get("code");
+	if(CheckCodeCost == 3000)
+	{
+		cost_creator_entries = creator_data_cost.get("data");
+		for each  data2 in cost_creator_entries
+		{
+			Record_ID = data2.get("ID");
+			recdelete = invokeurl
+			[
+				url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/All_Cost_Items/" + Record_ID + ""
+				type :DELETE
+				headers:AuthToken
+			];
+			info recdelete;
+		}
+	}
+	////////////////// Delete Reminders Entries ///////////////////////////
+	creator_data_cost = zoho.creator.getRecords("blinksigns","reminders","All_Reminders","Quote==\"" + Quote_id + "\"",1,100,"zoho_creator");
+	CheckCodeCost = creator_data_cost.get("code");
+	if(CheckCodeCost == 3000)
+	{
+		reminder_entries = creator_data_cost.get("data");
+		for each  data3 in reminder_entries
+		{
+			Record_ID = data3.get("ID");
+			recdelete = invokeurl
+			[
+				url :"https://creator.zoho.com/api/v2/blinksigns/reminders/report/All_Reminders/" + Record_ID + ""
+				type :DELETE
+				headers:AuthToken
+			];
+			info recdelete;
+		}
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Delete CFQ/Creator Entries / Quotes / Workflow / CRM"
+		message :"Quote ID: " + Quote_id + " CFQ ID:" + CFQID + " Root Cause: " + e
+	]
+}

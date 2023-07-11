@@ -1,0 +1,23 @@
+try 
+{
+	resp = zoho.crm.getRecordById("Requests_for_quote",rfq_id);
+	design_id = resp.get("Design").get("id");
+	resp_1 = zoho.crm.getRecordById("Designs",design_id);
+	Porject_id = resp_1.get("Project").get("id");
+	Organization = resp_1.get("Organization_Name");
+	//------------------------------------------------------------------------------------
+	//update RFQ
+	mp = Map();
+	mp.put("Project",Porject_id);
+	mp.put("Organization_Name",Organization);
+	createResp = zoho.crm.updateRecord("Requests_for_quote",rfq_id,mp);
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :" Update Project from Design / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000006283126\" >Workflow</a>  " + "ID: " + rfq_id + " Root Cause: " + e
+	]
+}

@@ -1,0 +1,317 @@
+try 
+{
+	Get_Quote_Details = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2.1/Quotes/" + quote_id
+		type :GET
+		connection:"zoho_crm"
+	];
+	Quote_details = Get_Quote_Details.get("data").get(0);
+	//Quote_details = zoho.crm.getRecordById("Quotes",quote_id);
+	//////////////////////////////////////////////////////////////////////
+	Deal_id = ifnull(Quote_details.get("Deal_Name"),"").get("id");
+	Contact_id = ifnull(Quote_details.get("Contact_Name"),"").get("id");
+	Customer_id = ifnull(Quote_details.get("Account_Name"),"").get("id");
+	Design_id = ifnull(Quote_details.get("Design"),"").get("id");
+	Serv_id = ifnull(Quote_details.get("Service_location"),"").get("id");
+	Quote_No = Quote_details.get("Quote_Auto_No");
+	Cost = Quote_details.get("Cost");
+	Down_Payment = Quote_details.get("Down_Payment");
+	DP_Balance_due = Quote_details.get("Balance_Due");
+	Valid_till = Quote_details.get("Valid_Till");
+	Inv_Terms = Quote_details.get("Terms");
+	Client_PO = Quote_details.get("Client_PO");
+	Gross_Margin = Quote_details.get("Profit_Margin");
+	Gross_Margin_perc = Quote_details.get("Profit");
+	Prod_details = Quote_details.get("Quoted_Items");
+	Taxnew = ifnull(Quote_details.get("Tax_N"),0);
+	// 	line_tax = Quote_details.get("$line_tax");
+	Discount = Quote_details.get("Discount");
+	Adjustment = Quote_details.get("Adjustment");
+	State_Tax = Quote_details.get("State_Tax");
+	County_Tax = Quote_details.get("County_Tax");
+	State_Tax_Name = Quote_details.get("State_Tax_Name");
+	County_Tax_Name = Quote_details.get("County_Tax_Name");
+	Organization_Name = Quote_details.get("Organization_Name");
+	Billing_city = Quote_details.get("Billing_City");
+	Billing_code = Quote_details.get("Billing_Code");
+	Billing_country = Quote_details.get("Billing_Country");
+	Billing_state = Quote_details.get("Billing_State");
+	Billing_street = Quote_details.get("Billing_Street");
+	Shipping_city = Quote_details.get("Shipping_City");
+	Shipping_code = Quote_details.get("Shipping_Code");
+	Shipping_country = Quote_details.get("Shipping_Country");
+	Shipping_state = Quote_details.get("Shipping_State");
+	Shipping_street = Quote_details.get("Shipping_Street");
+	CC_production_manager = Quote_details.get("CC_Production_Manager");
+	CC_project_manager = Quote_details.get("CC_Project_Manager");
+	CC_yourself = Quote_details.get("CC_Yourself");
+	CC_Emails = Quote_details.get("CC_Emails");
+	Currency = Quote_details.get("Currency");
+	if(Organization_Name == "Blink Signs" || Organization_Name == "Blink Sourcing")
+	{
+		Terms_condition = Quote_details.get("Terms_and_Conditions");
+	}
+	else if(Organization_Name == "Blink Swag")
+	{
+		Terms_condition_swag = Quote_details.get("Terms_and_Conditions_Swag");
+	}
+	/////////////////////////////// Get Project / Production and Sale rep  user //////////////
+	Proj_details = zoho.crm.getRecordById("Deals",Deal_id);
+	Project_Manager = Proj_details.get("Owner");
+	Product_Manager = Proj_details.get("Production_Manager");
+	Sale_Rep = Proj_details.get("Lead_Owner");
+	Closing_Date = Proj_details.get("Closing_Date");
+	if(Closing_Date != null)
+	{
+		Closing_Date = Closing_Date.toString("yyyy-MM-dd");
+	}
+	/////////////////// Checking if Production Manager is Disabled ////////////////////////////////////////
+	if(Product_Manager != null)
+	{
+		Product_Manager_id = Product_Manager.get("id");
+		Prod_mgr_Details = zoho.crm.getRecordById("users",Product_Manager_id);
+		prod_mgr_status = Prod_mgr_Details.get("users").geT("0").get("status");
+		if(prod_mgr_status == "disabled")
+		{
+			Product_Manager = 3205780000000152015;
+		}
+	}
+	//////////////////// Checking Project Manager //////////////////////////////////
+	if(Project_Manager != null)
+	{
+		Proj_Manager_id = Project_Manager.get("id");
+		Proj_mgr_Details = zoho.crm.getRecordById("users",Proj_Manager_id);
+		Proj_mgr_status = Proj_mgr_Details.get("users").geT("0").get("status");
+		if(Proj_mgr_status == "disabled")
+		{
+			Project_Manager = 3205780000000152015;
+		}
+	}
+	//////////////////// Checking Sales Rep //////////////////////////////////
+	if(Sale_Rep != null)
+	{
+		Sales_Rep_id = Sale_Rep.get("id");
+		Sales_Rep_Details = zoho.crm.getRecordById("users",Sales_Rep_id);
+		sales_rep_status = Sales_Rep_Details.get("users").geT("0").get("status");
+		if(sales_rep_status == "disabled")
+		{
+			Sale_Rep = 3205780000000152015;
+		}
+	}
+	// 	info Taxnew;
+	///////////////////////////////////////////////////////
+	mp = Map();
+	mp.put("Subject","New Sales Order from Blink Signs ");
+	mp.put("Owner",Product_Manager);
+	mp.put("Version","0");
+	mp.put("Organization_Name",Organization_Name);
+	mp.put("Sign_Project_Name",Deal_id);
+	mp.put("Contact_Name",Contact_id);
+	mp.put("Account_Name",Customer_id);
+	mp.put("Client_PO",Client_PO);
+	mp.put("Due_Date",Closing_Date);
+	mp.put("Cost",Cost);
+	mp.put("Status","Active");
+	mp.put("Service_Location",Serv_id);
+	mp.put("Down_Payment",Down_Payment);
+	mp.put("Down_Payment_Balance_Due",DP_Balance_due);
+	mp.put("Terms",Inv_Terms);
+	mp.put("Gross_Margin",Gross_Margin);
+	mp.put("Gross_Margin_perc",Gross_Margin_perc);
+	//mp.put("Invoice_Date",today.toString("yyyy-MM-dd"));
+	mp.put("Down_Payment_Invoice_Status","Not Sent");
+	mp.put("Ordered_Items",Prod_details);
+	mp.put("Tax_N",Taxnew.round(3));
+	mp.put("Discount",Discount);
+	mp.put("Adjustment",Adjustment);
+	mp.put("State_Tax",State_Tax);
+	mp.put("County_Tax",County_Tax);
+	mp.put("State_Tax_Name",State_Tax_Name);
+	mp.put("County_Tax_Name",County_Tax_Name);
+	mp.put("Terms_and_Conditions",Terms_condition);
+	mp.put("Terms_and_Conditions_Swag",Terms_condition_swag);
+	mp.put("CC_Production_Manager",CC_production_manager);
+	mp.put("CC_Project_Manager",CC_project_manager);
+	mp.put("CC_Yourself",CC_yourself);
+	mp.put("Other_CC_Emails",CC_Emails);
+	mp.put("Project_Manager",Project_Manager);
+	mp.put("Sales_Rep",Sale_Rep);
+	mp.put("Deal_Name",Deal_id);
+	mp.put("Contact_Name",Contact_id);
+	mp.put("Account_Name",Customer_id);
+	mp.put("Design",Design_id);
+	mp.put("Quote_Name",quote_id);
+	mp.put("Quote_No",Quote_No);
+	mp.put("Billing_City",Billing_city);
+	mp.put("Billing_Code",Billing_code);
+	mp.put("Billing_Country",Billing_country);
+	mp.put("Billing_State",Billing_state);
+	mp.put("Billing_Street",Billing_street);
+	mp.put("Shipping_City",Shipping_city);
+	mp.put("Shipping_Code",Shipping_code);
+	mp.put("Shipping_Country",Shipping_country);
+	mp.put("Shipping_State",Shipping_state);
+	mp.put("Shipping_Street",Shipping_street);
+	mp.put("Currency",Currency);
+	//////////////////////////////////////////////////////////////////
+	dlist = List();
+	dlist.add(mp);
+	mp3 = Map();
+	mp3.put("data",dlist);
+	create_SO = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2.1/Sales_Orders"
+		type :POST
+		parameters:mp3 + ""
+		connection:"zoho_crm"
+	];
+	info "create SO " + create_SO;
+	///////checking for errors///////////////////
+	code = create_SO.get("data").get(0).get("code");
+	errordetails = create_SO.get("data").get(0).get("details");
+	status = create_SO.get("data").get(0).get("status");
+	if(status != "success" || code != "SUCCESS" || code = "INVALID_DATA")
+	{
+		sendmail
+		[
+			from :zoho.adminuserid
+			to :"erp@blinksigns.com"
+			subject :"New - Create SO when Quote is Approved / CRM"
+			message :"ID: " + quote_id + " Root Cause: +" + errordetails
+		]
+	}
+	///////////////////////////////////////////////////
+	SO_id = create_SO.get("data").get(0).get("details").get("id");
+	/////////////////// Get SO to update the subject /////////////////
+	SO_details = zoho.crm.getRecordById("Sales_Orders",SO_id);
+	Auto_no = SO_details.get("SO_No");
+	mp2 = Map();
+	mp2.put("Subject","New Sales Order from " + Organization_Name + " " + Auto_no);
+	update_SO = zoho.crm.updateRecord("Sales_Orders",SO_id,mp2,{"trigger":{"workflow"}});
+	info update_SO;
+	//////////////////// Push SO ID so Line Items can be duplicated ///////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+	Line_Data_mp = Map();
+	Line_Data_mp.put("criteria","Quote==\"" + quote_id + "\"");
+	creator_data = invokeurl
+	[
+		url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/All_Line_Items?process_until_limit=true"
+		type :GET
+		parameters:Line_Data_mp
+		connection:"zoho_creator"
+	];
+	//info creator_data
+	CheckCode = creator_data.get("code");
+	if(CheckCode == 3000)
+	{
+		creator_entries = creator_data.get("data");
+		for each index x in creator_entries
+		{
+			if(x = 0)
+			{
+				data = creator_entries.get(x);
+				Entry_id = data.get("ID").tolong();
+				info Entry_id;
+				mp = Map();
+				mp.put("SO_ID",SO_id);
+				Line_upadate_mp = Map();
+				Line_upadate_mp.put("data",mp);
+				Update_Line_creator = invokeurl
+				[
+					url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/All_Line_Items/" + Entry_id
+					type :PATCH
+					parameters:Line_upadate_mp + ""
+					connection:"zoho_creator"
+				];
+				//////////////////////////////////////////////////////////
+				//empty_mp = Map();
+				//Update_Line_creator = zoho.creator.updateRecord("blinksigns","line-items","All_Line_Items",Entry_id,mp,empty_mp,"zoho_creator");
+				info Update_Line_creator;
+			}
+		}
+	}
+	////////////////////// Update SO on RFQ /////////////////////////////
+	//creator_data_RFQ = zoho.creator.getRecords("blinksigns","line-items","All_RFQs","Quote==\"" + quote_id + "\"",1,100,"zoho_creator");
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+	RFQ_Data_mp = Map();
+	RFQ_Data_mp.put("criteria","Quote==\"" + quote_id + "\"");
+	creator_data_RFQ = invokeurl
+	[
+		url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/All_RFQs?process_until_limit=true"
+		type :GET
+		parameters:RFQ_Data_mp
+		connection:"zoho_creator"
+	];
+	//info creator_data_RFQ;
+	CheckCodeRFQ = creator_data_RFQ.get("code");
+	if(CheckCodeRFQ == 3000)
+	{
+		creator_entries_RFQ = creator_data_RFQ.get("data");
+		for each  data in creator_entries_RFQ
+		{
+			Entry_id = data.get("ID").tolong();
+			mp = Map();
+			mp.put("Sales_Order",SO_id);
+			RFQ_upadate_mp = Map();
+			RFQ_upadate_mp.put("data",mp);
+			Update_rfq_creator = invokeurl
+			[
+				url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/All_RFQs/" + Entry_id
+				type :PATCH
+				parameters:RFQ_upadate_mp + ""
+				connection:"zoho_creator"
+			];
+			//empty_mp = Map();
+			//Update_rfq_creator = zoho.creator.updateRecord("blinksigns","line-items","All_RFQs",Entry_id,mp,empty_mp,"zoho_creator");
+			info Update_rfq_creator;
+		}
+	}
+	////////////////////// Update SO on VP /////////////////////////////
+	//creator_data_VP = zoho.creator.getRecords("blinksigns","line-items","All_Vendor_Proposals","Quote==\"" + quote_id + "\"",1,100,"zoho_creator");
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+	VP_Data_mp = Map();
+	VP_Data_mp.put("criteria","Quote==\"" + quote_id + "\"");
+	creator_data_VP = invokeurl
+	[
+		url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/All_Vendor_Proposals?process_until_limit=true"
+		type :GET
+		parameters:VP_Data_mp
+		connection:"zoho_creator"
+	];
+	CheckCodeVP = creator_data_VP.get("code");
+	if(CheckCodeVP == 3000)
+	{
+		creator_entries_VP = creator_data_VP.get("data");
+		for each  data in creator_entries_VP
+		{
+			Entry_id = data.get("ID").tolong();
+			mp = Map();
+			mp.put("Sales_Order",SO_id);
+			VP_upadate_mp = Map();
+			VP_upadate_mp.put("data",mp);
+			Update_VP_creator = invokeurl
+			[
+				url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/All_Vendor_Proposals/" + Entry_id
+				type :PATCH
+				parameters:VP_upadate_mp + ""
+				connection:"zoho_creator"
+			];
+			//////////////////////////////////////////////////////////////////////	
+			//empty_mp = Map();
+			//Update_VP_creator = zoho.creator.updateRecord("blinksigns","line-items","All_Vendor_Proposals",Entry_id,mp,empty_mp,"zoho_creator");
+			info Update_VP_creator;
+		}
+	}
+}
+catch (e)
+{
+	info e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"New - Create SO when Quote is Approved / Quotes / Workflow / CRM"
+		message :"ID: " + quote_id + " Root Cause: " + e + "Created SO Resp: " + SO_details
+	]
+}

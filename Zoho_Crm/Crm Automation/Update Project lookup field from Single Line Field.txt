@@ -1,0 +1,24 @@
+try 
+{
+	wrec = zoho.crm.searchRecords("Deals","((Project_ID:equals:" + newvalue + "))");
+	for each  w in wrec
+	{
+		wid = ifnull(w.get("id"),"");
+	}
+	info wid;
+	Proj_obj = zoho.crm.getRecordById("Deals",wid);
+	Organization_Name = Proj_obj.get("Organization_Name");
+	mp = Map();
+	mp.put("Project",wid);
+	mp.put("Organization_Name",Organization_Name);
+	update = zoho.crm.updateRecord("PO_Approval",PO_app_id,mp,{"trigger":{"workflow"}});
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update Project lookup field from Single Line Field / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000009905131\" >Workflow</a>  " + "ID: " + PO_app_id + " Root Cause: " + e
+	]
+}

@@ -1,0 +1,33 @@
+try 
+{
+	// 	update_map = Map();
+	// 	update_map.put("status","archived");
+	// 	update_map.put("custom_status","1264527000001694005");
+	// 	info update_map;
+	// 	resp = invokeurl
+	// 	[
+	// 		url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProj_id + "/"
+	// 		type :POST
+	// 		parameters:update_map
+	// 		connection:"zohoprojectcall"
+	// 	];
+	// 	info resp;
+	//////////////////////////////Delete Zoho Project ////////////////////////////////////
+	Delete_Proj = invokeurl
+	[
+		url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProj_id + "/"
+		type :DELETE
+		connection:"zohoprojectcall"
+	];
+	info Delete_Proj;
+	// -----------------------------------------------------------------------------------
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Delete Project In Zoho Projects / CRM"
+		message :"ID: " + Sp_Id + " Root Cause: " + e
+	]
+}

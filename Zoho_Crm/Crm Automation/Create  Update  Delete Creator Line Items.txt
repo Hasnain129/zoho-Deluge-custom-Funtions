@@ -1,0 +1,170 @@
+try 
+{
+	Quote_Details = zoho.crm.getRecordById("Sales_Orders",SO_id);
+	Product_details = Quote_Details.get("Product_Details");
+	Quote_name = Quote_Details.get("Subject");
+	// 	creator_entries = zoho.creator.v1.getRecords("blinksigns","line-items","All_Line_Items","Sales_Order==" + SO_id + "");
+	creator_data = zoho.creator.getRecords("blinksigns","line-items","All_Line_Items","Sales_Order==" + SO_id + "",1,200,"zoho_creator");
+	A = ifnull(creator_data.toMap().get("message"),"");
+	// //////////////////////Create Quote product List /////////////////////////////
+	Quote_product_list_A = List();
+	Quote_product_list_B = List();
+	for each  data_1 in Product_details
+	{
+		product_id = data_1.get("product").get("id");
+		Quote_product_list_A.add(product_id);
+		Quote_product_list_B.add(product_id);
+	}
+	// ///////////////////// Create Creator Product list //////////////////////////////
+	Creator_saleitem_list_A = List();
+	Creator_saleitem_list_B = List();
+	if(A.notContains("no records"))
+	{
+		creator_entries = creator_data.get("data");
+		for each  data_2 in creator_entries
+		{
+			Sale_item_name = data_2.get("Sale_Item");
+			wrec = zoho.crm.searchRecords("Products","((Product_Name:equals:" + Sale_item_name + "))");
+			Sale_item_id = wrec.toMap().get("id");
+			Creator_saleitem_list_A.add(Sale_item_id);
+			Creator_saleitem_list_B.add(Sale_item_id);
+		}
+	}
+	// ///////////////////////////////// Create Item on Creator /////////////////////////////////////
+	try 
+	{
+		Quote_product_list_A.removeAll(Creator_saleitem_list_A);
+		if(Quote_product_list_A.isEmpty() == false)
+		{
+			for each  data3 in Quote_product_list_A
+			{
+				for each  data_4 in Product_details
+				{
+					if(data3 == data_4.get("product").get("id"))
+					{
+						product_id = data_4.get("product").get("id");
+						Qty = data_4.get("quantity");
+						List_price = data_4.get("list_price");
+						subtotal = List_price * Qty;
+						mp = Map();
+						mp.put("Sales_Order",SO_id);
+						mp.put("Status","Not Started");
+						mp.put("Sale_Item",product_id);
+						mp.put("Per_Unit_Total",List_price.round(2));
+						mp.put("Quantity",Qty);
+						mp.put("Sales_Item_Total",subtotal);
+						mp.put("Margin_Type","Fixed Price");
+						mp.put("Fixed_Price",subtotal.round(2));
+						mp.put("Sub_Total",subtotal.round(2));
+						mp.put("Total_Before_Tax",subtotal.round(2));
+						mp.put("Grand_Total",subtotal.round(2));
+						mp.put("Est_Profit_Margin_amt",0);
+						mp.put("Est_Profit_Margin_perc",0);
+						// 						create_product_creator = zoho.creator.v1.createRecord("blinksigns","line-items","Line_Items",mp);
+						empty_mp = Map();
+						create_product_creator = zoho.creator.createRecord("blinksigns","line-items","Line_Items",mp,empty_mp,"zoho_creator");
+						info "Create";
+						info create_product_creator;
+					}
+				}
+			}
+		}
+	}
+ catch (exception)
+	{	}
+	// ///////////////////////////////// Delete Item from Creator /////////////////////////////////////
+	Creator_saleitem_list_B.removeAll(Quote_product_list_B);
+	if(Creator_saleitem_list_B.isEmpty() == false)
+	{
+		for each  data7 in Creator_saleitem_list_B
+		{
+			// 			Entry_toremove = zoho.creator.v1.getRecords("blinksigns","line-items","All_Line_Items","Sale_Item==" + data7 + "");
+			// 			Record_ID = Entry_toremove.toMap().get("ID");
+			// 			mp = Map();
+			// 			mp.put("authtoken","45650af1abfbeb9281dcdf67a4639ebe");
+			// 			mp.put("scope","creatorapi");
+			// 			mp.put("criteria","ID ==\"" + Record_ID + "\"");
+			// 			delete = invokeurl
+			// 			[
+			// 				url :"https://creator.zoho.com/api/blinksigns/json/line-items/form/Line_Items/record/delete"
+			// 				type :POST
+			// 				parameters:mp
+			// 			];
+			// 			info delete;
+			// 			info "Remove";
+			Entry_toremove = zoho.creator.getRecords("blinksigns","line-items","All_Line_Items","Sale_Item==" + data7 + "",1,200,"zoho_creator");
+			Record_ID = Entry_toremove.get("data").get(0).get("ID");
+			NewAccessTokenRequest = invokeurl
+			[
+				url :"https://accounts.zoho.com/oauth/v2/token?			refresh_token=1000.734d71bc8c4f674e37a0a917a8e4c293.0754e0b5bd7ffe8fb783af0e6dc58b1b&client_id=1000.ATIZKND5E1GREUQP1F5K1EAOD9XNAF&client_secret=ac00e6ba115bf49c47b1cf4bf0d2f6e0509567c031&grant_type=refresh_token"
+				type :POST
+			];
+			info NewAccessTokenRequest;
+			NewAccessToken = NewAccessTokenRequest.get("access_token");
+			//---------------------------Authtoken---------------------------------------
+			AuthToken = Map();
+			AuthToken.put("Authorization","Zoho-oauthtoken " + NewAccessToken + "");
+			// AuthToken.put("scope","ZohoCreator.report.DELETE");
+			info AuthToken;
+			//---------------------------------------------------------------------------
+			recdelete = invokeurl
+			[
+				url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/Line_Items/" + Record_ID + ""
+				type :DELETE
+				headers:AuthToken
+			];
+			info recdelete;
+		}
+	}
+	////////////////////// Update Current Items if any is updated ///////////////////////////
+	for each  data5 in Product_details
+	{
+		creator_entries = creator_data.get("data");
+		for each  data_6 in creator_entries
+		{
+			if(data5.get("product").get("name") == data_6.get("Sale_Item"))
+			{
+				CRM_item_amount = data5.get("total").toDecimal();
+				Creator_item_amount = data_6.get("Sub_Total").remove("$ ").replaceAll(",","").toDecimal();
+				CRM_Item_Qty = data5.get("quantity");
+				Create_Item_Qty = data_6.get("Quantity").tolong();
+				if(CRM_item_amount != Creator_item_amount || CRM_Item_Qty != Create_Item_Qty)
+				{
+					Entry_id = data_6.get("ID").tolong();
+					product_id = data5.get("product").get("id");
+					Qty = data5.get("quantity");
+					List_price = data5.get("list_price");
+					subtotal = List_price * Qty;
+					mp = Map();
+					mp.put("Sales_Order",SO_id);
+					mp.put("Sale_Item",product_id);
+					mp.put("Per_Unit_Total",List_price.round(2));
+					mp.put("Quantity",Qty);
+					mp.put("Sales_Item_Total",subtotal.round(2));
+					mp.put("Margin_Type","Fixed Price");
+					mp.put("Fixed_Price",subtotal.round(2));
+					mp.put("Sub_Total",subtotal.round(2));
+					mp.put("Total_Before_Tax",subtotal.round(2));
+					mp.put("Grand_Total",subtotal.round(2));
+					mp.put("Est_Profit_Margin_amt",0);
+					mp.put("Est_Profit_Margin_perc",0);
+					// 					Update_product_creator = zoho.creator.v1.updateRecord("blinksigns","line-items","Line_Items",Entry_id,mp);
+					// 					info "Update";
+					// 					info Update_product_creator;
+					empty_mp = Map();
+					Update_product_creator = zoho.creator.updateRecords("blinksigns","line-items","Line_Items","ID=" + Entry_id + "",mp,empty_mp,"zoho_creator");
+					info "Updated: " + Update_product_creator;
+				}
+			}
+		}
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :" Create / Update / Delete Creator Line Items / CRM"
+		message :"<a href=\"https://crm.zoho.com/crm/org666155072/settings/workflow-rules/3205780000040531445\" >Workflow</a>  " + "ID: " + SO_id + " Root Cause: " + e
+	]
+}

@@ -1,0 +1,5 @@
+Sale_Obj = zoho.crm.getRecordById("Sales_Orders",SO_id);
+Account_id = Sale_Obj.get("Account_Name").get("id");
+Status = Map();
+Status.put("Customer_Stage","Customer");
+update = zoho.crm.updateRecord("Accounts",Account_id,Status);

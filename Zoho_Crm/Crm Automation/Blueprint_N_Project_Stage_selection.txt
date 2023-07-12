@@ -1,0 +1,393 @@
+try 
+{
+	Sign_Project_obj = zoho.crm.getRecordById("Deals",Sp_Id);
+	ZProject_ID = Sign_Project_obj.get("Zoho_Projects_Project_ID");
+	CurrentStage = Sign_Project_obj.get("Stage");
+	AllTasksClosed = Sign_Project_obj.get("trigger");
+	CheckTransitionsIDs = ifnull(Sign_Project_obj.get("Blueprint_Transitions_IDs"),"");
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////
+	if(ZProject_ID == null)
+	{
+		AllTasksClosed = true;
+	}
+	////////////////////// Check All invoice and SO amount are equal to each other /////////////////////
+	SO_Count = 0;
+	Invoice_Count = 0;
+	SO_Total = 0;
+	SO_obj = zoho.crm.getRelatedRecords("SalesOrders","Deals",Sp_Id);
+	for each  SOs in SO_obj
+	{
+		if(SOs.get("Status") != "Cancelled")
+		{
+			SO_Count = SO_Count + 1;
+			if(SOs.get("Currency") == "CAD")
+			{
+				SO_Total = SO_Total + SOs.get("Grand_Total") / SOs.get("Exchange_Rate");
+			}
+			else
+			{
+				SO_Total = SO_Total + SOs.get("Grand_Total");
+			}
+		}
+	}
+	info SO_Count;
+	Update_Mp = Map();
+	Update_Mp.put("No_of_SOs",SO_Count);
+	UpdateResp = zoho.crm.updateRecord("Deals",Sp_Id,Update_Mp);
+	info UpdateResp;
+	/////////////////////////////////////// Invoices Total /////////////////////////////////////
+	INV_Total = 0;
+	Paid_INV_Total = 0;
+	searchParam = {"zcrm_potential_id":Sp_Id};
+	BooksInvoices = zoho.books.getRecords("invoices","666479573",searchParam);
+	All_Books_Invoice = BooksInvoices.get("invoices");
+	for each  Invoice in All_Books_Invoice
+	{
+		if(Invoice.get("status") != "void")
+		{
+			Invoice_Count = Invoice_Count + 1;
+			if(Invoice.get("currency_code") == "CAD")
+			{
+				INV_Total = INV_Total + Invoice.get("total") * Invoice.get("exchange_rate");
+			}
+			else
+			{
+				INV_Total = INV_Total + Invoice.get("total");
+			}
+			///////////////////////////////////////////////////////////////////
+			if(Invoice.get("status") == "paid")
+			{
+				if(Invoice.get("currency_code") == "CAD")
+				{
+					Paid_INV_Total = Paid_INV_Total + Invoice.get("total") * Invoice.get("exchange_rate");
+				}
+				else
+				{
+					Paid_INV_Total = Paid_INV_Total + Invoice.get("total");
+				}
+			}
+		}
+	}
+	////////////////////// Check All PO's and Bills amount are equal to each other /////////////////////
+	PO_totals = 0;
+	Bills_totals = 0;
+	Paid_Bills = 0;
+	PO_Count = 0;
+	Bill_Count = 0;
+	PO_Obj = zoho.crm.getRelatedRecords("Purchase_Orders","Deals",Sp_Id);
+	for each  PO_data in PO_Obj
+	{
+		if(PO_data.get("Status") != "Draft" && PO_data.get("Status") != "Rejected" && PO_data.get("Status") != "Voided")
+		{
+			PO_Count = PO_Count + 1;
+			if(PO_data.get("Currency") == "CAD")
+			{
+				PO_Grand_Total = PO_data.get("Grand_Total") / PO_data.get("Exchange_Rate");
+			}
+			else
+			{
+				PO_Grand_Total = PO_data.get("Grand_Total");
+			}
+			PO_totals = PO_totals + PO_Grand_Total;
+			Bills = zoho.crm.getRelatedRecords("Bills","Purchase_Orders",PO_data.get("id"));
+			for each  Bill in Bills
+			{
+				Bill_id = Bill.get("Books_Bill_ID");
+				//info Bill_id;
+				if(Bill_id != null)
+				{
+					Books_bill = zoho.books.getRecordsByID("bills","666479573",Bill_id);
+					//info "books bills" + Books_bill;
+					if(Books_bill.get("code") = 0)
+					{
+						if(Books_bill.get("bill").get("status") == "paid")
+						{
+							if(Books_bill.get("bill").get("currency_code") == "CAD")
+							{
+								Paid_Bills = Paid_Bills + Books_bill.get("bill").get("total") * Books_bill.get("bill").get("exchange_rate");
+							}
+							else
+							{
+								Paid_Bills = Paid_Bills + Books_bill.get("bill").get("total");
+							}
+						}
+						/////////////////////////////////////////////////////////////////////////////////////////
+						if(Books_bill.get("bill").get("status") != "void" && Books_bill.get("bill").get("status") != "draft")
+						{
+							Bill_Count = Bill_Count + 1;
+							if(Books_bill.get("bill").get("currency_code") == "CAD")
+							{
+								Bills_totals = Bills_totals + Books_bill.get("bill").get("total") * Books_bill.get("bill").get("exchange_rate");
+							}
+							else
+							{
+								Bills_totals = Bills_totals + Books_bill.get("bill").get("total");
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	info "SO Total: " + SO_Total.round(2);
+	info "Invoice Total: " + INV_Total.round(2);
+	info "Paid Invoice Total: " + Paid_INV_Total.round(2);
+	info "PO Total: " + PO_totals.round(2);
+	info "Bills Total: " + Bills_totals.round(2);
+	info "Paid Bills: " + Paid_Bills.round(2);
+	///////////////////////////////////////////////
+	info "SO Counts: " + SO_Count;
+	info "Invoice Counts: " + Invoice_Count;
+	info "PO Counts: " + PO_Count;
+	info "Bill Counts: " + Bill_Count;
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	SO_Equals_Inv = false;
+	if((SO_Total.round(2) - INV_Total.round(2) == 0 || (SO_Total.round(2) - INV_Total.round(2)).abs() <= 0.1 || (INV_Total.round(2) - SO_Total.round(2)).abs() <= 0.1) && SO_Count > 0 && Invoice_Count > 0)
+	{
+		SO_Equals_Inv = true;
+	}
+	/////////////////////////////////////////////////////////////////////////////////////////////
+	PO_Equals_Bill = false;
+	if(PO_totals.round(2) - Bills_totals.round(2) == 0 || (PO_totals.round(2) - Bills_totals.round(2)).abs() <= 0.1 || (Bills_totals.round(2) - PO_totals.round(2)).abs() <= 0.1 || PO_Obj.size() == 0)
+	{
+		PO_Equals_Bill = true;
+	}
+	/////////////////////////////////////////////////////////////////////////////////////////////
+	Fully_Paid_Check = false;
+	if(INV_Total.round(2) == Paid_INV_Total.round(2) && Invoice_Count > 0)
+	{
+		Fully_Paid_Check = true;
+	}
+	info "PO = Bill: " + PO_Equals_Bill;
+	info "SO = Invoice: " + SO_Equals_Inv;
+	info "Invoice = Payments: " + Fully_Paid_Check;
+	info "All Task Closed: " + AllTasksClosed;
+	/////////////////////////////////////////////////////////////////////////////////////////////	
+	if(SO_Equals_Inv == true && PO_Equals_Bill == true && Fully_Paid_Check == true && AllTasksClosed == true)
+	{
+		Status = "Fully Paid";
+	}
+	/////////////////new condition ///////////
+	else if(AllTasksClosed == true)
+	{
+		Status = "Project Completed";
+	}
+	//  	else if(SO_Equals_Inv == true && PO_Equals_Bill == true && Fully_Paid_Check == false && AllTasksClosed == true)
+	// 	{
+	// 		Status = "Project Completed";
+	// 	}
+	else if(SO_Count > 0)
+	{
+		Status = "Production";
+	}
+	else if(SO_Count == 0)
+	{
+		Status = "Pre-Production";
+	}
+	info "Status: " + Status;
+	////////////////////
+	///////////////// Update stage from status ////////////////////////////////
+	if(CheckTransitionsIDs != "")
+	{
+		TransitionsIDs = Sign_Project_obj.get("Blueprint_Transitions_IDs").toMap();
+		if(Status == "Fully Paid")
+		{
+			if(CurrentStage != "Fully Paid")
+			{
+				dataMap = Map();
+				blueprint1 = Map();
+				blueprint1.put("transition_id",TransitionsIDs.get("Fully Paid"));
+				blueprint1.put("data",dataMap);
+				blueprintList = List();
+				blueprintList.add(blueprint1);
+				param = Map();
+				param.put("blueprint",blueprintList);
+				response = invokeurl
+				[
+					url :"https://www.zohoapis.com/crm/v2/deals/" + Sp_Id + "/actions/blueprint"
+					type :PUT
+					parameters:param.toString()
+					connection:"zoho_crm"
+				];
+				info response;
+			}
+			info zoho.crm.updateRecord("Deals",Sp_Id,{"Disable_Transition":true});
+		}
+		else if(Status == "Project Completed")
+		{
+			if(CurrentStage != "Project Completed")
+			{
+				dataMap = Map();
+				blueprint1 = Map();
+				blueprint1.put("transition_id",TransitionsIDs.get("Project Completed"));
+				blueprint1.put("data",dataMap);
+				blueprintList = List();
+				blueprintList.add(blueprint1);
+				param = Map();
+				param.put("blueprint",blueprintList);
+				response = invokeurl
+				[
+					url :"https://www.zohoapis.com/crm/v2/deals/" + Sp_Id + "/actions/blueprint"
+					type :PUT
+					parameters:param.toString()
+					connection:"zoho_crm"
+				];
+				info response;
+			}
+			info zoho.crm.updateRecord("Deals",Sp_Id,{"Disable_Transition":true});
+		}
+		else if(Status == "Production" && SO_Count > 0)
+		{
+			info zoho.crm.updateRecord("Deals",Sp_Id,{"Disable_Transition":false});
+			if(CurrentStage != "Production")
+			{
+				dataMap = Map();
+				blueprint1 = Map();
+				blueprint1.put("transition_id",TransitionsIDs.get("Production"));
+				blueprint1.put("data",dataMap);
+				blueprintList = List();
+				blueprintList.add(blueprint1);
+				param = Map();
+				param.put("blueprint",blueprintList);
+				response = invokeurl
+				[
+					url :"https://www.zohoapis.com/crm/v2/deals/" + Sp_Id + "/actions/blueprint"
+					type :PUT
+					parameters:param.toString()
+					connection:"zoho_crm"
+				];
+				info response;
+			}
+		}
+		else if(Status == "Pre-Production" && SO_Count == 0)
+		{
+			info zoho.crm.updateRecord("Deals",Sp_Id,{"Disable_Transition":false});
+			if(CurrentStage != "Pre-Production")
+			{
+				dataMap = Map();
+				blueprint1 = Map();
+				blueprint1.put("transition_id",TransitionsIDs.get("Pre-Production"));
+				blueprint1.put("data",dataMap);
+				blueprintList = List();
+				blueprintList.add(blueprint1);
+				param = Map();
+				param.put("blueprint",blueprintList);
+				response = invokeurl
+				[
+					url :"https://www.zohoapis.com/crm/v2/deals/" + Sp_Id + "/actions/blueprint"
+					type :PUT
+					parameters:param.toString()
+					connection:"zoho_crm"
+				];
+				info response;
+			}
+		}
+	}
+	/////////////////////////// Updating Project Status on Zoho Projects ////////////////
+	// 		Proj_details = zoho.crm.getRecordById("Deals",Sp_Id);
+	// 		Project_ID = Proj_details.get("Project_ID");
+	// 		ZProject_ID = Proj_details.get("Zoho_Projects_Project_ID");
+	// 		update_map_1 = Map();
+	// 		if(ZProject_ID != null)
+	// 		{
+	// 			zoho_proj_detail = invokeurl
+	// 			[
+	// 				url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProject_ID + "/"
+	// 				type :GET
+	// 				parameters:update_map_1
+	// 				connection:"zohoprojectcall"
+	// 			];
+	// 			zoho_projj_status = zoho_proj_detail.get("projects").get("0").get("custom_status_name");
+	// 		}
+	//////////////////////////////////////////////////////////////////////
+	if(ZProject_ID != null && (Status == "Fully Paid" || Status == "Project Completed") && AllTasksClosed == true)
+	{
+		//////////new condition/////////
+		update_map = Map();
+		update_map.put("custom_status","1264527000000212116");
+		resp = invokeurl
+		[
+			url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProject_ID + "/"
+			type :POST
+			parameters:update_map
+			connection:"zohoprojectcall"
+		];
+		info resp;
+	}
+	// 	else if(ZProject_ID != null && (Status == "Production" || Status == "Pre-Production") && zoho_projj_status != "Approved")
+	// 	{
+	// 		update_map = Map();
+	// 		update_map.put("status","active");
+	// 		update_map.put("custom_status","1264527000000212089");
+	// 		resp = invokeurl
+	// 		[
+	// 			url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProject_ID + "/"
+	// 			type :POST
+	// 			parameters:update_map
+	// 			connection:"zohoprojectcall"
+	// 		];
+	// 		info resp;
+	// 		/////////////////////////////////
+	// 	}
+	///////////////////////////////////// Marking Sales Orders as Completed ////////////////////////////////////////////////
+	if((Status == "Fully Paid" || Status == "Project Completed") && AllTasksClosed == true)
+	{
+		SO_related_proj = zoho.crm.getRelatedRecords("SalesOrders","Deals",Sp_Id);
+		//info SO_related_proj;
+		for each  data in SO_related_proj
+		{
+			SO_id = data.get("id");
+			if(data.get("Status") == "Active")
+			{
+				mp = Map();
+				mp.put("Status","Completed");
+				update_SO = zoho.crm.updateRecord("Sales_Orders",SO_id,mp);
+				info update_SO;
+				//===========================Line Items=========================================================================
+				upadate_mp = Map();
+				upadate_mp.put("Status","Completed");
+				Data_mp = Map();
+				Data_mp.put("criteria","Sales_Order=\"" + SO_id + "\" && Status!=\"Cancelled\"");
+				Data_mp.put("data",upadate_mp);
+				UpdateLineItemResp = invokeurl
+				[
+					url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/All_Line_Items?process_until_limit=true"
+					type :PATCH
+					parameters:Data_mp + ""
+					connection:"zoho_creator"
+				];
+				info UpdateLineItemResp;
+				//===========================Cost Items=========================================================================
+				CI_upadate_mp = Map();
+				CI_upadate_mp.put("Status","Completed");
+				CI_Data_mp = Map();
+				CI_Data_mp.put("criteria","Sales_Order_1=\"" + SO_id + "\" && Status!=\"Cancelled\"");
+				CI_Data_mp.put("data",CI_upadate_mp);
+				UpdateCostItemResp = invokeurl
+				[
+					url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/All_Cost_Items?process_until_limit=true"
+					type :PATCH
+					parameters:CI_Data_mp + ""
+					connection:"zoho_creator"
+				];
+				info UpdateCostItemResp;
+			}
+		}
+	}
+	////////////////////////////////////////////////////////////////////////////////////////////////////////
+}
+catch (e)
+{
+	Email_Body = "";
+	Email_Body = Email_Body + "SO Resp: " + SO_obj + "\n\n";
+	Email_Body = Email_Body + "Invoice Resp: " + BooksInvoices + "\n\n";
+	Email_Body = Email_Body + "PO Resp: " + PO_Obj + "\n\n";
+	Email_Body = Email_Body + "Bill Resp: " + Bills + "\n\n";
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Blueprint_N_Project_Stage_selection / CRM"
+		message :"Sign Project ID: " + Sp_Id + " Root Cause: " + e + "\n\n" + Email_Body
+	]
+}

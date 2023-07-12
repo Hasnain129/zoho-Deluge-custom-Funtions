@@ -1,0 +1,117 @@
+try 
+{
+	Proj_details = zoho.crm.getRecordById("Deals",Deal_ID);
+	Project_ID = Proj_details.get("Project_ID");
+	ZProject_ID = Proj_details.get("Zoho_Projects_Project_ID");
+	/////////////// Marking project as Cancelled and Arching the project ///////////////////////
+	if(ZProject_ID != null)
+	{
+		update_map = Map();
+		update_map.put("status","archived");
+		update_map.put("custom_status","1264527000041652467");
+		resp = invokeurl
+		[
+			url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProject_ID + "/"
+			type :POST
+			parameters:update_map
+			connection:"zohoprojectcall"
+		];
+		info resp;
+		add_status_map = Map();
+		add_status_map.put("content","Project has been archived");
+		archive_resp = invokeurl
+		[
+			url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProject_ID + "/statuses/"
+			type :POST
+			parameters:add_status_map
+			connection:"zohoprojectcall"
+		];
+		info archive_resp;
+	}
+	/////////////////////////////// Mark Sales Order as Cancelled ////////////////////////
+	SO_related_proj = zoho.crm.getRelatedRecords("SalesOrders","Deals",Deal_ID.tolong());
+	if(SO_related_proj != {})
+	{
+		for each  data in SO_related_proj
+		{
+			SO_id = data.get("id");
+			if(data.get("Status") == "Active")
+			{
+				mp = Map();
+				mp.put("Status","Cancelled");
+				update_SO = zoho.crm.updateRecord("Sales_Orders",SO_id,mp);
+				info update_SO;
+				//===========================Line Items=========================================================================
+				upadate_mp = Map();
+				upadate_mp.put("Status","Cancelled");
+				Data_mp = Map();
+				Data_mp.put("criteria","Sales_Order=\"" + SO_id + "\" && Status!=\"Completed\"");
+				Data_mp.put("data",upadate_mp);
+				UpdateLineItemResp = invokeurl
+				[
+					url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/All_Line_Items?process_until_limit=true"
+					type :PATCH
+					parameters:Data_mp + ""
+					connection:"zoho_creator"
+				];
+				info UpdateLineItemResp;
+				//===========================Cost Items=========================================================================
+				CI_upadate_mp = Map();
+				CI_upadate_mp.put("Status","Cancelled");
+				CI_Data_mp = Map();
+				CI_Data_mp.put("criteria","Sales_Order_1=\"" + SO_id + "\" && Status!=\"Completed\"");
+				CI_Data_mp.put("data",CI_upadate_mp);
+				UpdateCostItemResp = invokeurl
+				[
+					url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/All_Cost_Items?process_until_limit=true"
+					type :PATCH
+					parameters:CI_Data_mp + ""
+					connection:"zoho_creator"
+				];
+				info UpdateCostItemResp;
+			}
+		}
+		//=======================Update No of SOs on Sign Project=========================
+		Deals_SOs = zoho.crm.getRelatedRecords("SalesOrders","Deals",Deal_ID);
+		SO_Count = 0;
+		for each  SO in Deals_SOs
+		{
+			if(SO.get("Status") != "Cancelled")
+			{
+				SO_Count = SO_Count + 1;
+			}
+		}
+		info SO_Count;
+		Update_Mp = Map();
+		Update_Mp.put("No_of_SOs",SO_Count);
+		Update_Mp.put("Disable_Transition",false);
+		UpdateResp = zoho.crm.updateRecord("Deals",Deal_ID,Update_Mp);
+		info UpdateResp;
+	}
+	/////////////////////////////////////////////////////////////////////////////////////////
+	Subj = "Project ID: " + Project_ID + " marked as Lost";
+	Email_Message = "Dear Team, <br><br>" + Project_ID + " has been marked as Lost.<br><br>Please confirm all the below data points against this project are cancelled or voided in the system.<br><br>1. Quotes<br>2. Sales Orders<br>3. Line and Cost Items<br>4. Retainer Invoices<br>5. Invoices<br>6. POs<br>7. Bills<br>8. Zoho Sign Documents<br><br>Sign Project Link: <a href='https://crm.zoho.com/crm/org666155072/tab/Potentials/" + Deal_ID + "'>Link</a><br><br>Thank You.";
+	//////////////////////////////// Create Ticket on Zoho Desk /////////////////////////////////////////////////////
+	mp = Map();
+	mp.put("departmentId",274337000000006907);
+	mp.put("contactId",274337000002270007);
+	mp.put("assigneeId",274337000001074001);
+	mp.put("channel","Email");
+	mp.put("priority","High");
+	mp.put("classification","Zoho");
+	mp.put("subject",Subj);
+	mp.put("description",Email_Message);
+	Data = zoho.desk.create("666335187","Tickets",mp);
+	info Data;
+}
+catch (e)
+{
+	info e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Blueprint Project Lost - Lost Function For SignProjects"
+		message :"ID: " + Deal_ID + " Root Cause: " + e
+	]
+}

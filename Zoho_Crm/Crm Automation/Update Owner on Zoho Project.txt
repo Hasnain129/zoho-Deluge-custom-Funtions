@@ -1,0 +1,45 @@
+SP_Details = zoho.crm.getRecordById("Deals",SP_id);
+Project_Workflow_id = SP_Details.get("Workflow").get("id");
+Project_Workflow = zoho.crm.getRecordById("Workflow_Setup",Project_Workflow_id);
+zp_owner = zoho.crm.getRecordById("users",SP_Details.get("Owner").get("id")).get("users").get(0).get("zuid");
+Template_Tasks_with_Owner = List();
+info Project_Workflow.get("Template_ID");
+ZP_id = SP_Details.get("Zoho_Projects_Project_ID");
+Zoho_Project_Tasks = invokeurl
+[
+	url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZP_id + "/tasks/"
+	type :GET
+	connection:"zohoprojectcall"
+];
+for each  Tasks in Zoho_Project_Tasks.get("tasks")
+{
+	if(Tasks.get("status").get("name") != "Cancelled")
+	{
+		for each  fields in Tasks.get("custom_fields")
+		{
+			if(fields.containsValue("Project Management"))
+			{
+				Mp = Map();
+				Mp.put("person_responsible",zp_owner);
+				update_task_owner = invokeurl
+				[
+					url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZP_id + "/tasks/" + Tasks.get("id") + "/"
+					type :POST
+					parameters:Mp
+					connection:"zohoprojectcall"
+				];
+			}
+		}
+	}
+}
+//info Zoho_Project_Tasks;
+mp = Map();
+mp.put("owner",zp_owner);
+Update_Project_Owner = invokeurl
+[
+	url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZP_id + "/"
+	type :POST
+	parameters:mp
+	connection:"zohoprojectcall"
+];
+info Update_Project_Owner;

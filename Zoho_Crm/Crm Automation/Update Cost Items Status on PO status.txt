@@ -1,0 +1,75 @@
+try 
+{
+	PO_details = zoho.crm.getRecordById("Purchase_Orders",PO_id);
+	Status = PO_details.get("Status");
+	if(Status == "Draft" || Status == "Rejected" || Status == "Voided")
+	{
+		Creator_status = "Not Started";
+	}
+	else if(Status == "Sent" || Status == "Accepted")
+	{
+		Creator_status = "In Progress";
+	}
+	else if(Status == "Completed" || Status == "QA Passed")
+	{
+		Creator_status = "Completed";
+	}
+	// else if(Status == "Rejected" || Status == "Voided")
+	// {
+	// 	Creator_status = "Cancelled";
+	// }
+	info Creator_status;
+	if(Creator_status != null)
+	{
+		////////////////////////////// Cost Items /////////////////////////////////////////////
+		//creator_data = zoho.creator.getRecords("blinksigns","line-items","All_Cost_Items","PO==\"" + PO_id + "\"",1,100,"zoho_creator");
+		//////////////////////////////////////////////////////////////////////////////////////////////////
+		CI_Data_mp = Map();
+		CI_Data_mp.put("criteria","PO==\"" + PO_id + "\"");
+		creator_data = invokeurl
+		[
+			url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/All_Cost_Items?process_until_limit=true"
+			type :GET
+			parameters:CI_Data_mp
+			connection:"zoho_creator"
+		];
+		//info creator_data;
+		CheckCode = creator_data.get("code");
+		if(CheckCode == 3000)
+		{
+			creator_entries = creator_data.get("data");
+			for each  data in creator_entries
+			{
+				Entry_id = data.get("ID").tolong();
+				info Entry_id;
+				mp = Map();
+				mp.put("Status",Creator_status);
+				mp.put("Update_Status",true);
+				CI_upadate_mp = Map();
+				CI_upadate_mp.put("data",mp);
+				Update_product_creator = invokeurl
+				[
+					url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/All_Cost_Items/" + Entry_id
+					type :PATCH
+					parameters:CI_upadate_mp + ""
+					connection:"zoho_creator"
+				];
+				//////////////////////////////////////////////////////////
+				//Update_product_creator = zoho.creator.updateRecord("blinksigns","line-items","All_Cost_Items",Entry_id,mp,Map(),"zoho_creator");
+				/////////////////////////////////////////////////////////////
+				info Update_product_creator;
+				break;
+			}
+		}
+	}
+}
+ catch (e)
+{	info e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"auto@rebiz.zohodesk.com"
+		subject :"Update Cost Items Status on PO status / Purchase Orders / Workflow / CRM"
+		message :"ID: " + PO_id + " Root Cause: " + e
+	]
+}

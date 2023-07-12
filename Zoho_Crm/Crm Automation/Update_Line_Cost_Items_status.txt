@@ -1,0 +1,60 @@
+try 
+{
+	salesorderinfo = zoho.crm.getRecordById("Sales_Orders",Saleorderid);
+	criteria = "Sales_Order=\"" + Saleorderid + "\" && Status==\"Pending Approval\"";
+	Line_Items_Details = zoho.creator.getRecords("blinksigns","line-items","All_Line_Items",criteria,1,200,"zoho_creator");
+	//info Line_Items_Details;
+	CheckCode = Line_Items_Details.get("code");
+	if(CheckCode == 3000)
+	{
+		for each  data in Line_Items_Details.get("data")
+		{
+			id = data.get("ID");
+			info id;
+			upadate_mp = Map();
+			upadate_mp.put("Status","Not Started");
+			empty_mp = Map();
+			updateRecord = zoho.creator.updateRecord("blinksigns","line-items","All_Line_Items",id,upadate_mp,empty_mp,"zoho_creator");
+			info updateRecord;
+		}
+	}
+	Cost_Items_Details = zoho.creator.getRecords("blinksigns","line-items","All_Cost_Items",criteria,1,200,"zoho_creator");
+	CheckCode = Cost_Items_Details.get("code");
+	if(CheckCode == 3000)
+	{
+		for each  data in Cost_Items_Details.get("data")
+		{
+			id = data.get("ID");
+			info id;
+			upadate_mp = Map();
+			upadate_mp.put("Status","Not Started");
+			empty_mp = Map();
+			updateRecord = zoho.creator.updateRecord("blinksigns","line-items","All_Cost_Items",id,upadate_mp,empty_mp,"zoho_creator");
+			info updateRecord;
+		}
+	}
+	//info salesorderinfo;
+	// 	upadate_mp = Map();
+	// 	upadate_mp.put("Status","Not Started");
+	// 	Data_mp = Map();
+	// 	// Data_mp.put("criteria","Sales_Order=\"" + Saleorderid + "\"");
+	// 	Data_mp.put("criteria","Sales_Order=\"" + Saleorderid + "\" && Status==\"Pending Approval\"");
+	// 	Data_mp.put("data",upadate_mp);
+	// 	UpdateLineItemResp = invokeurl
+	// 	[
+	// 		url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/All_Line_Items?process_until_limit=true"
+	// 		type :PATCH
+	// 		parameters:Data_mp + ""
+	// 		connection:"zoho_creator"
+	// 	];
+	// 	info UpdateLineItemResp;
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update_Line_Cost_Items_status / SO / Workflow / CRM"
+		message :"ID: " + Saleorderid + " Root Cause: " + e
+	]
+}

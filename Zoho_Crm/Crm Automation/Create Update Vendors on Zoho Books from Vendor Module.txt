@@ -1,0 +1,138 @@
+try 
+{
+	Vendor_contacts = zoho.crm.getRelatedRecords("Contacts","Vendors",CRM_Vendor_id);
+	///////////////////////////////// Import Vendor ///////////////////////////////////////////////
+	Books_Vendor = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/crm/vendor/" + CRM_Vendor_id + "/import?organization_id=666479573"
+		type :POST
+		connection:"zoho_books"
+	];
+	Vendor_Books_Id = Books_Vendor.get("data").get("customer_id");
+	///////////////////////////////// ============ VENDOR ID =============  //////////////////////////////////////////////
+	Get_Vend_Details = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/contacts/" + Vendor_Books_Id + "?organization_id=666479573"
+		type :GET
+		connection:"zoho_books"
+	];
+	Contact_Person_Info = Get_Vend_Details.get("contact").get("contact_persons");
+	if(Vendor_contacts.isEmpty() == false)
+	{
+		//////////////// Check for Contact Person's Emails ////////////////////////
+		cp_mp = Map();
+		books_contact_list = List();
+		crm_contact_list = list();
+		for each  data in Contact_Person_Info
+		{
+			ContactPerson_Email = data.get("email");
+			Cont_Id = data.get("contact_person_id");
+			cp_mp.put(ContactPerson_Email,Cont_Id);
+			books_contact_list.add(ContactPerson_Email);
+		}
+		info cp_mp;
+		/////////////////////////////////////////////////////////
+		for each  item in Vendor_contacts
+		{
+			crm_contact_email = item.get("Email");
+			crm_contact_list.add(crm_contact_email);
+			if(!books_contact_list.contains(crm_contact_email) == true)
+			{
+				mp = Map();
+				Fn = item.get("First_Name");
+				Ln = item.get("Last_Name");
+				Em = item.get("Email");
+				Phone = item.get("Phone");
+				Mobile = item.get("Secondary_Phone");
+				Pos = item.get("Position");
+				mp_cp = Map();
+				mp_cp.put("contact_id",Vendor_Books_Id);
+				mp_cp.put("first_name",Fn);
+				mp_cp.put("last_name",Ln);
+				mp_cp.put("email",Em);
+				mp_cp.put("phone",Phone);
+				mp_cp.put("mobile",Mobile);
+				mp_cp.put("designation",Pos);
+				Json_data = Map();
+				Json_data.put("JSONString",mp_cp);
+				create_contact_persons = invokeurl
+				[
+					url :"https://books.zoho.com/api/v3/contacts/contactpersons?organization_id=666479573"
+					type :POST
+					parameters:Json_data
+					connection:"zoho_books"
+				];
+				info "Contact Created" + create_contact_persons;
+			}
+			else
+			{
+				cont_per_id = cp_mp.get(crm_contact_email);
+				info cont_per_id;
+				mp = Map();
+				Fn = item.get("First_Name");
+				Ln = item.get("Last_Name");
+				Em = item.get("Email");
+				Phone = item.get("Phone");
+				Mobile = item.get("Secondary_Phone");
+				Pos = item.get("Position");
+				mp_cp = Map();
+				mp_cp.put("contact_id",Vendor_Books_Id);
+				mp_cp.put("first_name",Fn);
+				mp_cp.put("last_name",Ln);
+				mp_cp.put("email",Em);
+				mp_cp.put("phone",Phone);
+				mp_cp.put("mobile",Mobile);
+				mp_cp.put("designation",Pos);
+				Json_data = Map();
+				Json_data.put("JSONString",mp_cp);
+				update_contact_persons = invokeurl
+				[
+					url :"https://books.zoho.com/api/v3/contacts/contactpersons/" + cont_per_id + "?organization_id=666479573"
+					type :PUT
+					parameters:Json_data
+					connection:"zoho_books"
+				];
+				info "Contact Updated" + update_contact_persons;
+				///////////////////////////////////////////////////////
+				if(update_contact_persons.get("code") == 31027)
+				{
+					info "Duplicate Email";
+					////////////////////////////// Delete //////////////////////////////
+					Delete_contact_persons = invokeurl
+					[
+						url :"https://books.zoho.com/api/v3/contacts/contactpersons/" + cont_per_id + "?organization_id=666479573"
+						type :DELETE
+						connection:"zoho_books"
+					];
+					info "Contact Deleted" + Delete_contact_persons;
+				}
+			}
+		}
+		////////////////////////////////////// Removing additional contacts /////////////////////////
+		books_contact_list.removeAll(crm_contact_list);
+		for each  delete_contact in books_contact_list
+		{
+			cont_per_id = cp_mp.get(delete_contact);
+			if(cont_per_id != null)
+			{
+				////////////////////////////// Delete //////////////////////////////
+				Delete_contact_persons = invokeurl
+				[
+					url :"https://books.zoho.com/api/v3/contacts/contactpersons/" + cont_per_id + "?organization_id=666479573"
+					type :DELETE
+					connection:"zoho_books"
+				];
+				info "Contact Deleted" + Delete_contact_persons;
+			}
+		}
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Create/Update Vendor Contact Person on Books / Vendors / Workflow / CRM"
+		message :"ID: " + CRM_Vendor_id + " Root Cause: " + e
+	]
+}

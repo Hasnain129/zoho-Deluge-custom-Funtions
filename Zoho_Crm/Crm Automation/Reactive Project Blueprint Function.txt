@@ -1,0 +1,41 @@
+Proj_details = zoho.crm.getRecordById("Deals",Deal_ID);
+Project_ID = Proj_details.get("Project_ID");
+ZProject_ID = Proj_details.get("Zoho_Projects_Project_ID");
+//////////////////////////////////// Checking if project is actvie or not ///////////////////
+if(ZProject_ID != null)
+{
+	Zproj_details = invokeurl
+	[
+		url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProject_ID + "/"
+		type :GET
+		connection:"zohoprojectcall"
+	];
+	Status = Zproj_details.get("projects").tomap().get("status");
+	////////////////////////////////////////////////////////
+	if(Status != "active")
+	{
+		update_map = Map();
+		update_map.put("status","active");
+		update_map.put("custom_status","1264527000000212089");
+		resp = invokeurl
+		[
+			url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProject_ID + "/"
+			type :POST
+			parameters:update_map
+			connection:"zohoprojectcall"
+		];
+		info resp;
+		/////////////////////////////////
+		// 		//  ----------------------------------------------------  On Sucsess  Note Creation
+		// 		User_name = zoho.loginuser;
+		// 		Title = "Project Reactivated";
+		// 		Content = "Project ID: \"" + Project_ID + "\" has been reactivated by " + User_name;
+		// 		mp = Map();
+		// 		mp.put("Parent_Id",Deal_ID);
+		// 		mp.put("Note_Title",Title);
+		// 		mp.put("Note_Content",Content);
+		// 		mp.put("$se_module","Deals");
+		// 		create_note = zoho.crm.createRecord("Notes",mp);
+		// 		// --------------------------------------------------------------------------------
+	}
+}

@@ -1,0 +1,757 @@
+try 
+{
+	Presta_Order_details = zoho.crm.getRecordById("Woo_Orders",woo_id);
+	Order_ID = Presta_Order_details.get("Name");
+	///////////////////// Get order from woocommerce to find SKU of products ///////////////////////////
+	Order = invokeurl
+	[
+		url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/api/orders/" + Order_ID + "?output_format=JSON"
+		type :GET
+	];
+	//info Order;
+	Order_details = Order.get("order");
+	shop_id = Order_details.get("id_shop");
+	Billing_id = Order_details.get("id_address_invoice");
+	Shipping_id = Order_details.get("id_address_delivery");
+	Customer_id = Order_details.get("id_customer");
+	Line_items = Order_details.get("associations").get("order_rows");
+	Discount = Order_details.get("total_discounts");
+	Shipping_total = Order_details.get("total_shipping");
+	Payment_Method = Order_details.get("payment");
+	Order_ref = Order_details.get("reference");
+	Order_state = Order_details.get("current_state");
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////
+	///////////////////////////////////////// Order_Status /////////////////////////////////////////////////////
+	Order_State_details = invokeurl
+	[
+		url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/api/order_states/" + Order_state + "?output_format=JSON"
+		type :GET
+	];
+	Order_status = Order_State_details.get("order_state").get("name");
+	///////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////// Contact details  /////////////////////////////////////////////
+	Customer_details = invokeurl
+	[
+		url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/api/customers/" + Customer_id + "?output_format=JSON"
+		type :GET
+	];
+	info Customer_details;
+	First_name = Customer_details.get("customer").get("firstname");
+	Last_name = Customer_details.get("customer").get("lastname");
+	Email = Customer_details.get("customer").get("email").toLowerCase();
+	Group_id = Customer_details.get("customer").get("id_default_group");
+	info Group_id;
+	if(Group_id == 4)
+	{
+		parent_customer = 3205780000005121061;
+		//////////////////////////////////////////////// Extra funds data for Motto Cases ////////////////////////
+		Extra_Customer_Data = invokeurl
+		[
+			url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/mottomortgage/api/CustomerTransactions/" + Customer_id + "?output_format=JSON"
+			type :GET
+		];
+		info Extra_Customer_Data;
+		Extra_Customer_Details = Extra_Customer_Data.get("extra_fields");
+		Allocated_funds = Extra_Customer_Details.get("allocated_funds");
+		Consued_funds = Extra_Customer_Details.get("consumed_funds");
+		Balance_funds = Extra_Customer_Details.get("balance_funds");
+		Expirty_date = Extra_Customer_Details.get("expiry_funds");
+		if(Expirty_date == "0000-00-00")
+		{
+			Expirty_date = "";
+		}
+	}
+	/////////////////////////////////////// Shop Name /////////////////////////////////////////////
+	shop_details = invokeurl
+	[
+		url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/api/shops/" + shop_id + "?output_format=JSON"
+		type :GET
+	];
+	Shop_Name = shop_details.get("shop").get("name");
+	////////////////////////////////// Billings Detials ////////////////////////////////////////////
+	Billings_details = invokeurl
+	[
+		url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/api/addresses/" + Billing_id + "?output_format=JSON"
+		type :GET
+	];
+	Company_name = Billings_details.get("address").get("company");
+	Phone = Billings_details.get("address").get("phone").remove("/");
+	Billing_street = Billings_details.get("address").get("address1");
+	Billing_city = Billings_details.get("address").get("city");
+	Billing_code = Billings_details.get("address").get("postcode");
+	Billing_state_id = Billings_details.get("address").get("id_state");
+	Billing_country_id = Billings_details.get("address").get("id_country");
+	////////////////////////////////////// Billing State ////////////////////////////////////////////
+	Billings_state_details = invokeurl
+	[
+		url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/api/states/" + Billing_state_id + "?output_format=JSON"
+		type :GET
+	];
+	Billing_state = Billings_state_details.get("state").get("name");
+	/////////////////////////////////// Billing Country //////////////////////////////////////////
+	Billings_country_details = invokeurl
+	[
+		url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/api/countries/" + Billing_country_id + "?output_format=JSON"
+		type :GET
+	];
+	Billing_country = Billings_country_details.get("country").get("name");
+	////////////////////////////////// Shipping Detials ////////////////////////////////////////////
+	Shipping_details = invokeurl
+	[
+		url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/api/addresses/" + Shipping_id + "?output_format=JSON"
+		type :GET
+	];
+	Shipping_street = Shipping_details.get("address").get("address1");
+	Shipping_city = Shipping_details.get("address").get("city");
+	Shipping_code = Shipping_details.get("address").get("postcode");
+	Shipping_state_id = Shipping_details.get("address").get("id_state");
+	Shipping_country_id = Shipping_details.get("address").get("id_country");
+	////////////////////////////////////// Billing State ////////////////////////////////////////////
+	Shipping_state_details = invokeurl
+	[
+		url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/api/states/" + Shipping_state_id + "?output_format=JSON"
+		type :GET
+	];
+	Shipping_state = Shipping_state_details.get("state").get("name");
+	/////////////////////////////////// Billing Country //////////////////////////////////////////
+	Shipping_country_details = invokeurl
+	[
+		url :"https://I7CG8LJ7WXCCEVRG3MX1N8SVZPRRC8AP@blinkswag.com/api/countries/" + Shipping_country_id + "?output_format=JSON"
+		type :GET
+	];
+	Shipping_country = Shipping_country_details.get("country").get("name");
+	/////////////////////////////////////// Product Subform ///////////////////////
+	Products_list = List();
+	info Products_list;
+	for each  data in Line_items
+	{
+		///////////////////// Fetching Description ////////////////////////////////////
+		Prod_name_presta = data.get("product_name");
+		SKU = data.get("product_reference");
+		Price = data.get("unit_price_tax_incl");
+		Quantity = data.get("product_quantity");
+		Mp = Map();
+		Mp.put("Product",Prod_name_presta);
+		Mp.put("SKU",SKU);
+		Mp.put("Qty",Quantity);
+		Mp.put("Cost",Price);
+		Products_list.add(Mp);
+	}
+	//////////////////////////// If Company is Empty ///////////////////////////////////
+	if(Company_name == "" || Company_name == " ")
+	{
+		Company_name = First_name + " " + Last_name + " Company";
+	}
+	mp = Map();
+	mp.put("Product_Item",Products_list);
+	mp.put("Shop_Name",Shop_Name);
+	mp.put("First_Name",First_name);
+	mp.put("Last_Name",Last_name);
+	mp.put("Phone_No",Phone);
+	mp.put("Company_Name",Company_name.remove("(").remove(")"));
+	mp.put("Email",Email);
+	mp.put("Payment_Method",Payment_Method);
+	mp.put("Order_Reference",Order_ref);
+	mp.put("Billing_Street",Billing_street);
+	mp.put("Billing_City",Billing_city);
+	mp.put("Billing_State",Billing_state);
+	mp.put("Billing_Code",Billing_code);
+	mp.put("Billing_Country",Billing_country);
+	mp.put("Shipping_Street",Shipping_street);
+	mp.put("Shipping_City",Shipping_city);
+	mp.put("Shipping_State",Shipping_state);
+	mp.put("Shipping_Code",Shipping_code);
+	mp.put("Shipping_Country",Shipping_country);
+	mp.put("Shipping_Cost",Shipping_total);
+	mp.put("Discount",Discount);
+	mp.put("Group",Group_id);
+	mp.put("Order_Status",Order_status);
+	update = zoho.crm.updateRecord("Woo_Orders",woo_id,mp);
+	//	info update;
+	//////////////////////////////// Create Customer, Contact, Project, SO /////////////////////////
+	woo_details = zoho.crm.getRecordById("Woo_Orders",woo_id);
+	First_name = ifnull(woo_details.get("First_Name"),"");
+	Last_name = ifnull(woo_details.get("Last_Name"),"");
+	Company_name = ifnull(woo_details.get("Company_Name"),"");
+	Contact_email = ifnull(woo_details.get("Email"),"");
+	Contact_phone = ifnull(woo_details.get("Phone_No"),"");
+	Order_ID = ifnull(woo_details.get("Name"),"");
+	Order_reference = ifnull(woo_details.get("Order_Reference"),"");
+	Billing_street = ifnull(woo_details.get("Billing_Street"),"");
+	Billing_city = ifnull(woo_details.get("Billing_City"),"");
+	Billing_state = ifnull(woo_details.get("Billing_State"),"");
+	Billing_code = ifnull(woo_details.get("Billing_Code"),"");
+	Billing_country = ifnull(woo_details.get("Billing_Country"),"");
+	Shipping_street = ifnull(woo_details.get("Shipping_Street"),"");
+	Shipping_city = ifnull(woo_details.get("Shipping_City"),"");
+	Shipping_state = ifnull(woo_details.get("Shipping_State"),"");
+	Shipping_code = ifnull(woo_details.get("Shipping_Code"),"");
+	Shipping_country = ifnull(woo_details.get("Shipping_Country"),"");
+	Product_details = woo_details.get("Product_Item");
+	Due_Date = zoho.currentdate;
+	//////////////////////// Searching contact //////////////////////
+	contact_id = "";
+	contacts = zoho.crm.searchRecords("Contacts","((Email:equals:" + Contact_email + "))");
+	for each  w in contacts
+	{
+		contact_id = ifnull(w.get("id"),"");
+	}
+	//////////////////// Checking if customer exisit and Creating contact //////////////////////////////
+	if(contact_id == "")
+	{
+		////////////////////// Searching Customer //////////////////////
+		customer_id = "";
+		customers = zoho.crm.searchRecords("Accounts","((Account_Name:equals:" + Company_name + "))");
+		for each  w in customers
+		{
+			customer_id = ifnull(w.get("id"),"");
+		}
+		///////////////////// Creating customer ////////////////////////
+		if(customer_id = "")
+		{
+			mp_customer = Map();
+			mp_customer.put("Organization_Name",{"Blink Swag"});
+			if(Group_id == 4)
+			{
+				mp_customer.put("Parent_Customer",parent_customer);
+			}
+			mp_customer.put("Account_Name",Company_name);
+			mp_customer.put("Billing_Street",Billing_street);
+			mp_customer.put("Billing_City",Billing_city);
+			mp_customer.put("Billing_State",Billing_state);
+			mp_customer.put("Billing_Code",Billing_code);
+			mp_customer.put("Billing_Country",Billing_country);
+			mp_customer.put("Shipping_Street",Shipping_street);
+			mp_customer.put("Shipping_City",Shipping_city);
+			mp_customer.put("Shipping_State",Shipping_state);
+			mp_customer.put("Shipping_Code",Shipping_code);
+			mp_customer.put("Shipping_Country",Shipping_country);
+			Create_customer = zoho.crm.createRecord("Accounts",mp_customer);
+			customer_id = Create_customer.get("id");
+		}
+		else
+		{
+			mp_customer = Map();
+			if(Group_id == 4)
+			{
+				mp_customer.put("Parent_Customer",parent_customer);
+			}
+			Update_customer = zoho.crm.updateRecord("Accounts",customer_id,mp_customer);
+		}
+		//////////////// Creating Contact ///////////////////////////
+		mp_contact = Map();
+		mp_contact.put("Organization_Name",{"Blink Swag"});
+		if(Group_id == 4)
+		{
+			mp_contact.put("Parent_Customer",parent_customer);
+		}
+		mp_contact.put("First_Name",First_name);
+		mp_contact.put("Last_Name",Last_name);
+		mp_contact.put("Email",Contact_email);
+		mp_contact.put("Phone",Contact_phone);
+		mp_contact.put("Account_Name",customer_id);
+		mp_contact.put("Type_of_contact","Client");
+		mp_contact.put("Primary_Contact",true);
+		mp_contact.put("Allocated_Funds",Allocated_funds);
+		mp_contact.put("Balance_Funds",Balance_funds);
+		mp_contact.put("Consumed_Funds",Consued_funds);
+		mp_contact.put("Expiry_Date",Expirty_date);
+		create_contact = zoho.crm.createRecord("Contacts",mp_contact);
+		contact_id = create_contact.get("id");
+		Contact_Name = zoho.crm.getRecordById("Contacts",contact_id).get("Full_Name");
+	}
+	else
+	{
+		contact_details = zoho.crm.getRecordById("Contacts",contact_id);
+		customer = contact_details.get("Account_Name");
+		Contact_Name = contact_details.get("Full_Name");
+		if(customer == null)
+		{
+			////////////////////// Searching Customer //////////////////////
+			customer_id = "";
+			customers = zoho.crm.searchRecords("Accounts","((Account_Name:equals:" + Company_name + "))");
+			for each  w in customers
+			{
+				customer_id = ifnull(w.get("id"),"");
+			}
+			///////////////////// Creating customer ////////////////////////
+			if(customer_id = "")
+			{
+				mp_customer = Map();
+				mp_customer.put("Organization_Name",{"Blink Swag"});
+				if(Group_id == 4)
+				{
+					mp_customer.put("Parent_Customer",parent_customer);
+				}
+				mp_customer.put("Account_Name",Company_name);
+				mp_customer.put("Billing_Street",Billing_street);
+				mp_customer.put("Billing_City",Billing_city);
+				mp_customer.put("Billing_State",Billing_state);
+				mp_customer.put("Billing_Code",Billing_code);
+				mp_customer.put("Billing_Country",Billing_country);
+				mp_customer.put("Shipping_Street",Shipping_street);
+				mp_customer.put("Shipping_City",Shipping_city);
+				mp_customer.put("Shipping_State",Shipping_state);
+				mp_customer.put("Shipping_Code",Shipping_code);
+				mp_customer.put("Shipping_Country",Shipping_country);
+				Create_customer = zoho.crm.createRecord("Accounts",mp_customer);
+				customer_id = Create_customer.get("id");
+			}
+			else
+			{
+				mp_customer = Map();
+				if(Group_id == 4)
+				{
+					mp_customer.put("Parent_Customer",parent_customer);
+				}
+				Update_customer = zoho.crm.updateRecord("Accounts",customer_id,mp_customer);
+			}
+		}
+		else
+		{
+			customer_id = customer.get("id");
+		}
+		//////////////// Updating Contact /////////////////
+		mp_contact = Map();
+		if(Group_id == 4)
+		{
+			mp_contact.put("Parent_Customer",parent_customer);
+		}
+		mp_contact.put("Account_Name",customer_id);
+		mp_contact.put("Type_of_contact","Client");
+		//mp_contact.put("Primary_Contact",true);
+		mp_contact.put("Allocated_Funds",Allocated_funds);
+		mp_contact.put("Balance_Funds",Balance_funds);
+		mp_contact.put("Consumed_Funds",Consued_funds);
+		mp_contact.put("Expiry_Date",Expirty_date);
+		Update_contact = zoho.crm.updateRecord("Contacts",contact_id,mp_contact);
+	}
+	////////////////////////////// Importing CRM Contact in Books //////////////////////////////
+	Import_account = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/crm/account/" + customer_id + "/import?organization_id=666479573"
+		type :POST
+		connection:"zoho_books"
+	];
+	Book_contact_ID = Import_account.get("data").get("customer_id");
+	Book_contact_Name = Import_account.get("data").get("customer_name");
+	info Book_contact_ID;
+	/////////////////////////////////////// Geting contact details ///////////////////////////////////
+	// 	contactdetails = zoho.inventory.getRecordsByID("contacts","666479573",Book_contact_ID);
+	// 	Contact_obj = contactdetails.get("contact").get("contact_persons");
+	contact_persons = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/contacts/" + Book_contact_ID + "/contactpersons?organization_id=666479573"
+		type :GET
+		connection:"zoho_books"
+	];
+	Contact_obj = contact_persons.get("contact_persons");
+	for each  data_contact in Contact_obj
+	{
+		web_contact_email = Contact_email.toLowerCase();
+		books_contact_email = data_contact.get("email").toLowerCase();
+		if(books_contact_email == web_contact_email)
+		{
+			SO_contact_id = data_contact.get("contact_person_id");
+		}
+	}
+	info SO_contact_id;
+	///////////////////////Get Books Product ID//////////////////////////
+	Product_list = List();
+	for each  product in Product_details
+	{
+		Prod_name_presta = product.get("Product");
+		Product_descp = "Website Product name: " + Prod_name_presta;
+		Quantity = product.get("Qty");
+		Price = product.get("Cost");
+		SKU = product.get("SKU");
+		///////////////////////////////////////////////////
+		searchParam = {"sku":SKU};
+		Booksproduct = zoho.books.getRecords("items","666479573",searchParam);
+		Product_info = Booksproduct.get("items").get(0);
+		Books_item_ID = Product_info.get("item_id");
+		Books_item_name = Product_info.get("name");
+		item = Map();
+		item.put("item_id",Books_item_ID);
+		item.put("name",Books_item_name);
+		item.put("description",Product_descp);
+		item.put("rate",Price);
+		item.put("quantity",Quantity);
+		item.put("tax_id","1316483000000255373");
+		Product_list.add(item);
+	}
+	//info "productList : " + Product_list;
+	///////////////////// Data of Custom Fields /////////////////////////////////
+	cf_list = List();
+	cf_org_name = Map();
+	cf_org_name.put("label","Organization Name");
+	cf_org_name.put("value","Blink Swag");
+	cf_list.add(cf_org_name);
+	/////////////////////////////////////////////////
+	cf_contact = Map();
+	cf_contact.put("label","Contact");
+	cf_contact.put("value",First_name + " " + Last_name);
+	cf_list.add(cf_contact);
+	/////////////////////////////////////////////////
+	// 	cf_e_commerce = Map();
+	// 	cf_e_commerce.put("label","E-COMMERCE");
+	// 	cf_e_commerce.put("value","Yes");
+	// 	cf_list.add(cf_e_commerce);
+	/////////////////////////////////Create SO ////////////////////
+	mp_SO = Map();
+	mp_SO.put("date",Due_Date);
+	mp_SO.put("customer_id",Book_contact_ID);
+	mp_SO.put("contact_persons",{SO_contact_id});
+	mp_SO.put("status","Draft");
+	mp_SO.put("reference_number",Shop_Name + " Order: " + Order_ID + " - " + Order_reference);
+	mp_SO.put("template_id",1316483000009546035);
+	mp_SO.put("custom_fields",cf_list);
+	mp_SO.put("line_items",Product_list);
+	mp_SO.put("shipping_charge",Shipping_total);
+	if(Group_id != 4)
+	{
+		mp_SO.put("discount",Discount);
+		mp_SO.put("discount_type","entity_level");
+		mp_SO.put("cf_payment_method","COOP");
+	}
+	resp_SO = zoho.inventory.createRecord("salesorders","666479573",mp_SO);
+	info "SO_RESp " + resp_SO.get("salesorder").get("salesorder_number");
+	Salesorder_ID = resp_SO.get("salesorder").get("salesorder_id");
+	////////////////// Submit Sales Order for Approval /////////////////////////////////
+	Confirmed_SO = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/salesorders/" + Salesorder_ID + "/submit"
+		type :POST
+		connection:"zoho_books"
+	];
+	///////////////////// Approve Sales Order //////////////////////////////
+	Approve_SO = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/salesorders/" + Salesorder_ID + "/approve"
+		type :POST
+		connection:"zoho_books"
+	];
+	///////////////////// Comfired/Open SalesOrder //////////////////////////////
+	Open_SO = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/salesorders/" + Salesorder_ID + "/status/open"
+		type :POST
+		connection:"zoho_books"
+	];
+	info Open_SO;
+	///////////////////////////// Update Billing Address ///////////////////
+	Billing_Data = Map();
+	Billing_Data.put("attention",First_name + " " + Last_name);
+	Billing_Data.put("address",Billing_street);
+	Billing_Data.put("city",Billing_city);
+	Billing_Data.put("state",Billing_state);
+	Billing_Data.put("zip",Billing_code);
+	Billing_Data.put("country",Billing_country);
+	Billing_Data.put("phone",Contact_phone);
+	Billing_Data.put("is_one_off_address",true);
+	Billing_Data.put("is_update_customer",false);
+	JsonString = Map();
+	JsonString.put("JSONString",Billing_Data);
+	Update_shipping_add = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/salesorders/" + Salesorder_ID + "/address/billing?organization_id=666479573"
+		type :PUT
+		parameters:JsonString
+		connection:"zoho_books"
+	];
+	//info "Update Billing Address: " + Billing_Data;
+	/////////////////////////////////// Updating Shipping address //////////////////////////////
+	Shipping_Data = Map();
+	Shipping_Data.put("attention",First_name + " " + Last_name);
+	Shipping_Data.put("address",Shipping_street);
+	Shipping_Data.put("city",Shipping_city);
+	Shipping_Data.put("state",Shipping_state);
+	Shipping_Data.put("zip",Shipping_code);
+	Shipping_Data.put("country",Shipping_country);
+	Shipping_Data.put("is_one_off_address",true);
+	Shipping_Data.put("is_update_customer",false);
+	JsonString = Map();
+	JsonString.put("JSONString",Shipping_Data);
+	Update_shipping_add = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/salesorders/" + Salesorder_ID + "/address/shipping?organization_id=666479573"
+		type :PUT
+		parameters:JsonString
+		connection:"zoho_books"
+	];
+	//info "Update Shipping Address: " + Update_shipping_add;
+	////////////////// Create Invoice from Sales Orders //////////////////////
+	Inv_SO = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/invoices/fromsalesorder?organization_id=666479573&salesorder_id=" + Salesorder_ID
+		type :POST
+		connection:"zoho_books"
+	];
+	Invoice_ID = Inv_SO.get("invoice").get("invoice_id");
+	Invoice_Number = Inv_SO.get("invoice").get("invoice_number");
+	Total_Inv_Amount = Inv_SO.get("invoice").get("total");
+	////////////////// Submit Invoice for Approval /////////////////////////////////
+	Confirmed_Inv = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/invoices/" + Invoice_ID + "/submit"
+		type :POST
+		connection:"zoho_books"
+	];
+	///////////////////// Approve Invoice //////////////////////////////
+	Approve_Inv = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/invoices/" + Invoice_ID + "/approve"
+		type :POST
+		connection:"zoho_books"
+	];
+	///////////////////// Invoice Mark as Sent //////////////////////////////
+	Sent_Inv = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/invoices/" + Invoice_ID + "/status/sent"
+		type :POST
+		connection:"zoho_books"
+	];
+	info Sent_Inv;
+	////////////////////////////// Tag Id and BlinkSwag tag /////////////////////////////
+	tags_list = List();
+	tag_id = 1316483000000000335;
+	tag_option_id = 1316483000008042005;
+	tag_mp = Map();
+	tag_mp.put("tag_id",tag_id);
+	tag_mp.put("tag_option_id",tag_option_id);
+	tags_list.add(tag_mp);
+	/////////////////////////////////// Update Invoice Line Items /////////////////////////
+	li_list = List();
+	line_items = Inv_SO.get("invoice").get("line_items").toJSONList();
+	for each  item in line_items
+	{
+		li_mp = Map();
+		li_id = item.get("line_item_id");
+		li_mp.put("line_item_id",li_id);
+		li_mp.put("tags",tags_list);
+		li_list.add(li_mp);
+	}
+	////////////////////////////// Payment Gateway update ///////////////
+	currency_id = 1316483000000000097;
+	///////////////Configuring Authorize.net /////////////////////////
+	payment_getway = Map();
+	payment_getway.put("configured",true);
+	payment_getway.put("can_show_billing_address",false);
+	payment_getway.put("is_bank_account_applicable",true);
+	payment_getway.put("gateway_name","authorize_net");
+	payment_options = Map();
+	payment_options.put("payment_gateways",{payment_getway});
+	///////////////////// Data of Custom Fields /////////////////////////////////
+	// 	cf_list2 = List();
+	// 	cf_e_commerce2 = Map();
+	// 	cf_e_commerce2.put("label","E-Commerce");
+	// 	cf_e_commerce2.put("value","Yes");
+	// 	cf_list2.add(cf_e_commerce2);
+	////////////////////////// Update Invoice ////////////////////////////////////
+	mp_Inv = Map();
+	mp_Inv.put("reference_number",Shop_Name + " Order: " + Order_ID + " - " + Order_reference);
+	mp_Inv.put("template_id",1316483000009790351);
+	mp_Inv.put("line_items",li_list);
+	mp_Inv.put("payment_options",payment_options);
+	//mp_Inv.put("custom_fields",cf_list2);
+	Update_INV = zoho.inventory.updateRecord("invoices","666479573",Invoice_ID,mp_Inv);
+	// 	info Update_INV;
+	/////////////////////// Mark invoice as paid ////////////////////////////////////
+	if(Payment_Method.contains("PayPal"))
+	{
+		Books_payment_mode = "PayPal";
+	}
+	else
+	{
+		Books_payment_mode = "Authorize.Net";
+	}
+	info Books_payment_mode;
+	if(Group_id != 4)
+	{
+		Invoice_map = Map();
+		Invoice_map.put("invoice_id",Invoice_ID);
+		Invoice_map.put("amount_applied",Total_Inv_Amount);
+		mp_pay = Map();
+		mp_pay.put("date",today);
+		mp_pay.put("customer_id",Book_contact_ID);
+		mp_pay.put("amount",Total_Inv_Amount);
+		mp_pay.put("invoices",Invoice_map.toJSONList());
+		mp_pay.put("payment_mode",Books_payment_mode);
+		mp_pay.put("reference_number",Shop_Name + " Order: " + Order_ID);
+		mp_pay.put("account_id","1316483000006026187");
+		Payment_inv = zoho.inventory.createRecord("customerpayments","666479573",mp_pay);
+	}
+	else if(Group_id == 4)
+	{
+		COOP_Amount = Discount;
+		Invoice_map = Map();
+		Invoice_map.put("invoice_id",Invoice_ID);
+		Invoice_map.put("amount_applied",COOP_Amount);
+		mp_pay1 = Map();
+		mp_pay1.put("date",today);
+		mp_pay1.put("customer_id",Book_contact_ID);
+		mp_pay1.put("amount",COOP_Amount);
+		mp_pay1.put("invoices",Invoice_map.toJSONList());
+		mp_pay1.put("payment_mode","COOP");
+		mp_pay1.put("account_id","1316483000006026187");
+		Payment_inv_1 = zoho.inventory.createRecord("customerpayments","666479573",mp_pay1);
+		// 	info Payment_inv_1;
+		////////////////////////////////////////////////////////////////////////////////
+		Remaining_amt = Total_Inv_Amount.round(2) - Discount.round(2);
+		Invoice_map = Map();
+		Invoice_map.put("invoice_id",Invoice_ID);
+		Invoice_map.put("amount_applied",Remaining_amt);
+		mp_pay2 = Map();
+		mp_pay2.put("date",today);
+		mp_pay2.put("customer_id",Book_contact_ID);
+		mp_pay2.put("amount",Remaining_amt);
+		mp_pay2.put("invoices",Invoice_map.toJSONList());
+		mp_pay2.put("payment_mode",Books_payment_mode);
+		mp_pay2.put("reference_number",Shop_Name + " Order: " + Order_ID);
+		mp_pay2.put("account_id","1316483000006026187");
+		Payment_inv_2 = zoho.inventory.createRecord("customerpayments","666479573",mp_pay2);
+		// 	info Payment_inv_2;
+		///////////////////////////////// Add Items in Recurring Invoice /////////////////////
+		Product_list2 = List();
+		regular_item_count = 0;
+		Prepaid_item_count = 0;
+		Prepaid_Discount = 0;
+		Total = 0;
+		shipping_charges = 0;
+		searchParam = {"customer_id":"1316483000010512838","date":zoho.currentdate.toString("yyyy-MM-dd").left(7) + "-01","reference_number":"Monthly Invoice"};
+		rec_invs = zoho.books.getRecords("invoices","666479573",searchParam,"zoho_books").get("invoices");
+		info "invoices size " + rec_invs.size();
+		if(rec_invs.size() > 0)
+		{
+			for each  rec_inv in rec_invs
+			{
+				record_id = rec_inv.get("invoice_id");
+				info today.toString("yyyy-MM-dd").toDate().getMonth() + "-" + today.toString("yyyy-MM-dd").toDate().getYear();
+				info rec_inv.get("date").toDate().getMonth() + "-" + rec_inv.get("date").toDate().getYear();
+				if(today.toString("yyyy-MM-dd").toDate().getMonth() + "-" + today.toString("yyyy-MM-dd").toDate().getYear() == rec_inv.get("date").toDate().getMonth() + "-" + rec_inv.get("date").toDate().getYear())
+				{
+					rec_inv_items = zoho.books.getRecordsByID("invoices","666479573",rec_inv.get("invoice_id"));
+					rec_inv_items = zoho.books.getRecordsByID("invoices","666479573",rec_inv.get("invoice_id")).get("invoice").get("line_items");
+					for each  rec_item in rec_inv_items
+					{
+						Product_list2.add(rec_item);
+					}
+					///////////////////////////////////////////// Add lineitems of current Inv /////////////////////////
+					str = Invoice_Number + "	:	" + Contact_Name + "\nOrder Date	:	" + today.toString("MM/dd/yyyy") + "\n\n";
+					regular_item_count = 0;
+					Prepaid_item_count = 0;
+					for each  inv_items in Product_list
+					{
+						info inv_items.get("item_id");
+						Item_Obj = zoho.books.getRecordsByID("items","666479573",inv_items.get("item_id")).get("item");
+						info Item_Obj.get("stock_on_hand");
+						item = Map();
+						if(Item_Obj.get("stock_on_hand") < 0)
+						{
+							info "regular";
+							if(regular_item_count == 0)
+							{
+								regular_items = "Regular Items:";
+								regular_item_count = regular_item_count + 1;
+							}
+							regular_items = regular_items + "\n" + Item_Obj.get("sku") + "	" + inv_items.get("quantity") + "	$" + inv_items.get("rate");
+							Total = Total + inv_items.get("rate").toDecimal();
+						}
+						else
+						{
+							info "Prepared";
+							if(Prepaid_item_count == 0)
+							{
+								Prepaid_items = "Prepaid Items:";
+								Prepaid_item_count = Prepaid_item_count + 1;
+							}
+							Prepaid_items = Prepaid_items + "\n" + Item_Obj.get("sku") + "	" + inv_items.get("quantity") + "	$" + inv_items.get("rate");
+							Total = Total + inv_items.get("rate").toDecimal();
+							Prepaid_Discount = Prepaid_Discount + inv_items.get("rate").toDecimal();
+						}
+					}
+					info "Shipping_total	" + Shipping_total;
+					Prepaid_items = Prepaid_items + "\n\nPaid via CC	$" + Remaining_amt;
+					regular_items = regular_items + "\n\nShipping Charges $" + Shipping_total.toDecimal().round(2);
+					str = str + Prepaid_items + "\n\n---------------------------------\n\n";
+					str = str + regular_items;
+					Total_Cost = Total.toDecimal().round(2) + Shipping_total.toDecimal().round(2);
+					item.put("description",str);
+					item.put("rate",Total_Cost);
+					info "Discount " + Prepaid_Discount;
+					info "Shipping charges" + Shipping_total.toDecimal().round(2);
+					item.put("discount",Prepaid_Discount + Shipping_total.toDecimal().round(2));
+					Product_list2.add(item);
+					Mp2 = Map();
+					Mp2.put("line_items",Product_list2);
+					recurring_Inv = zoho.books.updateRecord("invoices","666479573",record_id,Mp2);
+					info recurring_Inv.get("message");
+				}
+			}
+		}
+		else
+		{
+			info "Found Else";
+			str = Invoice_Number + "	:	" + Contact_Name + "\nOrder Date	:	" + today.toString("MM/dd/yyyy") + "\n\n";
+			for each  inv_items in Product_list
+			{
+				info inv_items.get("item_id");
+				Item_Obj = zoho.books.getRecordsByID("items","666479573",inv_items.get("item_id")).get("item");
+				info Item_Obj.get("stock_on_hand");
+				item = Map();
+				if(Item_Obj.get("stock_on_hand") < 0)
+				{
+					info "regular";
+					if(regular_item_count == 0)
+					{
+						regular_items = "Regular Items:";
+						regular_item_count = regular_item_count + 1;
+					}
+					regular_items = regular_items + "\n" + Item_Obj.get("sku") + "	" + inv_items.get("quantity") + "	$" + inv_items.get("rate");
+					Total = Total + inv_items.get("rate").toDecimal();
+				}
+				else
+				{
+					info "Prepared";
+					if(Prepaid_item_count == 0)
+					{
+						Prepaid_items = "Prepaid Items:";
+						Prepaid_item_count = Prepaid_item_count + 1;
+					}
+					Prepaid_items = Prepaid_items + "\n" + Item_Obj.get("sku") + "	" + inv_items.get("quantity") + "	$" + inv_items.get("rate");
+					Total = Total + inv_items.get("rate").toDecimal();
+					Prepaid_Discount = Prepaid_Discount + inv_items.get("rate").toDecimal();
+				}
+			}
+			Prepaid_items = Prepaid_items + "\n\nPaid via CC	$" + Remaining_amt;
+			regular_items = regular_items + "\n\nShipping Charges $" + shipping_charges;
+			info Prepaid_items;
+			info regular_items;
+			str = str + Prepaid_items + "\n\n---------------------------------\n\n";
+			str = str + regular_items;
+			Total_Cost = Total.toDecimal().round(2) + Shipping_total.toDecimal().round(2);
+			item.put("description",str);
+			item.put("rate",Total_Cost);
+			item.put("discount",Prepaid_Discount + Shipping_total.toDecimal().round(2));
+			Product_list2.add(item);
+			Mp = Map();
+			Mp.put("customer_id","1316483000010512838");
+			Mp.put("reference_number","Monthly Invoice");
+			Mp.put("date",zoho.currentdate.toString("yyyy-MM-dd").left(7) + "-01");
+			Mp.put("line_items",Product_list2);
+			info Mp;
+			recurring_Inv_created = zoho.books.createRecord("invoices","666479573",Mp);
+			info recurring_Inv_created;
+		}
+	}
+	///////////////////////////////////////////////////////////////////////////
+	mp_woo = Map();
+	mp_woo.put("Converted_to_Invoice",true);
+	mp_woo.put("Invoice",Invoice_ID);
+	//	mp_woo.put("E_C_Status_ZB",true);
+	update_woo = zoho.crm.updateRecord("Woo_Orders",woo_id,mp_woo);
+}
+catch (e)
+{
+	info e;
+}

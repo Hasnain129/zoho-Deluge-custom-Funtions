@@ -1,0 +1,53 @@
+try 
+{
+	data = zoho.crm.getRecordById("Quotes",qoute_id);
+	sp_id = data.get("Deal_Name").get("id");
+	p_data = zoho.crm.getRecordById("Deals",sp_id);
+	//info p_data;
+	team_id = 274337000001513411;
+	org = p_data.get("Organization_Name");
+	if(org == "Blink Signs" || org == "Blink Sourcing")
+	{
+		team_id = 274337000001513411;
+	}
+	else
+	{
+		team_id = 274337000001666135;
+	}
+	proj_id = p_data.get("Zoho_Projects_Project_ID");
+	proj_auto_id = p_data.get("Project_ID");
+	Subj = "Quote: " + Qoute_autno + " Approved for Project: " + proj_auto_id + "";
+	Username = "Team";
+	Email_Body = "<div style=\"background-color:#fff;margin:auto;padding:3em 4em;border-bottom:1px solid #e9e9e9;border-right:1px solid #e9e9e9\"><div><div style=\"font-size:14px;margin-bottom:25px;font-family:Helvetica,sans-serif\">Dear " + Username + ",</div>";
+	Email_Body = Email_Body + "<div style=\"font-size:14px\"><div style=\"padding-bottom:30px;line-height:20px\"><p style=\"padding:0;margin:0\">Quote " + Qoute_autno + " has been approved.  Please update the relevant Quote Tasks for Project: " + proj_auto_id + ".<br>Please use the below buttons to perform the necessary actions. </p><p>  </div>";
+	Email_Body = Email_Body + "<a href='https://crm.zoho.com/crm/org666155072/tab/Quotes/" + qoute_id + "' target='_blank' rel='noopener noreferrer' style='color: black; text-decoration: none; display: inline-block; text-align: center'><span style='border-radius: 5px; padding: 3px 5px; border: 0px black; background: rgb(0, 152, 214); font-family: Arial; margin-left: 0px; text-align: left; letter-spacing: 0.5px; font-size: 12px; cursor: pointer; text-decoration: none; max-width: 100%; display: inline-block; font-weight: bold; color: rgb(255, 255, 255)'>View Quote</span></a></p>";
+	Email_Body = Email_Body + "<a href='https://crm.zoho.com/crm/org666155072/tab/Potentials/" + sp_id + "' target='_blank' rel='noopener noreferrer' style='color: black; text-decoration: none; display: inline-block; text-align: center'><span style='border-radius: 5px; padding: 3px 5px; border: 0px black; background: rgb(0, 152, 214); font-family: Arial; margin-left: 0px; text-align: left; letter-spacing: 0.5px; font-size: 12px; cursor: pointer; text-decoration: none; max-width: 100%; display: inline-block; font-weight: bold; color: rgb(255, 255, 255)'>View Sign Project</span></a></p></div>";
+	Email_Body = Email_Body + "<a href='https://projects.zoho.com/portal/blinksigns#dashboard/" + proj_id + "' target='_blank' rel='noopener noreferrer' style='color: black; text-decoration: none; display: inline-block; text-align: center'><span style='border-radius: 5px; padding: 3px 5px; border: 0px black; background: rgb(0, 152, 214); font-family: Arial; margin-left: 0px; text-align: left; letter-spacing: 0.5px; font-size: 12px; cursor: pointer; text-decoration: none; max-width: 100%; display: inline-block; font-weight: bold; color: rgb(255, 255, 255)'>View Zoho Project</span></a></p></div>";
+	// Email_Body = Email_Body + "<div style=\"color:#366bc1;outline:none;display:block;border-right:1px solid #ebebeb\"><div style=\"margin:0;padding:0\"><br><div style=\"margin-top:0px;color:#838383;font-size:16px;font-style:italic;font-family:georgia\">Regards, <p></p> Blink Signs <div style=\"padding-top:10px\">";
+	// Email_Body = Email_Body + "<img src='https://crm.zoho.com/crm/viewInLineImage?fileContent=a00ba01fa44192fb37d41319d2c868c9046f89cadfba9195119015eebf735ee205559bff7ccb1f3ebf78c548c4b52dc6b6b6a041bfd5746d8cae3b2850fb0b9318057691d0d9c9b0525a99e923c617f538cd57a13ebb70604dc876a5e275b8cf' alt='CRM Team' data-image-whitelisted='' class='CToWUd' width='120px' height='60px'></div></div>";
+	// //////////////////////////////// Create Ticket on Zoho Desk /////////////////////////////////////////////////////
+	mp = Map();
+	mp.put("departmentId","274337000000006907");
+	mp.put("contactId",274337000002270007);
+	mp.put("channel","Email");
+	mp.put("email","tickets@blinksigns.com");
+	// mp.put("assigneeId","");
+	mp.put("teamId",team_id);
+	mp.put("priority","Low");
+	mp.put("classification","Escalation");
+	mp.put("subject",Subj);
+	mp.put("description",Email_Body);
+	Data = zoho.desk.create("666335187","Tickets",mp);
+	info Data;
+}
+catch (e)
+{
+	info e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Create Ticket on Quote Approval / Quote / Workflow / CRM"
+		message :"ID: " + qoute_id + " Root Cause: " + e
+	]
+}

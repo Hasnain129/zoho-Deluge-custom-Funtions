@@ -1,0 +1,43 @@
+contacT_details = zoho.crm.getRecordById("Contacts",contact_id);
+contact_email = contacT_details.get("Email");
+contact_company_id = contacT_details.get("Account_Name").get("id");
+// 	//////////////////////////// Fetch Books Customer ID /////////////////////////
+if(compnanyid != contact_company_id)
+{
+	searchParam = {"zcrm_account_id":compnanyid};
+	BooksContact = zoho.books.getRecords("contacts","666479573",searchParam);
+	//info BooksContact ;
+	Books_contact_Info = BooksContact.get("contacts").get(0);
+	Book_contact_ID = Books_contact_Info.get("contact_id");
+	info Book_contact_ID;
+	//////////////////////// Geting contact person for that books customer ////////////////////
+	contact_persons = invokeurl
+	[
+		url :" https://books.zoho.com/api/v3/contacts/" + Book_contact_ID + "/contactpersons?organization_id=666479573"
+		type :GET
+		connection:"zoho_books"
+	];
+	Contact_obj = contact_persons.get("contact_persons");
+	info Contact_obj;
+	//////////////////// matching contact email with contact person email if already exist ////////////////////
+	for each  data_contact in Contact_obj
+	{
+		info data_contact.get("email");
+		if(data_contact.get("email") == contact_email)
+		{
+			contact_person_id = data_contact.get("contact_person_id");
+		}
+	}
+	info contact_person_id;
+	/////////////// Deleting contact person after //////////////////
+	if(contact_person_id != null)
+	{
+		delete_contact_persons = invokeurl
+		[
+			url :"https://books.zoho.com/api/v3/contacts/contactpersons/" + contact_person_id + "?organization_id=666479573"
+			type :DELETE
+			connection:"zoho_books"
+		];
+		info delete_contact_persons;
+	}
+}

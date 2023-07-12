@@ -1,0 +1,21 @@
+try 
+{
+	////////////////////////////////////////// Empty ship to and address field /////////////////////////////////////
+	PO_details = zoho.crm.getRecordById("Purchase_Orders",PO_id);
+	mp = Map();
+	mp.put("Ship_to","-None-");
+	mp.put("Ship_to_address"," ");
+	update_ship_to = zoho.crm.updateRecord("Purchase_Orders",PO_id,mp);
+	info update_ship_to;
+}
+catch (e)
+{
+	info e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"shehryar@erphub.com"
+		subject :"Auto populate shipping address on PO / Purchase Orders / Workflow / CRM"
+		message :"ID: " + PO_id + " Root Cause: " + e
+	]
+}

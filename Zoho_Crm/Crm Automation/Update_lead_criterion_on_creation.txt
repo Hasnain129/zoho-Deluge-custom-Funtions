@@ -1,0 +1,42 @@
+try 
+{
+	entityMap = zoho.crm.getRecordById("Leads",lead_id);
+	Lead_id = entityMap.get("id");
+	Company_name = entityMap.get("Company");
+	lead_update_map = Map();
+	if(Company_name != null)
+	{
+		Company_name_up = Company_name.replaceAll("'","''");
+		query = "{\"select_query\":\"select Account_Name from Accounts where (Account_Name='" + Company_name_up + "' and (Type=Brands))\"}";
+		QueryResp = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v2/coql"
+			type :POST
+			parameters:query
+			connection:"zoho_crm"
+		];
+		if(ifnull(QueryResp.size(),0) > 0)
+		{
+			lead_update_map.put("Qualification_Criteria","Brands");
+		}
+		else
+		{
+			lead_update_map.put("Qualification_Criteria","Not Brands");
+		}
+	}
+	else
+	{
+		lead_update_map.put("Qualification_Criteria","");
+	}
+	lead_update_map.put("Processed",true);
+	updated_lead = zoho.crm.updateRecord("leads",Lead_id,lead_update_map);
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update Lead criteria On Brand Compny Selection / CRM / Leads / On Create and Edit"
+		message :"ID: " + Lead_id + " Root Cause: " + e
+	]
+}

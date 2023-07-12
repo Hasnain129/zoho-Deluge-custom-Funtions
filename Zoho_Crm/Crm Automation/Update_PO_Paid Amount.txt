@@ -1,0 +1,24 @@
+try 
+{
+	Bill_details = zoho.crm.getRecordById("Create_Bills",bill_id);
+	PO_id = Bill_details.get("PO").get("id");
+	All_bills_PO = zoho.crm.getRelatedRecords("Bills","Purchase_Orders",PO_id);
+	paid_amt = 0;
+	for each  bill in All_bills_PO
+	{
+		paid_amt = paid_amt + ifnull(bill.get("Paid_Amount"),0);
+	}
+	info paid_amt;
+	mp3 = Map();
+	mp3.put("Paid_Amount",paid_amt);
+	res = zoho.crm.updateRecord("Purchase_Orders",PO_id,mp3,{"trigger":{"workflow"}});
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update_PO_Paid Amount / Create Bills / Workflow / CRM"
+		message :"ID: " + bill_id + " Root Cause: " + e
+	]
+}

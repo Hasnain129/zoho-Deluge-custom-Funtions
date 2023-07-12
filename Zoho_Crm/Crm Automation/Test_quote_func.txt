@@ -1,0 +1,7 @@
+sendmail
+[
+	from :zoho.adminuserid
+	to :"junaid.hussain@basecampdata.com"
+	subject :"Test"
+	message :"Testing Body"
+]

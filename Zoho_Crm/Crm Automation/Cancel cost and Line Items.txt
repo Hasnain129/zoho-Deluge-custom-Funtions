@@ -1,0 +1,82 @@
+try 
+{
+	//===========================New Code=========================================================================
+	//creator_data = zoho.creator.getRecords("blinksigns","line-items","All_Line_Items","Sales_Order==\"" + SO_id + "\"",1,100,"zoho_creator");
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+	CI_Data_mp = Map();
+	CI_Data_mp.put("criteria","Sales_Order==\"" + SO_id + "\"");
+	creator_data = invokeurl
+	[
+		url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/All_Line_Items?process_until_limit=true"
+		type :GET
+		parameters:CI_Data_mp
+		connection:"zoho_creator"
+	];
+	//info creator_data;
+	CheckCode = creator_data.get("code");
+	if(CheckCode == 3000)
+	{
+		creator_entries = creator_data.get("data");
+		for each  data in creator_entries
+		{
+			Entry_id = data.get("ID").tolong();
+			info Entry_id;
+			mp = Map();
+			mp.put("Status","Cancelled");
+			mp.put("Cancel_Items",true);
+			CI_upadate_mp = Map();
+			CI_upadate_mp.put("data",mp);
+			Update_product_creator = invokeurl
+			[
+				url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/All_Line_Items/" + Entry_id
+				type :PATCH
+				parameters:CI_upadate_mp + ""
+				connection:"zoho_creator"
+			];
+			////////////////////////////////////////////////////////////////
+			//Update_product_creator = zoho.creator.updateRecord("blinksigns","line-items","All_Line_Items",Entry_id,mp,Map(),"zoho_creator");
+			info Update_product_creator;
+			break;
+		}
+	}
+	//===========================Previous Code====================================================================
+	/*			
+	//===========================Line Items=========================================================================
+	upadate_mp = Map();
+	upadate_mp.put("Status","Cancelled");
+	Data_mp = Map();
+	Data_mp.put("criteria","Sales_Order=\"" + SO_id + "\"");
+	Data_mp.put("data",upadate_mp);
+	UpdateLineItemResp = invokeurl
+	[
+		url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/All_Line_Items?process_until_limit=true"
+		type :PATCH
+		parameters:Data_mp + ""
+		connection:"zoho_creator"
+	];
+	info UpdateLineItemResp;
+	//===========================Cost Items=========================================================================
+	CI_upadate_mp = Map();
+	CI_upadate_mp.put("Status","Cancelled");
+	CI_Data_mp = Map();
+	CI_Data_mp.put("criteria","Sales_Order_1=\"" + SO_id + "\"");
+	CI_Data_mp.put("data",CI_upadate_mp);
+	UpdateCostItemResp = invokeurl
+	[
+		url :"https://creator.zoho.com/api/v2/blinksigns/line-items/report/All_Cost_Items?process_until_limit=true"
+		type :PATCH
+		parameters:CI_Data_mp + ""
+		connection:"zoho_creator"
+	];
+	info UpdateCostItemResp;
+	*/
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Cancel cost and Line Items / SO / Workflow / CRM"
+		message :"ID: " + SO_id + " Root Cause: " + e
+	]
+}

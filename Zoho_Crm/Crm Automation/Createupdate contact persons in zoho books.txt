@@ -1,0 +1,99 @@
+try 
+{
+	record = zoho.crm.getRecordById("Contacts_X_Customers",rec_id);
+	compnanyid = record.get("Multi_Customers").get("id");
+	contact_id = record.get("Linking_Customers").get("id");
+	contacT_details = zoho.crm.getRecordById("Contacts",contact_id);
+	contact_email = contacT_details.get("Email");
+	info contact_email;
+	contact_phone = contacT_details.get("Phone");
+	Contact_FN = contacT_details.get("First_Name");
+	Contact_LN = contacT_details.get("Last_Name");
+	Designation = contacT_details.get("Position");
+	// 	//////////////////////////// Importing Customer on Books /////////////////////////
+	Imported = invokeurl
+	[
+		url :"https://books.zoho.com/api/v3/crm/account/" + compnanyid + "/import?organization_id=666479573"
+		type :POST
+		connection:"zoho_books"
+	];
+	info "Imported Info: " + Imported;
+	//////////////////////////// Fetch Books Customer ID /////////////////////////
+	searchParam = {"zcrm_account_id":compnanyid};
+	BooksContact = zoho.books.getRecords("contacts","666479573",searchParam);
+	info BooksContact;
+	Books_contact_Info = BooksContact.get("contacts").get(0);
+	Book_contact_ID = Books_contact_Info.get("contact_id");
+	info Book_contact_ID;
+	//////////////////////// Geting contact person for that books customer ////////////////////
+	contact_persons = invokeurl
+	[
+		url :" https://books.zoho.com/api/v3/contacts/" + Book_contact_ID + "/contactpersons?organization_id=666479573"
+		type :GET
+		connection:"zoho_books"
+	];
+	Contact_obj = contact_persons.get("contact_persons");
+	info Contact_obj;
+	//////////////////// matching contact email with contact person email if already exist ////////////////////
+	for each  data_contact in Contact_obj
+	{
+		info data_contact.get("email");
+		if(data_contact.get("email") == contact_email)
+		{
+			contact_person_id = data_contact.get("contact_person_id");
+		}
+	}
+	info contact_person_id;
+	/////////////// creating contact person if not found //////////////////
+	if(contact_person_id == null)
+	{
+		mp_cp = Map();
+		mp_cp.put("contact_id",Book_contact_ID);
+		mp_cp.put("first_name",Contact_FN);
+		mp_cp.put("last_name",Contact_LN);
+		mp_cp.put("email",contact_email);
+		mp_cp.put("phone",contact_phone);
+		mp_cp.put("designation",Designation);
+		Jason = Map();
+		Jason.put("JSONString",mp_cp);
+		create_contact_persons = invokeurl
+		[
+			url :"https://books.zoho.com/api/v3/contacts/contactpersons?organization_id=666479573"
+			type :POST
+			parameters:Jason
+			connection:"zoho_books"
+		];
+		info create_contact_persons;
+	}
+	//////////////////// Updating contact person ////////////////////
+	else
+	{
+		mp_cp = Map();
+		mp_cp.put("contact_id",Book_contact_ID);
+		mp_cp.put("first_name",Contact_FN);
+		mp_cp.put("last_name",Contact_LN);
+		mp_cp.put("email",contact_email);
+		mp_cp.put("phone",contact_phone);
+		mp_cp.put("designation",Designation);
+		Jason = Map();
+		Jason.put("JSONString",mp_cp);
+		update_contact_persons = invokeurl
+		[
+			url :"https://books.zoho.com/api/v3/contacts/contactpersons/" + contact_person_id + "?organization_id=666479573"
+			type :PUT
+			parameters:Jason
+			connection:"zoho_books"
+		];
+		info update_contact_persons;
+	}
+}
+ catch (e)
+{	info e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Create/update Contact Person in Zoho Books/ CRM/ Contacts X Customer / Workflow"
+		message :"ID: " + rec_id + " Root Cause: " + e + " Response: " + BooksContact
+	]
+}

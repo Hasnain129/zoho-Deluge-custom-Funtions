@@ -1,0 +1,55 @@
+try 
+{
+	location = 0;
+	PO_details = zoho.crm.getRecordById("Purchase_Orders",PO_id);
+	Vendor_id = PO_details.get("Vendor_Name").get("id");
+	Vendor = zoho.crm.getRecordById("Vendors",Vendor_id);
+	Serv_Location = zoho.crm.getRelatedRecords("Locations","Vendors",Vendor_id);
+	if(!Serv_Location.isEmpty())
+	{
+		for each  data in Serv_Location
+		{
+			Address_type = data.get("Address_Type");
+			if(Address_type == "Shipping Address")
+			{
+				Address = data.get("Name");
+				info "address : " + Address;
+				info "address type : " + Address_type;
+				location = location + 1;
+			}
+		}
+		if(location == 1)
+		{
+			mp = Map();
+			mp.put("Ship_to_address",Address);
+			update_address = zoho.crm.updateRecord("Purchase_Orders",PO_id,mp);
+			info "updated";
+		}
+		else
+		{
+			mp = Map();
+			mp.put("Ship_to_address"," ");
+			update_address = zoho.crm.updateRecord("Purchase_Orders",PO_id,mp);
+			info "no location or more than one location with shipping address";
+		}
+	}
+	else
+	{
+		mp = Map();
+		mp.put("Ship_to_address"," ");
+		update_address = zoho.crm.updateRecord("Purchase_Orders",PO_id,mp);
+		info "No location";
+	}
+}
+catch (e)
+{
+	info e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"shehryar@erphub.com"
+		subject :"Auto populate shipping address on PO / Purchase Orders / Workflow / CRM"
+		message :"ID: " + PO_id + " Root Cause: " + e
+	]
+}
+//"auto@rebiz.zohodesk.com"

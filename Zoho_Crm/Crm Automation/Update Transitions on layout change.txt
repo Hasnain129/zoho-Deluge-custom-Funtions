@@ -1,0 +1,29 @@
+BlueprintResp = invokeurl
+[
+	url :"https://www.zohoapis.com/crm/v2/deals/" + DealID + "/actions/blueprint"
+	type :GET
+	connection:"zoho_crm"
+];
+info BlueprintResp;
+if(BlueprintResp.get("code") != "RECORD_NOT_IN_PROCESS")
+{
+	BlueprintObj = BlueprintResp.get("blueprint");
+	All_Transitions = BlueprintObj.get("transitions");
+	TransitionsIDs = Map();
+	for each  Transition in All_Transitions
+	{
+		if(TransitionsIDs.containsKey(Transition.get("name")) == false)
+		{
+			TransitionsIDs.put(Transition.get("name"),Transition.get("id"));
+		}
+		Next_Transition = Transition.get("next_transitions");
+		for each  trans in Next_Transition
+		{
+			if(TransitionsIDs.containsKey(trans.get("name")) == false)
+			{
+				TransitionsIDs.put(trans.get("name"),trans.get("id"));
+			}
+		}
+	}
+	info zoho.crm.updateRecord("Deals",DealID,{"Blueprint_Transitions_IDs":TransitionsIDs.toString()});
+}

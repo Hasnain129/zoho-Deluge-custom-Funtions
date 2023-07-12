@@ -1,0 +1,7 @@
+if(Street != "" && State != "" && City != "")
+{
+	Mp = Map();
+	Mp.put("Valid_Address",true);
+	response = zoho.crm.updateRecord("Vendors",vendor_id,Mp);
+	info response;
+}

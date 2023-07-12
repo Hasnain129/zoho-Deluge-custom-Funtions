@@ -1,0 +1,48 @@
+try 
+{
+	//RetainerDetails = zoho.creator.getRecords("blinksigns","reminders","All_Reminders","Retainer_ID==" + Ret_Inv_ID,1,200,"zoho_creator");
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+	CI_Data_mp = Map();
+	CI_Data_mp.put("criteria","Retainer_ID==" + Ret_Inv_ID);
+	RetainerDetails = invokeurl
+	[
+		url :"https://creator.zoho.com/api/v2/blinksigns/reminders/report/All_Reminders?process_until_limit=true"
+		type :GET
+		parameters:CI_Data_mp
+		connection:"zoho_creator"
+	];
+	//info RetainerDetails;
+	CheckCode = RetainerDetails.get("code");
+	if(CheckCode == 3000)
+	{
+		Retainer_data = RetainerDetails.get("data");
+		for each  rec in Retainer_data
+		{
+			record_id = rec.get("ID");
+			info record_id;
+			dataMap = Map();
+			dataMap.put("Status","Inactive");
+			upadate_mp = Map();
+			upadate_mp.put("data",dataMap);
+			resp = invokeurl
+			[
+				url :"https://creator.zoho.com/api/v2/blinksigns/reminders/report/All_Reminders/" + record_id
+				type :PATCH
+				parameters:upadate_mp + ""
+				connection:"zoho_creator"
+			];
+			//otherMap = Map();
+			//resp = zoho.creator.updateRecord("blinksigns","reminders","All_Reminders",record_id,dataMap,otherMap,"zoho_creator");
+			info resp;
+		}
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update Retainer Status in Creator/ Retainer / Workflow / CRM"
+		message :"ID: " + Ret_Inv_ID + " Root Cause: " + e
+	]
+}

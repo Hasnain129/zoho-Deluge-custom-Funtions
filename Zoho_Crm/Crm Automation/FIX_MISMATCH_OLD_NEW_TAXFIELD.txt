@@ -1,0 +1,29 @@
+PDF_Details = invokeurl
+[
+	url :"https://www.zohoapis.com/crm/v2.1/Invoices/" + PDF_ID
+	type :GET
+	connection:"zoho_crm"
+];
+oldtax = PDF_Details.get("data").get(0).get("Tax");
+Getnew = PDF_Details.get("data").get(0).get("Tax_N");
+if(oldtax != Getnew)
+{
+	/// -----------------map data-------------////
+	map_value = Map();
+	map_value.put("Tax_N",oldtax);
+	///////list/////
+	dlist = List();
+	dlist.add(map_value);
+	////// put list in data for api /////////
+	mp2 = Map();
+	mp2.put("data",dlist);
+	// 		info mp2;
+	////////////// --------------updating tax field-----------------////////
+	Update_PDF_Details = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2.1/Invoices/" + PDF_ID
+		type :PUT
+		parameters:mp2 + ""
+		connection:"zoho_crm"
+	];
+}

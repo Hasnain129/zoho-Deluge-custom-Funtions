@@ -1,0 +1,27 @@
+task_Details = zoho.crm.getRecordById("Tasks",TaskId);
+project_Id = task_Details.get("What_Id").get("id");
+sign_project = zoho.crm.getRecordById("Potentials",project_Id);
+project_Name = sign_project.get("Deal_Name");
+project_status = sign_project.get("Stage");
+info project_status;
+estimate_Status = sign_project.get("Quote_Status1");
+sales_Rep = sign_project.get("Lead_Owner").get("name");
+Task_Owner = sign_project.get("Lead_Owner").get("id");
+due_date = zoho.currenttime.tostring("yyyy-MM-dd").addDay(3);
+contact_id = sign_project.get("Contact_Name").get("id");
+contact_name = sign_project.get("Contact_Name").get("name");
+if(estimate_Status.lower() == "sent" && (project_status != "Lost" || project_status != "Project Completed"))
+{
+	mp = Map();
+	mp.put("Subject",task_Details.get("Subject"));
+	mp.put("$se_module","Potentials");
+	mp.put("Who_Id",contact_id);
+	mp.put("What_Id",sign_project);
+	mp.put("Sales_Rep",sales_Rep);
+	mp.put("Owner",Task_Owner);
+	mp.put("Due_Date",due_date);
+	mp.put("Status","Not Started");
+	mp.put("Send_Notification_Email",true);
+	createTask = zoho.crm.createRecord("Tasks",mp);
+	info createTask;
+}

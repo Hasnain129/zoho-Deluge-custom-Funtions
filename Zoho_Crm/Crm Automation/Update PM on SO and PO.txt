@@ -1,0 +1,33 @@
+try 
+{
+	DealRec = zoho.crm.getRecordById("Deals",Deal_ID);
+	ProjectManager = ifnull(DealRec.get("Owner"),"");
+	if(ProjectManager != null)
+	{
+		Project_manager_id = ProjectManager.get("id");
+		Related_SO = zoho.crm.getRelatedRecords("SalesOrders","Deals",Deal_ID);
+		for each  SO in Related_SO
+		{
+			SO_Update = zoho.crm.updateRecord("Sales_Orders",SO.get("id"),{"Project_Manager":Project_manager_id});
+			info SO_Update;
+		}
+		//////////////////// Updating Related PO ////////////////////////////////////////
+		Related_PO = zoho.crm.getRelatedRecords("Purchase_Orders","Deals",Deal_ID);
+		for each  PO in Related_PO
+		{
+			PO_Update = zoho.crm.updateRecord("Purchase_Orders",PO.get("id"),{"Project_Manager":Project_manager_id});
+			info PO_Update;
+		}
+	}
+}
+catch (e)
+{
+	info e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Update PM on SO and PO / Sign Project / Workflow / CRM"
+		message :"Deal ID: " + Deal_ID + " Root Cause: " + e
+	]
+}

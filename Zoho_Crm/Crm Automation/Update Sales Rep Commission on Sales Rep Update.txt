@@ -1,0 +1,47 @@
+try 
+{
+	Sign_Pro_Obj = zoho.crm.getRecordById("Deals",Sign_Pro_id);
+	if(Sign_Pro_Obj.get("Lead_Owner") != null)
+	{
+		if(Sign_Pro_Obj.get("Lead_Owner").get("name") != "Blink Signs")
+		{
+			Sale_rep_id = Sign_Pro_Obj.get("Lead_Owner").get("id").toLong();
+			Sale_Rep_Obj = zoho.crm.getRecordById("users",Sale_rep_id);
+			if(!Sale_Rep_Obj.isEmpty())
+			{
+				if(!Sale_Rep_Obj.containValue("TOO_MANY_REQUESTS"))
+				{
+					Sales_Rep_details = Sale_Rep_Obj.get("users").toMap();
+					Commission = Sales_Rep_details.get("Commission");
+					Commission_Type = Sales_Rep_details.get("Commission_Type");
+					if(Commission == null)
+					{
+						Commission = 0;
+					}
+					info Commission;
+					info Commission_Type;
+					Mp = Map();
+					Mp.put("Sales_Rep_Commission",Commission);
+					Mp.put("Commission_Type",Commission_Type);
+					res = zoho.crm.updateRecord("Deals",Sign_Pro_id,Mp);
+				}
+			}
+		}
+		else
+		{
+			Mp = Map();
+			Mp.put("Sales_Rep_Commission","");
+			Mp.put("Commission_Type","");
+			res = zoho.crm.updateRecord("Deals",Sign_Pro_id,Mp);
+		}
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Fetch Sales Rep Commission on Field Update / CRM / Workflow / Sign Project"
+		message :"ID: " + Sign_Pro_Obj.get("id") + " Sales Rep Data " + Sale_Rep_Obj + " Root Cause: " + e
+	]
+}

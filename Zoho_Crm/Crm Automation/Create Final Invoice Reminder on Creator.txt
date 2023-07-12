@@ -1,0 +1,87 @@
+try 
+{
+	SO_Details = zoho.crm.getRecordById("Sales_Orders",SO_ID.tolong());
+	Owner = SO_Details.get("Owner");
+	SO_Owner_name = Owner.get("name");
+	SO_Owner_email = Owner.get("email");
+	SO_No = SO_Details.get("SO_No");
+	PDFGenID = SO_Details.get("PDF_ID");
+	Organization = SO_Details.get("Organization_Name");
+	SO_Inv_No = SO_Details.get("Invoice_No");
+	Invoice_Id = SO_Details.get("Invoice_ID");
+	Contact_Email = "";
+	Contact_Full_Name = "";
+	if(Organization != "Blink Sourcing")
+	{
+		//////////////////////////////////////////////////////////
+		Invoice_details = zoho.books.getRecordsByID("invoices","666479573",Invoice_Id);
+		Inv_Status = Invoice_details.get("invoice").geT("status");
+		due_date_inv = Invoice_details.get("invoice").geT("due_date");
+		info "Due Date : " + due_date_inv;
+		if(Inv_Status != "paid")
+		{
+			Deal_ID = SO_Details.get("Deal_Name").get("id");
+			Deal_details = zoho.crm.getRecordById("Deals",Deal_ID.tolong());
+			Accounting_POC = Deal_details.get("Invoice_Recipient_Email");
+			if(Accounting_POC != null)
+			{
+				Get_related_contacts = zoho.crm.getRelatedRecords("Contact_Roles","Deals",Deal_ID);
+				for each  data in Get_related_contacts
+				{
+					if(data.get("Email") == Accounting_POC)
+					{
+						Contact_Email = Accounting_POC;
+						Contact_Full_Name = data.get("Full_Name");
+					}
+				}
+			}
+			else if(Accounting_POC == null)
+			{
+				Contact_id = SO_Details.get("Contact_Name").get("id");
+				Contact_Details = zoho.crm.getRecordById("Contacts",Contact_id.tolong());
+				Contact_Email = Contact_Details.get("Email");
+				Contact_Full_Name = Contact_Details.get("Full_Name");
+			}
+			/////////////////////////////////////////////////////////////////
+			date = due_date_inv;
+			dummydate = date.toStartOfWeek();
+			dummydate1 = dummydate.addHour(9);
+			dummydate2 = dummydate1.addDay(2);
+			startdate = dummydate2.addWeek(1);
+			info "start date : " + startdate;
+			enddatedummy = startdate.addMonth(2);
+			enddate = enddatedummy.addHour(9);
+			info "end date : " + enddate;
+			info startdate;
+			info enddate;
+			dataMap = Map();
+			dataMap.put("Sales_Order",SO_ID);
+			dataMap.put("Type","Final Invoice");
+			dataMap.put("Invoice_No",SO_Inv_No);
+			dataMap.put("Contact_Name",Contact_Full_Name);
+			dataMap.put("Invoice_Contact_Email",Contact_Email);
+			dataMap.put("Type_of_Reminder","Periodic");
+			dataMap.put("Status","Active");
+			dataMap.put("Reminder_Cycle","Weekly");
+			dataMap.put("Start_Date_and_Time",startdate);
+			dataMap.put("End_Date_and_Time",enddate);
+			dataMap.put("PDF_Generator_ID",PDFGenID);
+			dataMap.put("Organization_Name",Organization);
+			dataMap.put("Rep_Name",SO_Owner_name);
+			dataMap.put("Rep_Email",SO_Owner_email);
+			otherMap = Map();
+			resp = zoho.creator.createRecord("blinksigns","reminders","Reminders",dataMap,otherMap,"zoho_creator");
+			info "Created: " + resp;
+		}
+	}
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksings.com"
+		subject :"Create Reminder / Final Invoice / Workflow / CRM"
+		message :"ID: " + SO_ID + " Root Cause: " + e
+	]
+}

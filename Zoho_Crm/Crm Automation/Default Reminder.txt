@@ -1,0 +1,75 @@
+try 
+{
+	QuoteDetails = zoho.crm.getRecordById("Quotes",QuoteID);
+	Deal_id = QuoteDetails.get("Deal_Name").get("id");
+	Deal_details = zoho.crm.getRecordById("Deals",Deal_id);
+	Bid_Proj = Deal_details.get("Bid_Project");
+	Bid_type = Deal_details.get("Bid_Type");
+	create_reminder = true;
+	if(Bid_Proj == true && Bid_type == "Government")
+	{
+		create_reminder = false;
+	}
+	///////////////////////////////////////////////////////
+	if(create_reminder == true)
+	{
+		AutoNum = QuoteDetails.get("Quote_Auto_No");
+		PDFGenID = QuoteDetails.get("Client_Facing_Quote_ID");
+		Organization = QuoteDetails.get("Organization_Name");
+		Owner = QuoteDetails.get("Owner");
+		Sales_rep_name = Owner.get("name");
+		Sales_rep_email = Owner.get("email");
+		ContactID = QuoteDetails.get("Contact_Name").get("id");
+		ContactDetails = zoho.crm.getRecordById("Contacts",ContactID);
+		ContactEmail = ContactDetails.get("Email");
+		info ContactEmail;
+		contactFname = ContactDetails.get("First_Name");
+		contactLast = ContactDetails.get("Last_Name");
+		if(contactFname == null)
+		{
+			Contact_Full_Name = contactLast;
+		}
+		else
+		{
+			Contact_Full_Name = contactFname + " " + contactLast;
+		}
+		date = zoho.currentdate;
+		dummydate = date.toStartOfWeek();
+		dummydate1 = dummydate.addHour(9);
+		dummydate2 = dummydate1.addDay(1);
+		startdate = dummydate2.addWeek(1);
+		enddatedummy = startdate.addWeek(3);
+		enddate = enddatedummy.addHour(9);
+		info startdate;
+		info enddate;
+		info ContactEmail;
+		dataMap = Map();
+		dataMap.put("Quote",QuoteID);
+		dataMap.put("Type","Quote");
+		dataMap.put("Quote_Auto_Number",AutoNum);
+		dataMap.put("Contact_Name",Contact_Full_Name);
+		dataMap.put("Quote_Contact_Email",ContactEmail);
+		dataMap.put("Type_of_Reminder","Periodic");
+		dataMap.put("Status","Active");
+		dataMap.put("Reminder_Cycle","Weekly");
+		dataMap.put("Start_Date_and_Time",startdate);
+		dataMap.put("End_Date_and_Time",enddate);
+		dataMap.put("PDF_Generator_ID",PDFGenID);
+		dataMap.put("Organization_Name",Organization);
+		dataMap.put("Sales_Rep_Name",Sales_rep_name);
+		dataMap.put("Sales_Rep_Email",Sales_rep_email);
+		//info dataMap;
+		otherMap = Map();
+		resp = zoho.creator.createRecord("blinksigns","reminders","Reminders",dataMap,otherMap,"zoho_creator");
+		info "Created: " + resp;
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksings.com"
+		subject :"Default Reminder / Quotes / Workflow / CRM"
+		message :"ID: " + QuoteID + " Root Cause: " + e
+	]
+}

@@ -1,0 +1,21 @@
+SO_Rec = zoho.crm.getRecordById("Sales_Orders",SO_ID);
+DealVal = ifnull(SO_Rec.get("Deal_Name"),"");
+SO_Count = 0;
+if(DealVal != "")
+{
+	Deal_ID = DealVal.get("id");
+	Deals_SOs = zoho.crm.getRelatedRecords("SalesOrders","Deals",Deal_ID);
+	for each  SO in Deals_SOs
+	{
+		if(SO.get("Status") != "Cancelled")
+		{
+			SO_Count = SO_Count + 1;
+		}
+	}
+	info SO_Count;
+	Update_Mp = Map();
+	Update_Mp.put("No_of_SOs",SO_Count);
+	UpdateResp = zoho.crm.updateRecord("Deals",Deal_ID,Update_Mp);
+	info UpdateResp;
+	//====================================================================
+}

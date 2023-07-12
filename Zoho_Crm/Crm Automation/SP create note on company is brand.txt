@@ -1,0 +1,91 @@
+try 
+{
+	data = zoho.crm.getRecordById("Deals",deal_id);
+	//  info data;
+	if(data.get("Lead_Owner") == null)
+	{
+		sp_owner_id = data.get("Owner").get("id");
+	}
+	else
+	{
+		sp_owner_id = data.get("Lead_Owner").get("id");
+	}
+	project_auto_id = data.get("Project_ID");
+	project_name = data.get("Deal_Name");
+	acc_id = data.get("Account_Name").get("id");
+	acc_name = data.get("Account_Name").get("name");
+	comp_data = zoho.crm.getRecordById("Accounts",acc_id);
+	info comp_data.get("Type");
+	flag = data.get("Brand_email_notification");
+	info flag;
+	if(comp_data.get("Type") == "Brands")
+	{
+		sp_id = deal_id;
+		// 	lead_data = zoho.crm.getRecordById("Leads",lead_id);
+		Owner_crm_id = sp_owner_id;
+		user_data = zoho.crm.getRecordById("users",sp_owner_id);
+		user_email = user_data.get("users").get(0).get("email");
+		Owner_zoho_id = user_data.get("users").get(0).get("zuid");
+		note1 = Map();
+		note1.put("Note_Title","Brand Company Selected On Project");
+		user_Tags = " crm[user#" + Owner_crm_id + "#" + Owner_zoho_id + "]crm";
+		note1.put("Note_Content"," " + user_Tags + ": Brand company is selected on the project. Please select a Non-Brand company.");
+		note1.put("Parent_Id",deal_id);
+		//lead Id
+		note1.put("se_module","Deals");
+		dataList = List();
+		dataList.add(note1);
+		params = Map();
+		params.put("data",dataList);
+		response = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v2/Notes"
+			type :POST
+			parameters:params.toString()
+			connection:"zoho_crm"
+		];
+		info response;
+		// 	if(flag == false)
+		// 	{
+		// 		p_update = Map();
+		// 		p_update.put("Brand_email_notification",true);
+		// 		u_deal = zoho.crm.updateRecord("Deals",deal_id,p_update,{"trigger":{"workflow"}});
+		// 	}
+		// 	else
+		// 	{
+		// 		p_update = Map();
+		// 		p_update.put("Brand_email_notification",false);
+		// 		u_deal = zoho.crm.updateRecord("Deals",deal_id,p_update,{"trigger":{"workflow"}});
+		// 	}
+		/////////////////////// Start Email
+		Email = "<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Strict//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd'><html><head><meta http-equiv='Content-Type' content='text/html; charset=utf-8' /><meta name='viewport' content='width=device-width, initial-scale=1.0' /><style>/* Add some padding for small screens */.wrapper {padding-left: 10px;padding-right: 10px;}h1,h2,h3,h4,h5,h6,p {margin: 0;padding: 0;padding-bottom: 20px;line-height: 1.6;font-family: 'Helvetica', 'Arial', sans-serif;}p,a,li {font-family: 'Helvetica', 'Arial', sans-serif;}";
+		Email = Email + "img {width: 100%;display: block;}#border-col{border-left: 1px solid silver;}@media only screen and (max-width: 620px) {.wrapper .section {width: 100%;}.wrapper .column {width: 100%;display: block;}#border-col{border-top: 1px solid silver;border-left: 0px solid silver;}}</style></head>";
+		Email = Email + "<body><table width='100%'><tbody><tr><td class='wrapper' width='800' align='center'><!-- One column --><table class='section' cellpadding='0' cellspacing='0' style='margin-top: 5px;'><tr><td class='column' width='600' valign='top' align='center'><table><tbody><tr><td align='left'><div style=''><a name='Top' style='text-decoration: none'></a><div style='max-width: 600px;'><div style='overflow-wrap: break-word; margin-top: 0px; margin-bottom: 0px; word-break: break-word; border-bottom: 1px solid rgb(17, 17, 17);' class='zpelement-wrapper image' selectedelement='true' align='center'>";
+		Email = Email + "<div style='float: none;' ><img class='zpImage' alt='Company name' style='width: 30%; max-width: 30%; vertical-align: top' imgfilesize='13919' src='https://crm.zoho.com/crm/viewInLineImage?fileContent=a00ba01fa44192fb37d41319d2c868c9046f89cadfba9195119015eebf735ee205559bff7ccb1f3ebf78c548c4b52dc6b6b6a041bfd5746d8cae3b2850fb0b9318057691d0d9c9b0525a99e923c617f538cd57a13ebb70604dc876a5e275b8cf' orgwidth='293' imgsize='M' width='270'></div><div style='clear: both'></div></div>";
+		Email = Email + "<div class='zpelement-wrapper spacebar' style='overflow-wrap: break-word; word-break: break-word; margin-top: 0px; margin-bottom: 0px; overflow: visible;'><div class='spacebar' style='height: 15px'><span style=''> &nbsp; </span></div><div class='zpresizer' style='left: 494.5px; top: 186px'></div><div style='clear: both'></div></div><div style='overflow-wrap: break-word; word-break: break-word; padding: 6px 30px;' class='zpelement-wrapper text'><div style=''>";
+		Email = Email + "<div style='padding: 0px; margin: 0px' align='Left'><font style=''><font color='#000000' size='2'>Dear User,</font><br style=''></font></div></div><div style='clear: both'></div></div><div style='overflow-wrap: break-word; margin-top: 0px; margin-bottom: 0px; overflow: visible; word-break: break-word;' class='zpelement-wrapper spacebar'><div style='height: 5px' class='spacebar'><span style=''> &nbsp; </span></div><div style='left: 609.5px; top: 674px' class='zpresizer'></div>";
+		Email = Email + "<div style='clear: both'></div></div><div style='overflow-wrap: break-word; word-break: break-word; padding: 6px 30px;' class='zpelement-wrapper text'><div style=''><div align='center' style=''><div style='text-align: left'><font size='2'>You just converted a Lead to a Project. However, Brand company was selected on the Lead, which is pushed on the new created Sign Project.<p></p>You are requested to update the company on Sign Project to a Non-Brand company.<p></p>Project Details:<br>Project Name: " + project_name + " <br>Project ID: " + project_auto_id + "<br>Company: " + acc_name + "<p></p>Please use the below button to access the project.</font><br></div><div style='text-align: left'><font size='2'><br></font></div>";
+		Email = Email + "<div style='text-align: center'><font size='2'>.</font></div></div></div><div style='clear: both'></div></div><div class='zpelement-wrapper buttonElem' style='overflow-wrap: break-word; word-break: break-word; margin-top: 0px; margin-bottom: 0px; padding: 6px 30px; box-shadow: none;'><div class='zpAlignPos' style='text-align: center'><a href='https://crm.zoho.com/crm/org666155072/tab/Potentials/" + deal_id + "' target='_blank' rel='noopener noreferrer' style='color: black; text-decoration: none; display: inline-block; text-align: center'><span style='border-radius: 15px; padding: 7px 20px; border: 0px black; background: rgb(147, 196, 125); font-family: Arial; margin: 0px; text-align: center; letter-spacing: 0.5px; font-size: 10pt; cursor: pointer; text-decoration: none; max-width: 100%; display: inline-block; font-weight: bold; color: rgb(255, 255, 255)'>View Project</span></a></div><div style='clear: both'></div></div><div class='zpelement-wrapper spacebar' style='overflow-wrap: break-word; word-break: break-word; margin-top: 0px; margin-bottom: 0px; overflow: visible;'><div class='spacebar' style='height: 10px'><span> &nbsp; </span></div><div class='zpresizer' style='left: 611.5px; top: 398px'></div><div style='clear: both'></div></div>";
+		Email = Email + "<div class='zpelement-wrapper text' style='padding: 6px 30px; overflow-wrap: break-word; word-break: break-word;'><div style=''><p style='text-align: center; padding: 0px; margin: 0px'><font size='2' face='Arial,Helvetica,sans-serif'>Thank You</font></p></div><div style='clear: both'></div></div><div style='overflow-wrap: break-word; margin-top: 0px; margin-bottom: 0px; word-break: break-word;' class='zpelement-wrapper spacebar'>";
+		Email = Email + "<div style='height: 20px' class='spacebar'><span style=''> &nbsp; </span></div><div style='left: 494.5px; top: 370px' class='zpresizer'></div><div style='clear: both'></div></div><div style='overflow-wrap: break-word; word-break: break-word; padding: 6px 30px; background-color: rgb(229, 229, 229);' class='zpelement-wrapper text'><div style=''><div align='center' style=''><span style='color: rgb(51, 51, 51); font-size: small; padding: 0px; margin: 0px'>Blink Signs, 1925 St. Clair Ave. Suite 100, Cleveland, Ohio, US  </span>&nbsp;<br></div>";
+		Email = Email + "<font color='#333333' style='' size='2'><div style='clear: both'></div></font></div><font color='#333333' style='' size='2'></font></div></div></div><br /></p></td></tr></tbody></table></td></tr></table><!-- One column --></td></tr></tbody></table></body></html>";
+		sendmail
+		[
+			from :zoho.adminuserid
+			to :user_email
+			subject :"Alert: Brand Company Selected On Project: " + project_auto_id
+			message :Email
+		]
+		//////////////////// END EMAIL
+		/////////////////////////// END IF
+	}
+}
+ catch (e)
+{	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Create project note if selected company is brand / CRM"
+		message :"ID: " + deal_id + " Root Cause: " + e
+	]
+}

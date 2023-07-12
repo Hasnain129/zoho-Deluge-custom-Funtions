@@ -1,0 +1,58 @@
+try 
+{
+	Proj_details = zoho.crm.getRecordById("Deals",Deal_ID);
+	Project_ID = Proj_details.get("Project_ID");
+	ZProject_ID = Proj_details.get("Zoho_Projects_Project_ID");
+	//====================================================================================
+	if(ZProject_ID != null)
+	{
+		update_map = Map();
+		update_map.put("status","archived");
+		update_map.put("custom_status","1264527000000212104");
+		resp = invokeurl
+		[
+			url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProject_ID + "/"
+			type :POST
+			parameters:update_map
+			connection:"zohoprojectcall"
+		];
+		info resp;
+		add_status_map = Map();
+		add_status_map.put("content","Project has been archived");
+		archive_resp = invokeurl
+		[
+			url :"https://projectsapi.zoho.com/restapi/portal/666337121/projects/" + ZProject_ID + "/statuses/"
+			type :POST
+			parameters:add_status_map
+			connection:"zohoprojectcall"
+		];
+		info archive_resp;
+	}
+	//======================================================================================
+	SO_Count = 0;
+	Deals_SOs = zoho.crm.getRelatedRecords("SalesOrders","Deals",Deal_ID);
+	for each  SO in Deals_SOs
+	{
+		if(SO.get("Status") != "Cancelled")
+		{
+			SO_Count = SO_Count + 1;
+		}
+	}
+	info SO_Count;
+	Update_Mp = Map();
+	Update_Mp.put("No_of_SOs",SO_Count);
+	Update_Mp.put("Disable_Transition",false);
+	UpdateResp = zoho.crm.updateRecord("Deals",Deal_ID,Update_Mp);
+	info UpdateResp;
+	/////////////////////////////////////////////////////////////////////////////////////////
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Blueprint Project Hold - OnHold Function For SignProjects"
+		message :"ID: " + Deal_ID + " Root Cause: " + e
+	]
+}

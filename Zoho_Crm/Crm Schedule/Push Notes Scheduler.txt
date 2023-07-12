@@ -1,0 +1,338 @@
+try 
+{
+	EstTime = zoho.currenttime.toString("yyyy-MM-dd HH:mm:ss","EST5EDT");
+	FromTime = EstTime.subHour(6).toString("yyyy-MM-dd'T'HH:00:00-04:00");
+	info FromTime;
+	ToTime = EstTime.subHour(1).toString("yyyy-MM-dd'T'HH:59:00-04:00");
+	info ToTime;
+	// 	FromTime = zoho.currenttime.subHour(6).toString("yyyy-MM-dd'T'HH:mm:ss-04:00");
+	// 	ToTime = zoho.currenttime.toString("yyyy-MM-dd'T'HH:mm:ss-04:00");
+	All_Notes = List();
+	Offsets = {0,200,400,600,800,1000,1200,1400,1600,1800,2000};
+	for each  offset in Offsets
+	{
+		query = "select Note_Content, Created_Time from Notes where Created_Time between '" + FromTime + "' and '" + ToTime + "' and Created_By != '3205780000000152015' ORDER BY Created_Time ASC LIMIT " + offset + ",200";
+		mp = Map();
+		mp.put("select_query",query);
+		response = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v2/coql"
+			type :POST
+			parameters:mp.toString()
+			connection:"zoho_crm"
+		];
+		info response;
+		if(response != "")
+		{
+			All_Notes.addAll(response.get("data"));
+			CheckMoreRecords = response.get("info").get("more_records");
+			if(CheckMoreRecords == false)
+			{
+				break;
+			}
+		}
+		else
+		{
+			break;
+		}
+	}
+	info All_Notes.size();
+	// 	sendmail
+	// 	[
+	// 		from :zoho.adminuserid
+	// 		to :"junaid.hussain@basecampdata.com"
+	// 		subject :"Push Notes Scheduler Response Before Adding Notes"
+	// 		message :"From: " + FromTime + "\nTo: " + ToTime + "\Notes Count: " + All_Notes.size() + "\n\nNotes Response: " + All_Notes
+	// 	]
+	//=================================================================================
+	Added_Notes_Count = 0;
+	Added_Notes_Resp = List();
+	for each  note_val in All_Notes
+	{
+		NoteId = note_val.get("id");
+		note = zoho.crm.getRecordById("Notes",NoteId);
+		try 
+		{
+			CheckEntity = note.get("$se_module");
+			ParentID = note.get("Parent_Id").get("id");
+			if(CheckEntity == "Quotes")
+			{
+				QuoteRec = zoho.crm.getRecordById("Quotes",ParentID);
+				CheckDealVal = ifnull(QuoteRec.get("Deal_Name"),"");
+				if(CheckDealVal != "")
+				{
+					DealID = CheckDealVal.get("id");
+					if(note.get("Created_By").get("id") != 3205780000000152015)
+					{
+						str = "Created by : " + note.get("Created_By").get("name") + "\n";
+						str = str + "Module : Quotes" + "\n";
+						Note_Data = ifnull(note.get("Note_Content"),"");
+						if(Note_Data != "")
+						{
+							n = Note_Data.getOccurenceCount("crm[user#");
+							counter = leftpad("1",n).replaceAll(" ","1,").toList();
+							for each index i in counter
+							{
+								if(Note_Data.contains("crm[user#"))
+								{
+									/////////////////////////// Pre Text of Content //////////////////////////
+									Pre_Text = Note_Data.subString(0,Note_Data.indexOf("crm[user#"));
+									////////////////////////// Id of Tag User and get its Name //////////////////
+									id = Note_Data.subString(Note_Data.indexOf("crm[user#") + 9,Note_Data.length());
+									id = id.getPrefix("#");
+									response = invokeurl
+									[
+										url :"https://www.zohoapis.com/crm/v2/users/" + id
+										type :GET
+										connection:"zoho_crm"
+									];
+									User_Name = response.get("users").get(0).get("full_name");
+									/////////////////////////////// PostText of Content //////////////////////	
+									Post_Text = Note_Data.getSuffix("]");
+									Post_Text = Post_Text.subString(3,Post_Text.length());
+									//////////////////////////////////////////////////////////////////////////
+									Note_Data = Pre_Text + '"' + User_Name + '"' + Post_Text;
+								}
+							}
+							str = str + "Content : " + Note_Data.removeLastOccurence(" ") + "\n";
+							str = str + "-\n";
+							str = str + "Link of record : " + "\n";
+							str = str + "https://crm.zoho.com/crm/org666155072/tab/Quotes/" + ParentID + "\n";
+							info str;
+							Mp = Map();
+							Mp.put("Note_Title",note.get("Note_Title"));
+							Mp.put("Note_Content",str + "\n ");
+							Mp2 = Map();
+							Mp2.put("data",Mp.toList());
+							Resp = invokeurl
+							[
+								url :"https://www.zohoapis.com/crm/v2/Deals/" + DealID + "/Notes"
+								type :POST
+								parameters:Mp2 + ""
+								connection:"zoho_crm"
+							];
+							info "Note Created: " + Resp;
+							Added_Notes_Count = Added_Notes_Count + 1;
+							Added_Notes_Resp.add(Resp);
+						}
+					}
+				}
+			}
+			else if(CheckEntity == "Sales_Orders")
+			{
+				SO_Rec = zoho.crm.getRecordById("Sales_Orders",ParentID);
+				CheckDealVal = ifnull(SO_Rec.get("Deal_Name"),"");
+				if(CheckDealVal != "")
+				{
+					DealID = CheckDealVal.get("id");
+					if(note.get("Created_By").get("id") != 3205780000000152015)
+					{
+						str = "Created by : " + note.get("Created_By").get("name") + "\n";
+						str = str + "Module : Sales Orders" + "\n";
+						Note_Data = ifnull(note.get("Note_Content"),"");
+						if(Note_Data != "")
+						{
+							n = Note_Data.getOccurenceCount("crm[user#");
+							counter = leftpad("1",n).replaceAll(" ","1,").toList();
+							for each index i in counter
+							{
+								if(Note_Data.contains("crm[user#"))
+								{
+									/////////////////////////// Pre Text of Content //////////////////////////
+									Pre_Text = Note_Data.subString(0,Note_Data.indexOf("crm[user#"));
+									////////////////////////// Id of Tag User and get its Name //////////////////
+									id = Note_Data.subString(Note_Data.indexOf("crm[user#") + 9,Note_Data.length());
+									id = id.getPrefix("#");
+									response = invokeurl
+									[
+										url :"https://www.zohoapis.com/crm/v2/users/" + id
+										type :GET
+										connection:"zoho_crm"
+									];
+									User_Name = response.get("users").get(0).get("full_name");
+									/////////////////////////////// PostText of Content //////////////////////	
+									Post_Text = Note_Data.getSuffix("]");
+									Post_Text = Post_Text.subString(3,Post_Text.length());
+									//////////////////////////////////////////////////////////////////////////
+									Note_Data = Pre_Text + '"' + User_Name + '"' + Post_Text;
+								}
+							}
+							str = str + "Content : " + Note_Data.removeLastOccurence(" ") + "\n";
+							str = str + "-\n";
+							str = str + "Link of record : " + "\n";
+							str = str + "https://crm.zoho.com/crm/org666155072/tab/SalesOrders/" + ParentID + "\n";
+							info str;
+							Mp = Map();
+							Mp.put("Note_Title",note.get("Note_Title"));
+							Mp.put("Note_Content",str + "\n ");
+							Mp2 = Map();
+							Mp2.put("data",Mp.toList());
+							Resp = invokeurl
+							[
+								url :"https://www.zohoapis.com/crm/v2/Deals/" + DealID + "/Notes"
+								type :POST
+								parameters:Mp2 + ""
+								connection:"zoho_crm"
+							];
+							info "Note Created: " + Resp;
+							Added_Notes_Count = Added_Notes_Count + 1;
+							Added_Notes_Resp.add(Resp);
+						}
+					}
+				}
+			}
+			else if(CheckEntity == "Purchase_Orders")
+			{
+				PO_Rec = zoho.crm.getRecordById("Purchase_Orders",ParentID);
+				CheckDealVal = ifnull(PO_Rec.get("Project"),"");
+				if(CheckDealVal != "")
+				{
+					DealID = CheckDealVal.get("id");
+					if(note.get("Created_By").get("id") != 3205780000000152015)
+					{
+						str = "Created by : " + note.get("Created_By").get("name") + "\n";
+						str = str + "Module : Purchase Orders" + "\n";
+						Note_Data = ifnull(note.get("Note_Content"),"");
+						if(Note_Data != "")
+						{
+							n = Note_Data.getOccurenceCount("crm[user#");
+							counter = leftpad("1",n).replaceAll(" ","1,").toList();
+							for each index i in counter
+							{
+								if(Note_Data.contains("crm[user#"))
+								{
+									/////////////////////////// Pre Text of Content //////////////////////////
+									Pre_Text = Note_Data.subString(0,Note_Data.indexOf("crm[user#"));
+									////////////////////////// Id of Tag User and get its Name //////////////////
+									id = Note_Data.subString(Note_Data.indexOf("crm[user#") + 9,Note_Data.length());
+									id = id.getPrefix("#");
+									response = invokeurl
+									[
+										url :"https://www.zohoapis.com/crm/v2/users/" + id
+										type :GET
+										connection:"zoho_crm"
+									];
+									User_Name = response.get("users").get(0).get("full_name");
+									/////////////////////////////// PostText of Content //////////////////////	
+									Post_Text = Note_Data.getSuffix("]");
+									Post_Text = Post_Text.subString(3,Post_Text.length());
+									//////////////////////////////////////////////////////////////////////////
+									Note_Data = Pre_Text + '"' + User_Name + '"' + Post_Text;
+								}
+							}
+							str = str + "Content : " + Note_Data.removeLastOccurence(" ") + "\n";
+							str = str + "-\n";
+							str = str + "Link of record : " + "\n";
+							str = str + "https://crm.zoho.com/crm/org666155072/tab/PurchaseOrders/" + ParentID + "\n";
+							info str;
+							Mp = Map();
+							Mp.put("Note_Title",note.get("Note_Title"));
+							Mp.put("Note_Content",str + "\n ");
+							Mp2 = Map();
+							Mp2.put("data",Mp.toList());
+							Resp = invokeurl
+							[
+								url :"https://www.zohoapis.com/crm/v2/Deals/" + DealID + "/Notes"
+								type :POST
+								parameters:Mp2 + ""
+								connection:"zoho_crm"
+							];
+							info "Note Created: " + Resp;
+							Added_Notes_Count = Added_Notes_Count + 1;
+							Added_Notes_Resp.add(Resp);
+						}
+					}
+				}
+			}
+			else if(CheckEntity == "Designs")
+			{
+				DesignRec = zoho.crm.getRecordById("Designs",ParentID);
+				CheckDealVal = ifnull(DesignRec.get("Project"),"");
+				if(CheckDealVal != "")
+				{
+					DealID = CheckDealVal.get("id");
+					if(note.get("Created_By").get("id") != 3205780000000152015)
+					{
+						str = "Created by : " + note.get("Created_By").get("name") + "\n";
+						str = str + "Module : Design" + "\n";
+						Note_Data = ifnull(note.get("Note_Content"),"");
+						if(Note_Data != "")
+						{
+							n = Note_Data.getOccurenceCount("crm[user#");
+							counter = leftpad("1",n).replaceAll(" ","1,").toList();
+							for each index i in counter
+							{
+								if(Note_Data.contains("crm[user#"))
+								{
+									/////////////////////////// Pre Text of Content //////////////////////////
+									Pre_Text = Note_Data.subString(0,Note_Data.indexOf("crm[user#"));
+									////////////////////////// Id of Tag User and get its Name //////////////////
+									id = Note_Data.subString(Note_Data.indexOf("crm[user#") + 9,Note_Data.length());
+									id = id.getPrefix("#");
+									response = invokeurl
+									[
+										url :"https://www.zohoapis.com/crm/v2/users/" + id
+										type :GET
+										connection:"zoho_crm"
+									];
+									User_Name = response.get("users").get(0).get("full_name");
+									/////////////////////////////// PostText of Content //////////////////////	
+									Post_Text = Note_Data.getSuffix("]");
+									Post_Text = Post_Text.subString(3,Post_Text.length());
+									//////////////////////////////////////////////////////////////////////////
+									Note_Data = Pre_Text + '"' + User_Name + '"' + Post_Text;
+								}
+							}
+							str = str + "Content : " + Note_Data.removeLastOccurence(" ") + "\n";
+							str = str + "-\n";
+							str = str + "Link of record : " + "\n";
+							str = str + "https://crm.zoho.com/crm/org666155072/tab/CustomModule32/" + ParentID + "\n";
+							Mp = Map();
+							Mp.put("Note_Title",note.get("Note_Title"));
+							Mp.put("Note_Content",str + "\n ");
+							Mp2 = Map();
+							Mp2.put("data",Mp.toList());
+							Resp = invokeurl
+							[
+								url :"https://www.zohoapis.com/crm/v2/Deals/" + DealID + "/Notes"
+								type :POST
+								parameters:Mp2 + ""
+								connection:"zoho_crm"
+							];
+							info "Note Created: " + Resp;
+							Added_Notes_Count = Added_Notes_Count + 1;
+							Added_Notes_Resp.add(Resp);
+						}
+					}
+				}
+			}
+		}
+		catch (e)
+		{
+			sendmail
+			[
+				from :zoho.adminuserid
+				to :"junaid.hussain@basecampdata.com"
+				subject :"Push_Notes_Scheduler / CRM"
+				message :"Root Cause: " + e + "Note Resp: " + note
+			]
+		}
+	}
+	// 	sendmail
+	// 	[
+	// 		from :zoho.adminuserid
+	// 		to :"junaid.hussain@basecampdata.com"
+	// 		subject :"Push Notes Scheduler Response After Adding Notes"
+	// 		message :"From: " + FromTime + "\nTo: " + ToTime + "\nAdded Notes Count: " + Added_Notes_Count + "\n\nAdded Notes Response: " + Added_Notes_Resp
+	// 	]
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Push_Notes_Scheduler / CRM"
+		message :"Root Cause: " + e
+	]
+}

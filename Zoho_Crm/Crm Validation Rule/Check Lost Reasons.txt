@@ -1,0 +1,20 @@
+entityMap = crmAPIRequest.toMap().get("record");
+Status = entityMap.get("Quote_Stage");
+Lost_reasons = entityMap.get("Lost_Reasons");
+Other_reasons = entityMap.get("Other_Lost_Reason");
+response = Map();
+if(Status == "Lost" && Lost_reasons == null)
+{
+	response.put('status','error');
+	response.put('message','Please input Lost reasons for this Quote');
+}
+else if(Status == "Lost" && Lost_reasons == "Other" && Other_reasons == null)
+{
+	response.put('status','error');
+	response.put('message','Please input Other Lost reasons for this Quote');
+}
+else
+{
+	response.put('status','success');
+}
+return response;

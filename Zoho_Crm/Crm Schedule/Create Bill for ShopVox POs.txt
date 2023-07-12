@@ -1,0 +1,111 @@
+try 
+{
+	Purchase_Orders = invokeurl
+	[
+		url :"https://www.zohoapis.com/crm/v2/Purchase_Orders?cvid=3205780000106427149"
+		type :GET
+		connection:"zoho_crm"
+	];
+	for each  PO in Purchase_Orders.get("data")
+	{
+		ShopVox_PO = PO.get("ShopVox_PO");
+		if(PO.get("Bill_Generated") == false)
+		{
+			//	Bills = zoho.crm.getRelatedRecords("Bills","Purchase_Orders",PO.get("id"));
+			// 	if(Bills.size() > 0)
+			// 	{
+			Total_Bills = 0;
+			Total_Paid_Bills = 0;
+			searchParam = {"cf_memo":ShopVox_PO};
+			SearchBills = zoho.books.getRecords("bills","666479573",searchParam);
+			info SearchBills;
+			if(SearchBills.get("bills").size() > 0)
+			{
+				for each  billed in SearchBills.get("bills")
+				{
+					Total_Bills = Total_Bills + billed.get("total");
+					//////////////////////////////////////////////////
+					Paid_bills = 0;
+					Get_bill = zoho.books.getRecordsByID("bills","666479573",billed.get("bill_id"));
+					Payements = Get_bill.get("bill").get("payments");
+					for each  payment in Payements
+					{
+						Paid_bills = Paid_bills + payment.get("amount");
+						Total_Paid_Bills = Total_Paid_Bills + payment.get("amount");
+					}
+					pecent = (billed.get("total") * 100) / PO.get("Grand_Total");
+					mp = Map();
+					mp.put("Organization_Name",PO.get("Organization_Name"));
+					info billed.get("status");
+					if(Paid_bills == billed.get("total"))
+					{
+						mp.put("Status","Paid");
+					}
+					else if(Paid_bills > 0 && Paid_bills < billed.get("total"))
+					{
+						mp.put("Status","Partially Paid");
+					}
+					else
+					{
+						mp.put("Status","Bill Generated");
+					}
+					mp.put("PO",PO.get("id"));
+					mp.put("Method_of_bill_creation","Partly");
+					mp.put("How_would_you_like_to_split_the_PO","By amount");
+					mp.put("Generated_bill_amount",billed.get("total").toString());
+					mp.put("Paid_Amount",Paid_bills);
+					//mp.put("to_pay",pecent.toDecimal().round(2).toString());
+					mp.put("Amount",billed.get("total").toString());
+					mp.put("Payment_Terms",PO.get("Terms"));
+					mp.put("Payment_Method",PO.get("Payment_Method1"));
+					mp.put("Books_Bill_ID",billed.get("bill_id"));
+					mp.put("Bill_Linked",true);
+					create_bill = zoho.crm.createRecord("Create_Bills",mp);
+					info create_bill;
+					////////////////////////// Updating Books Bill //////////////////////
+					Books_bill_id = billed.get("bill_id");
+					if(PO.get("Project") != null)
+					{
+						project_id = PO.get("Project").get("id");
+						//////////////// Get details from projects //////////////////////////////////
+						Proj_details = zoho.crm.getRecordById("Deals",project_id);
+						Project_name = Proj_details.get("Deal_Name");
+						Proj_ID = Proj_details.get("Project_ID");
+						////////////////// Custom Fields ////////////////////////////
+						custom_field = list();
+						custom_field_projname = Map();
+						custom_field_projname.put("customfield_id","1316483000007359057");
+						custom_field_projname.put("placeholder","cf_project_name");
+						custom_field_projname.put("value",Project_name);
+						custom_field.add(custom_field_projname);
+						////////////////////////////////////////////////////////
+						custom_field_projID = Map();
+						custom_field_projID.put("customfield_id","1316483000007359087");
+						custom_field_projID.put("placeholder","cf_project_id");
+						custom_field_projID.put("value",Proj_ID);
+						custom_field.add(custom_field_projID);
+						Books_Bill_map = Map();
+						Books_Bill_map.put("custom_fields",custom_field);
+						Bill_Update = zoho.books.updateRecord("bills","666479573",Books_bill_id,Books_Bill_map);
+						info Bill_Update;
+					}
+				}
+				mp2 = Map();
+				mp2.put("Bill_Amount",Total_Bills);
+				mp2.put("Paid_Amount",Total_Paid_Bills);
+				mp2.put("Bill_Generated",true);
+				update = zoho.crm.updateRecord("Purchase_Orders",PO.get("id"),mp2);
+			}
+		}
+	}
+}
+ catch (e)
+{	info e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com"
+		subject :"Create Bills for ShopVox POs / CRM / Schedular / Purchase Orders"
+		message :"ID: " + billed.get("bill_id") + " Root Cause: " + e + " Created Bill Data:" + create_bill
+	]
+}

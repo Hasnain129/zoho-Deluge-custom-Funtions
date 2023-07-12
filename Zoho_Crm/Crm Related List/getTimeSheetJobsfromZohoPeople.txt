@@ -1,0 +1,57 @@
+noRecords = "<error><message>No records found.</message></error>";
+url = "https://people.zoho.com/people/api/timetracker/getjobs?authtoken=" + authTkn + "&accountName=" + accountName;
+resp = getUrl(url,false);
+if(resp.get("responseCode") == "200")
+{
+	response1 = resp.get("responseText");
+	singlevalue = response1.getJSON("response");
+	result = singlevalue.getJSON("result").toJSONList();
+	if(result.toString() != "")
+	{
+		response = "<record>";
+		for each index x in result
+		{
+			response = response + "<row no=\"" + x + 1 + "\">";
+			rowvalue = result.get(x);
+			//    jobId=rowvalue.getJSON("jobId");
+			jobStatus = rowvalue.getJSON("jobStatus");
+			jobName = rowvalue.getJSON("jobName");
+			if(rowvalue.contains("totalhours"))
+			{
+				totalhours = rowvalue.getJSON("totalhours");
+			}
+			else
+			{
+				totalhours = "00:00";
+			}
+			toDate = "";
+			if(rowvalue.contains("toDate"))
+			{
+				toDate = rowvalue.getJSON("toDate");
+			}
+			fromDate = "";
+			if(rowvalue.contains("fromDate"))
+			{
+				fromDate = rowvalue.getJSON("fromDate");
+			}
+			hours = rowvalue.getJSON("hours");
+			response = response + "<FL val='Job Name'>" + jobName + "</FL>";
+			response = response + "<FL val='Status'>" + jobStatus + "</FL>";
+			response = response + "<FL val='From'>" + fromDate + "</FL>";
+			response = response + "<FL val='To'>" + toDate + "</FL>";
+			response = response + "<FL val='Estimated Hours'>" + hours + "</FL>";
+			response = response + "<FL val='Logged Hours'>" + totalhours + "</FL>";
+			response = response + "</row>";
+		}
+		response = response + "</record>";
+	}
+	else
+	{
+		response = "<error><message>NO RECORDS</message></error>";
+	}
+}
+else if(resp.get("responseCode") == "500")
+{
+	response = "<error><message>Authtoken is invalid</message></error>";
+}
+return response;

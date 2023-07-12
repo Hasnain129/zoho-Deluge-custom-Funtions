@@ -1,0 +1,42 @@
+try 
+{
+	email = "erp@blinksigns.com";
+	workspaceName = "BS_Workspace";
+	viewName = "Company Stage Report";
+	paramsMap = Map();
+	paramsMap.put("ZOHO_ACTION","EXPORT");
+	paramsMap.put("ZOHO_OUTPUT_FORMAT","JSON");
+	paramsMap.put("ZOHO_ERROR_FORMAT","JSON");
+	paramsMap.put("ZOHO_API_VERSION","1.0");
+	response = invokeurl
+	[
+		url :"https://analyticsapi.zoho.com/api/" + encodeUrl(email) + "/" + encodeUrl(workspaceName) + "/" + encodeUrl(viewName)
+		type :POST
+		parameters:paramsMap
+		connection:"zoho_analytics"
+	];
+	info response;
+	if(response.get("response").containKey("result"))
+	{
+		response_data = response.get("response").get("result").get("rows");
+		for each  data in response_data
+		{
+			customer_id = data.get(1);
+			customer_status = data.get(8);
+			Mp = Map();
+			Mp.put("Company_Stage",customer_status);
+			zoho.crm.updateRecord("Accounts",customer_id,Mp);
+		}
+	}
+}
+catch (e)
+{
+	info e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"erp@blinksigns.com","sarmad@erphub.com"
+		subject :"Update Company Stage / Companies / Schedular / CRM "
+		message :"Module:Company Time:" + zoho.currenttime + " ------------   " + e
+	]
+}

@@ -1,0 +1,27 @@
+email = "erp@blinksigns.com";
+workspaceName = "BS_Workspace";
+viewName = "Actual Due Date Audit Report";
+paramsMap = Map();
+paramsMap.put("ZOHO_ACTION","EXPORT");
+paramsMap.put("ZOHO_OUTPUT_FORMAT","JSON");
+paramsMap.put("ZOHO_ERROR_FORMAT","JSON");
+paramsMap.put("ZOHO_API_VERSION","1.0");
+response = invokeurl
+[
+	url :"https://analyticsapi.zoho.com/api/" + encodeUrl(email) + "/" + encodeUrl(workspaceName) + "/" + encodeUrl(viewName)
+	type :POST
+	parameters:paramsMap
+	connection:"zoho_analytics"
+];
+CheckResp = response.get("response");
+if(CheckResp.containsKey("result"))
+{
+	Result = CheckResp.get("result");
+	TotalRows = Result.get("rows");
+	for each  rec in TotalRows
+	{
+		CRM_ID = rec.get(0);
+		Project_Due_Date = rec.get(2);
+		info zoho.crm.updateRecord("Deals",CRM_ID,{"Actual_Due_Date":Project_Due_Date.toDate()});
+	}
+}

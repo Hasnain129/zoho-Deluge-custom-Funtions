@@ -1,0 +1,107 @@
+try 
+{
+	email = "erp@blinksigns.com";
+	workspaceName = "BS_Workspace";
+	viewName_Companies = "Company - GP_GGP_PA Fix";
+	viewName_Contacts = "Contacts - PC_GP_GGP_PA Fix";
+	viewName_Sign_Project = "Sign Project - PC_GP_GGP Fix";
+	paramsMap = Map();
+	paramsMap.put("ZOHO_ACTION","EXPORT");
+	paramsMap.put("ZOHO_OUTPUT_FORMAT","JSON");
+	paramsMap.put("ZOHO_ERROR_FORMAT","JSON");
+	paramsMap.put("ZOHO_API_VERSION","1.0");
+	//////////////////////////////////////// Fetching Company Report /////////////////////////////////////////////////
+	response_companies = invokeurl
+	[
+		url :"https://analyticsapi.zoho.com/api/" + encodeUrl(email) + "/" + encodeUrl(workspaceName) + "/" + encodeUrl(viewName_Companies)
+		type :POST
+		parameters:paramsMap
+		connection:"zoho_analytics"
+	];
+	// 	info response_companies;
+	//////////////////////////////////////// Fetching Contact Report /////////////////////////////////////////////////
+	response_contacts = invokeurl
+	[
+		url :"https://analyticsapi.zoho.com/api/" + encodeUrl(email) + "/" + encodeUrl(workspaceName) + "/" + encodeUrl(viewName_Contacts)
+		type :POST
+		parameters:paramsMap
+		connection:"zoho_analytics"
+	];
+	//info response_contacts;
+	//////////////////////////////////////// Fetching Sign Project Report /////////////////////////////////////////////////
+	response_Sign_Project = invokeurl
+	[
+		url :"https://analyticsapi.zoho.com/api/" + encodeUrl(email) + "/" + encodeUrl(workspaceName) + "/" + encodeUrl(viewName_Sign_Project)
+		type :POST
+		parameters:paramsMap
+		connection:"zoho_analytics"
+	];
+	// 	info response_Sign_Project;
+	////////////////////////////////// Updating Companies ////////////////////////////////////////
+	if(response_companies.get("response").containKey("result"))
+	{
+		response_data = response_companies.get("response").get("result").get("rows");
+		for each  data in response_data
+		{
+			customer_id = data.get(0);
+			grandparent_customer = data.get(4);
+			greatgrandparent_customer = data.get(5);
+			parentaccount_campaigns = data.get(6);
+			Mp = Map();
+			Mp.put("Grandparent_Customer",grandparent_customer);
+			Mp.put("Great_Grandparent_Customer",greatgrandparent_customer);
+			Mp.put("Parent_Account_Campaigns",parentaccount_campaigns);
+			updatecustomer = zoho.crm.updateRecord("Accounts",customer_id,Mp);
+			//info updatecustomer;
+		}
+	}
+	////////////////////////////////// Updating Contacts ////////////////////////////////////////
+	if(response_contacts.get("response").containKey("result"))
+	{
+		response_data = response_contacts.get("response").get("result").get("rows");
+		for each  data in response_data
+		{
+			contact_id = data.get(0);
+			parent_customer = data.get(2);
+			grandparent_customer = data.get(4);
+			greatgrandparent_customer = data.get(5);
+			parentaccount_campaigns = data.get(6);
+			Mp = Map();
+			Mp.put("Parent_Customer",parent_customer);
+			Mp.put("Grandparent_Customer",grandparent_customer);
+			Mp.put("Great_Grandparent_Customer",greatgrandparent_customer);
+			Mp.put("Parent_Account_Campaigns",parentaccount_campaigns);
+			updatecontacts = zoho.crm.updateRecord("Contacts",contact_id,Mp);
+			//info updatecontacts;
+		}
+	}
+	////////////////////////////////// Updating Sign Projects ////////////////////////////////////////
+	if(response_Sign_Project.get("response").containKey("result"))
+	{
+		response_data = response_Sign_Project.get("response").get("result").get("rows");
+		for each  data in response_data
+		{
+			sp_id = data.get(0);
+			parent_customer = data.get(1);
+			grandparent_customer = data.get(3);
+			greatgrandparent_customer = data.get(4);
+			Mp = Map();
+			Mp.put("Parent_Company",parent_customer);
+			Mp.put("Grandparent_Customer",grandparent_customer);
+			Mp.put("Great_Grandparent_Customer",greatgrandparent_customer);
+			updateSinproject = zoho.crm.updateRecord("Deals",sp_id,Mp);
+			//info updateSinproject;
+		}
+	}
+}
+catch (e)
+{
+	info e;
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"auto@rebiz.zohodesk.com"
+		subject :"Company-Contacts-Sign Project Updates / Schedular / CRM"
+		message :"Module : Companies - Contacts - Sign Project Time:" + zoho.currenttime + " ---- " + " Root Cause " + e + "\n Companies Report Response: " + response_companies + "\n Contacts Report Response: " + response_contacts + "\n Sign Prjoject Report Response: " + response_Sign_Project
+	]
+}

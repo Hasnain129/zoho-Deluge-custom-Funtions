@@ -1,0 +1,21 @@
+entityMap = crmAPIRequest.toMap().get("record");
+Stage = entityMap.get("Stage");
+Quote_Status = entityMap.get("Quote_Status1");
+response = Map();
+if(Stage == "Lost" && Quote_Status != "")
+{
+	if(Quote_Status != "Lost" && Quote_Status != "Voided")
+	{
+		response.put('status','error');
+		response.put('message','Please first mark the Quote as Lost or Voided');
+	}
+	else
+	{
+		response.put('status','success');
+	}
+}
+else
+{
+	response.put('status','success');
+}
+return response;

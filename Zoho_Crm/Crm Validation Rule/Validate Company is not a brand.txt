@@ -1,0 +1,37 @@
+entityMap = crmAPIRequest.toMap().get("record");
+Type = entityMap.get("Type");
+response = Map();
+if(Type != "Brands")
+{
+	Company_name = entityMap.get("Company");
+	if(Company_name != "")
+	{
+		Company_name = entityMap.get("Company").replaceAll("'","''");
+		query = "{\"select_query\":\"select Account_Name from Accounts where (Account_Name='" + Company_name + "' and (Type=Brands))\"}";
+		QueryResp = invokeurl
+		[
+			url :"https://www.zohoapis.com/crm/v2/coql"
+			type :POST
+			parameters:query
+			connection:"zoho_crm"
+		];
+		if(ifnull(QueryResp.size(),0) > 0)
+		{
+			response.put('status','error');
+			response.put('message','Selected company is a Brand. Please select a Non-Brand company');
+		}
+		else
+		{
+			response.put('status','success');
+		}
+	}
+	else
+	{
+		response.put('status','success');
+	}
+}
+else
+{
+	response.put('status','success');
+}
+return response;

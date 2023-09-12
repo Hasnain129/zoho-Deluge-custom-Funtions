@@ -1,0 +1,29 @@
+res = zoho.sheet.getRecords("sz3vxd128408d30704a628172170524d837b0","Sheet2");
+//info res;
+for each  rec in res.get("records")
+{
+	info "SKU :" + rec.get("sku");
+	searchParam = {"sku":rec.get("sku")};
+	response = zoho.books.getRecords("items",666479573,searchParam,"zoho_books");
+	itemID = response.get("items").get(0).get("item_id");
+	Item = invokeurl
+	[
+		url :"https://www.zohoapis.com/books/v3/items/" + itemID + "?organization_id=666479573"
+		type :GET
+		connection:"zoho_books"
+	];
+	initial_stock = ifnull(Item.get("item").toCollection().get("initial_stock"),0.0);
+	info initial_stock;
+	initial_stock_rate = ifnull(Item.get("item").toCollection().get("initial_stock_rate"),0.0);
+	info initial_stock_rate;
+	status = ifnull(Item.get("item").toCollection().get("status"),0.0);
+	info status;
+	if(status == "inactive")
+	{
+		update_mp = Map();
+		update_mp.put("initial_stock","0");
+		update_mp.put("initial_stock_rate","0");
+		response = zoho.books.updateRecord("items","666479573",itemID,update_mp);
+	}
+}
+return "";

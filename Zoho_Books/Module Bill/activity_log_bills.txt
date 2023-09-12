@@ -3,9 +3,6 @@
 
 Function Description : It is a function to take activity log of Sales order to check if someone deleted Bills. 
 
-
-
-
 /*
 This is a sample function. Uncomment to execute or make changes to this function.  
 billID = bill.get("bill_id");

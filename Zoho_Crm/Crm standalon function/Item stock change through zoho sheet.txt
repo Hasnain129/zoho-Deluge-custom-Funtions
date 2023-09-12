@@ -1,0 +1,66 @@
+res = zoho.sheet.getRecords("3cdb286378a1fdbdd4b9ba8306013796250a0","Sheet1");
+//info res;
+for each  rec in res.get("records")
+{
+	info "SKU :" + rec.get("sku");
+	searchParam = {"sku":rec.get("sku")};
+	response = zoho.books.getRecords("items",666479573,searchParam,"zoho_books");
+	itemID = response.get("items").get(0).get("item_id");
+	info itemID;
+	Item = invokeurl
+	[
+		url :"https://www.zohoapis.com/books/v3/items/" + itemID + "?organization_id=666479573"
+		type :GET
+		connection:"zoho_books"
+	];
+	cost_price = ifnull(Item.get("item").toCollection().get("purchase_rate"),0.0);
+	info "cost_price: " + cost_price;
+	initial_stock = ifnull(Item.get("item").toCollection().get("initial_stock"),0.0);
+	info "initial_stock: " + initial_stock;
+	initial_stock_rate = ifnull(Item.get("item").toCollection().get("initial_stock_rate"),0.0);
+	info "initial_stock_rate: " + initial_stock_rate;
+	// 	if(initial_stock == "0.0")
+	// 	{
+	// 		Update = Map();
+	// 		Update.put("initial_stock",0.1);
+	// 		Update.put("initial_stock_rate",cost_price);
+	// 	}
+	// 	else if(cost_price != "0.0")
+	// 	{
+	// 		Update = Map();
+	// 		Update.put("initial_stock",initial_stock);
+	// 		Update.put("initial_stock_rate",cost_price);
+	// 		info "false";
+	// 	}
+	Update_mp = Map();
+	if(cost_price != "0.0")
+	{
+		if(initial_stock == 0.0 || initial_stock == 0.1)
+		{
+			Update_mp.put("initial_stock","0.1");
+			Update_mp.put("initial_stock_rate",cost_price);
+			line_items = List();
+			////////////////////// Create Adjustment //////////////////////////////
+			item = Map();
+			item.put("item_id",itemID);
+			item.put("quantity_adjusted",-0.1);
+			line_items.add(item);
+			Mp = Map();
+			Mp.put("date",today);
+			Mp.put("reason","Inventory Revaluation");
+			Mp.put("adjustment_type","quantity");
+			Mp.put("line_items",line_items);
+			//info Mp;
+			response = zoho.books.createRecord("inventoryadjustments","666479573",Mp);
+			info response.get("message");
+		}
+		else
+		{
+			Update_mp.put("initial_stock",initial_stock);
+			Update_mp.put("initial_stock_rate",cost_price);
+		}
+		response = zoho.books.updateRecord("items","666479573",itemID,Update_mp);
+		info response.get("message");
+	}
+}
+return "";

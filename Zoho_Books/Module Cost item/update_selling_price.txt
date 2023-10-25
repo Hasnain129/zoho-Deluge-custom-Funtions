@@ -7,7 +7,6 @@ Workflow Description : Updates selling price when the margin is changed in both 
 
 
 
-
 /*
 	Calculates and updates the selling price of the cost item when margins are added or updated.
 	Function			= Update Selling Price
@@ -27,14 +26,13 @@ record_id = cm_cost_item.get("module_record_id");
 cost_price = cm_cost_item.get("cf_cost_price");
 selling_price = cm_cost_item.get("cf_selling_price");
 margin = cm_cost_item.get("cf_margin");
-estimate_line_item = cm_cost_item.get("cf_est_line_item");
+estimate_line_item = ifnull(cm_cost_item.get("cf_est_line_item"),"");
 product_id = cm_cost_item.get("cf_inventory_product_name");
 estimate_id = cm_cost_item.get("cf_estimate_number");
 qty = cm_cost_item.get("cf_qty");
 organization_name = cm_cost_item.get("cf_organization");
 organization_id = organization.get("organization_id");
 updatedata = Map();
-// estimate_array = zoho.books.getRecordsByID("estimates",organization_id,estimate_id);
 estimate_array = zoho.books.getRecordsByID("estimates",organization_id,estimate_id);
 estimate_status = estimate_array.get("estimate").get("status");
 if(estimate_status == "draft")

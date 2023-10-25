@@ -1,0 +1,24 @@
+
+entityID = cm_cost_item.get("module_record_id");
+vendor_id = cm_cost_item.get("cf_vendor");
+organizationID = organization.get("organization_id");
+if(vendor_id != null)
+{
+	searchParam = {"cf_vendor_name":vendor_id,"cf_cost_item":entityID};
+	response = zoho.books.getRecords("cm_rfq",organizationID,searchParam,"zoho_book");
+	if(response.get("module_records").size() > 0)
+	{
+		rfq_price = response.get("module_records").get(0).get("cf_price");
+		Mp = Map();
+		Mp.put("cf_cost_price",rfq_price);
+		resp = zoho.books.updateRecord("cm_cost_item",organizationID,entityID,Mp);
+		info resp.get("message");
+	}
+}
+else
+{
+	Mp = Map();
+	Mp.put("cf_cost_price","0.0");
+	resp = zoho.books.updateRecord("cm_cost_item",organizationID,entityID,Mp);
+	info resp.get("message");
+}

@@ -4,20 +4,23 @@
 
 
 
-
-/*
-This is a sample function. Uncomment to execute or make changes to this function.
-paymentID = customer_payment.get("payment_id");
-organizationID = organization.get("organization_id");
-*/
+ref_number = customer_payment.get("reference_number");
+Payment_Number = customer_payment.get("payment_number");
+customer_Name = customer_payment.get("customer_name");
+Payment_Mode = customer_payment.get("payment_mode");
+Amount = customer_payment.get("amount");
 Rows_Det = List();
 row1 = Map();
 row1.put("Date",zoho.currentdate.getDate());
 row1.put("Time - EST",zoho.currenttime.getTime());
-row1.put("Payment Number",customer_payment.get("payment_number"));
-row1.put("Reference",customer_payment.get("reference_number"));
-row1.put("Customer",customer_payment.get("customer_name"));
-row1.put("Payment Mode",customer_payment.get("payment_mode"));
+row1.put("Payment Number",Payment_Number);
+row1.put("Reference",ref_number);
+row1.put("Customer",customer_Name);
+row1.put("Payment Mode",Payment_Mode);
+row1.put("Total Amount","$" + Amount);
+row1.put("Application","Zoho Books");
+// row1.put("Payment Against",customer_payment.get("invoices").get(0).get("invoice_number"));
+// row1.put("Payment Against Retainer  Invoice ",customer_payment.get("invoices").get(0).get("retainerinvoice_number"));
 row1.put("Deleted By",zoho.loginuser);
 Rows_Det.add(row1);
 resource_id = "lhvwf04b16d7de44a45c4990b34f11eb25387";
@@ -33,3 +36,11 @@ add_records = invokeurl
 	parameters:rowData
 	connection:"zoho_sheet"
 ];
+msg = "<body style='font-family: Arial, sans-serif; background-color: #f5f5f5;'><div style='background-color: #5d209f; color: white; width: 100%; margin: auto; padding: 10px; text-align:center'><img style='width: 300px; height: auto' src='https://blinkswag.com/united/Logo-1.png'></div><div style='margin-left: 5%; margin-right: 5%;'><p><br> Dear Business Development Team,<p>We would like to inform you that a Payment Received, bearing reference [" + ref_number + "]<b/> has been deleted from Zoho Books, and this action has been attributed to " + zoho.loginuser + "</p></div><div style='margin-left: 5%'>Payment Number:" + Payment_Number + "<br>Reference Number: " + ref_number + "<br>Customer Name: " + customer_Name + "<br>Payment Mode: " + Payment_Mode + "<br>Deleted by " + zoho.loginuser + "<br>Time - EST: " + zoho.currenttime.getTime() + "<br>Date: " + zoho.currentdate.getDate() + "<br>Total Amount:" + "$" + Amount + "<br> <p>For access to all deleted Payment Received information, please click the button below.<p/></div><center><div style='text-align: center;'><br><button style='background-color: #5d209f; border: none; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; border-radius: 5px; margin-top: 20px'><a href='https://sheet.zoho.com/sheet/open/lhvwf04b16d7de44a45c4990b34f11eb25387?sheetid=3&range=E6' style='color:white; text-decoration: none;'>Please Click Here</a> </button> <p><br>BLINKSWAG © 2023 All Right Reserved</p></div>";
+sendmail
+[
+	from :zoho.loginuserid
+	to :"hasnain@blinkswag.com,f.rajput@blinkswag.com,shahzaib@blinkswag.com,yasir@blinkswag.com"
+	subject :"Verification Request - Payment Received Deleted by " + zoho.loginuser
+	message :msg
+]

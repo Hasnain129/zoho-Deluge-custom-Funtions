@@ -7,21 +7,23 @@ Description  : It is a function to take the activity log of the Sales order to c
 
 
 
-/*
-This is a sample function. Uncomment to execute or make changes to this function.  
-estimateID = estimate.get("estimate_id");
-estimatedate = estimate.get("date").toDate();
-organizationID = organization.get("organization_id");
-*/
+
+estimatenumber = estimate.get("estimate_number");
+estimate_ref = estimate.get("reference_number");
+customer_name = estimate.get("customer_name");
+estimate_status = estimate.get("status");
+Total = estimate.get("total");
 Rows_Det = List();
 row1 = Map();
 row1.put("Date",zoho.currentdate.getDate());
 row1.put("Time - EST",zoho.currenttime.getTime());
-row1.put("Estimate Number",estimate.get("estimate_number"));
-row1.put("Reference",estimate.get("reference_number"));
-row1.put("Customer",estimate.get("customer_name"));
-row1.put("Status",estimate.get("status"));
+row1.put("Estimate Number",estimatenumber);
+row1.put("Reference",estimate_ref);
+row1.put("Customer",customer_name);
+row1.put("Status",estimate_status);
+row1.put("Total Amount","$" + Total);
 row1.put("Deleted By",zoho.loginuser);
+row1.put("Application","Zoho Books");
 Rows_Det.add(row1);
 resource_id = "lhvwf04b16d7de44a45c4990b34f11eb25387";
 rowData = Map();
@@ -36,3 +38,11 @@ add_records = invokeurl
 	parameters:rowData
 	connection:"zoho_sheet"
 ];
+msg = "<body style='font-family: Arial, sans-serif; background-color: #f5f5f5;'><div style='background-color: #5d209f; color: white; width: 100%; margin: auto; padding: 10px; text-align:center'><img style='width: 300px; height: auto' src='https://blinkswag.com/united/Logo-1.png'></img></div><div style='margin-left: 5%; margin-right: 5%;'><p><br>Dear Business Development Team,<p>We would like to inform you that a Estimate, bearing reference " + estimatenumber + "<b/> has been deleted from Zoho Books, and this action has been attributed to " + zoho.loginuser + "</p></div><div style='margin-left: 5%'>Estimate Number: " + estimatenumber + "<br>Estimate Status: " + estimate_status + "<br>Reference Number: " + estimate_ref + "<br>Customer Name: " + customer_name + "<br>Deleted by " + zoho.loginuser + "<br>Time - EST: " + zoho.currenttime.getTime() + "<br>Date: " + zoho.currentdate.getDate() + "<br>Total Amount: " + "$" + Total + "<br><p>For access to all deleted Sales Order information, please click the button below.<p/></div><center><div style='text-align: center;'><br><button style='background-color: #5d209f; border: none; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; border-radius: 5px; margin-top: 20px'><a href='https://sheet.zoho.com/sheet/open/lhvwf04b16d7de44a45c4990b34f11eb25387?sheetid=0&range=A4' style='color:white; text-decoration: none;'>Please Click Here</a></button><p><br>BLINKSWAG © 2023 All Right Reserved</p></div>";
+sendmail
+[
+	from :zoho.loginuserid
+	to :"hasnain@blinkswag.com,shahzaib@blinkswag.com,f.rajput@blinkswag.com,yasir@blinkswag.com"
+	subject :"Verification Request - Estimate Deleted by " + zoho.loginuser
+	message :msg
+]

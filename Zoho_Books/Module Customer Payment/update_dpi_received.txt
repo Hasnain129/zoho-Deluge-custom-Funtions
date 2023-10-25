@@ -5,6 +5,7 @@ Workflow Description : Update DPI module when payment is received with "Yes"
 
 
 
+
 //-----------------------------------------------------
 // Get details from Customer Payments module
 customerID = customer_payment.get("customer_id");
@@ -20,49 +21,57 @@ if(!retainer_invoiceID.isNull())
 	//------------------------------------------------------
 	// Get Dwon Payment Invoice ID from CRM and get Quote ID
 	search = zoho.crm.searchRecords("Down_Payment_Invoices","((Name:equals:" + invoice_Number + "))");
-	for each  w in search
+	info search.size();
+	if(search.size() > 0)
 	{
-		DPI_id = ifnull(w.get("id"),"");
-	}
-	DPI_details = zoho.crm.getRecordById("Down_Payment_Invoices",DPI_id);
-	//-------------------------------------------------------------------------------------
-	// Update Paid field on DPI Module
-	mp11 = Map();
-	mp11.put("Paid","Paid");
-	update_DPI = zoho.crm.updateRecord("Down_Payment_Invoices",DPI_id,mp11,{"trigger":{"workflow"}});
-	salesOrder = DPI_details.get("Sales_Order");
-	if(salesOrder != null)
-	{
-		salesOrderID = salesOrder.get("id");
-		soDetails = zoho.crm.getRecordById("Sales_Orders",salesOrderID);
-		invoiceID = soDetails.get("Invoice_ID");
-		if(invoiceID != null)
+		for each  w in search
 		{
-			////////////////////////////// Fetching Retainer Invoice ////////////////////////////////////
-			ret_invoice_total = resp.get("total");
-			///////////////////////////// Apply Retainer Invoice to created Invoice //////////////
-			retInvoiceData = Map();
-			retInvoiceData.put("invoice_id",invoiceID);
-			retInvoiceData.put("amount_applied",ret_invoice_total);
-			invoice_Payment = Map();
-			invoice_Payment.put("invoice_payments",{retInvoiceData});
-			JsonString2 = Map();
-			JsonString2.put("JSONString",invoice_Payment);
-			resp_inv1 = invokeurl
-			[
-				url :"https://books.zoho.com/api/v3/retainerinvoices/" + retainer_invoiceID + "/invoices?organization_id=666479573"
-				type :POST
-				parameters:JsonString2
-				connection:"zoho_book"
-			];
-			info resp_inv1;
+			DPI_id = ifnull(w.get("id"),"");
 		}
+		DPI_details = zoho.crm.getRecordById("Down_Payment_Invoices",DPI_id);
+		//-------------------------------------------------------------------------------------
+		// Update Paid field on DPI Module
+		mp11 = Map();
+		mp11.put("Paid","Paid");
+		update_DPI = zoho.crm.updateRecord("Down_Payment_Invoices",DPI_id,mp11,{"trigger":{"workflow"}});
+		salesOrder = DPI_details.get("Sales_Order");
+		if(salesOrder != null)
+		{
+			salesOrderID = salesOrder.get("id");
+			soDetails = zoho.crm.getRecordById("Sales_Orders",salesOrderID);
+			invoiceID = soDetails.get("Invoice_ID");
+			if(invoiceID != null)
+			{
+				////////////////////////////// Fetching Retainer Invoice ////////////////////////////////////
+				ret_invoice_total = resp.get("total");
+				///////////////////////////// Apply Retainer Invoice to created Invoice //////////////
+				retInvoiceData = Map();
+				retInvoiceData.put("invoice_id",invoiceID);
+				retInvoiceData.put("amount_applied",ret_invoice_total);
+				invoice_Payment = Map();
+				invoice_Payment.put("invoice_payments",{retInvoiceData});
+				JsonString2 = Map();
+				JsonString2.put("JSONString",invoice_Payment);
+				resp_inv1 = invokeurl
+				[
+					url :"https://books.zoho.com/api/v3/retainerinvoices/" + retainer_invoiceID + "/invoices?organization_id=666479573"
+					type :POST
+					parameters:JsonString2
+					connection:"zoho_book"
+				];
+				info resp_inv1;
+			}
+		}
+		/////////////////////////////////////////////////update payment Retainer Invoice Number//////////////////
+		mp = Map();
+		mp.put("reference_number",invoice_Number);
+		update = zoho.books.updateRecord("customerpayments","666479573",paymentID,mp);
+		info update;
 	}
-	/////////////////////////////////////////////////update payment Retainer Invoice Number//////////////////
-	mp = Map();
-	mp.put("reference_number",invoice_Number);
-	update = zoho.books.updateRecord("customerpayments","666479573",paymentID,mp);
-	info update;
+	else
+	{
+		info "No Downpayment Found in CRM.";
+	}
 }
 else
 {

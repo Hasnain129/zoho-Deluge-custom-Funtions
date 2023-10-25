@@ -7,15 +7,23 @@ Function Description : It is a function to take activity log of Sales order to c
 
 
 
+ref_number = purchaseorder.get("reference_number");
+Po_NUM = purchaseorder.get("purchaseorder_number");
+info Po_NUM;
+vendor_Name = purchaseorder.get("vendor_name");
+po_status = purchaseorder.get("status");
+Total = purchaseorder.get("total");
 Rows_Det = List();
 row1 = Map();
 row1.put("Date",zoho.currentdate.getDate());
 row1.put("Time - EST",zoho.currenttime.getTime());
-row1.put("Purchase_Order Number",purchaseorder.get("purchaseorder_number"));
-row1.put("Reference",purchaseorder.get("reference_number"));
-row1.put("Customer",purchaseorder.get("customer_name"));
-row1.put("Status",purchaseorder.get("status"));
+row1.put("Purchase_Order Number",Po_NUM);
+row1.put("Reference",ref_number);
+row1.put("Vendor",vendor_Name);
+row1.put("Status",po_status);
+row1.put("Total Amount","$" + Total);
 row1.put("Deleted By",zoho.loginuser);
+row1.put("Application","Zoho Books");
 Rows_Det.add(row1);
 resource_id = "lhvwf04b16d7de44a45c4990b34f11eb25387";
 rowData = Map();
@@ -30,3 +38,11 @@ add_records = invokeurl
 	parameters:rowData
 	connection:"zoho_sheet"
 ];
+msg = "<body style='font-family: Arial, sans-serif; background-color: #f5f5f5;'><div style='background-color: #5d209f; color: white; width: 100%; margin: auto; padding: 10px; text-align:center'><img style='width: 300px; height: auto' src='https://blinkswag.com/united/Logo-1.png'></img></div><div style='margin-left: 5%; margin-right: 5%;'><p><br>Dear Business Development Team,<p>We would like to inform you that a Purchase Order, bearing reference " + Po_NUM + "<b/> has been deleted from Zoho Books, and this action has been attributed to " + zoho.loginuser + "</p></div><div style='margin-left: 5%'>PurchaseOrder Number: " + Po_NUM + "<br>PO Status: " + po_status + "<br>Reference Number: " + ref_number + "<br>Vendor Name: " + vendor_Name + "<br>Deleted by " + zoho.loginuser + "<br>Time - EST: " + zoho.currenttime.getTime() + "<br>Date: " + zoho.currentdate.getDate() + "<br>Total Amount: " + "$" + Total + "<br><p>For access to all deleted Purchase Order information, please click the button below.<p/></div><center><div style='text-align: center;'><br><button style='background-color: #5d209f; border: none; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; border-radius: 5px; margin-top: 20px'><a href='https://sheet.zoho.com/sheet/open/lhvwf04b16d7de44a45c4990b34f11eb25387?sheetid=0&range=A4' style='color:white; text-decoration: none;'>Please Click Here</a></button><p><br>BLINKSWAG © 2023 All Right Reserved</p></div>";
+sendmail
+[
+	from :zoho.loginuserid
+	to :"hasnain@blinkswag.com,shahzaib@blinkswag.com,f.rajput@blinkswag.com,yasir@blinkswag.com"
+	subject :"Verification Request - Purchase Order Deleted by " + zoho.loginuser
+	message :msg
+]

@@ -1,0 +1,39 @@
+
+retainerinvoice_number = retainer_invoice.get("retainerinvoice_number");
+Ref = retainer_invoice.get("reference_number");
+customer = retainer_invoice.get("customer_name");
+status = retainer_invoice.get("status");
+Total = retainer_invoice.get("total");
+Rows_Det = List();
+row1 = Map();
+row1.put("Date",zoho.currentdate.getDate());
+row1.put("Time - EST",zoho.currenttime.getTime());
+row1.put("Retainer_Invoivce Number",retainerinvoice_number);
+row1.put("Reference",Ref);
+row1.put("Customer",customer);
+row1.put("Status",status);
+row1.put("Total Amount","$" + Total);
+row1.put("Deleted By",zoho.loginuser);
+row1.put("Application","Zoho Inventory");
+Rows_Det.add(row1);
+resource_id = "lhvwf04b16d7de44a45c4990b34f11eb25387";
+rowData = Map();
+rowData.put("method","worksheet.records.add");
+rowData.put("worksheet_name","Retainer Invoice");
+rowData.put("header_row",1);
+rowData.put("json_data",Rows_Det);
+add_records = invokeurl
+[
+	url :"https://sheet.zoho.com/api/v2/" + resource_id
+	type :POST
+	parameters:rowData
+	connection:"zoho_sheet"
+];
+msg = "<body style='font-family: Arial, sans-serif; background-color: #f5f5f5;'><div style='background-color: #5d209f; color: white; width: 100%; margin: auto; padding: 10px; text-align:center'><img style='width: 300px; height: auto' src='https://blinkswag.com/united/Logo-1.png'></img></div><div style='margin-left: 5%; margin-right: 5%;'><p><br>Dear Business Development Team,<p>We would like to inform you that a Retainer Invoice, bearing reference [" + retainerinvoice_number + "]<b/> has been deleted from Zoho Inventory, and this action has been attributed to " + zoho.loginuser + "</p></div><div style='margin-left: 5%'>Retainer Invoice Number: " + retainerinvoice_number + "<br>Status: " + status + "<br>Reference Number: " + Ref + "<br>Customer Name: " + customer + "<br>Deleted by " + zoho.loginuser + "<br>Time - EST: " + zoho.currenttime.getTime() + "<br>Date: " + zoho.currentdate.getDate() + "<br>Total Amount: " + "$" + Total + "<br><p>For access to all deleted Retainer Invoice information, please click the button below.<p/></div><center><div style='text-align: center;'><br><button style='background-color: #5d209f; border: none; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; border-radius: 5px; margin-top: 20px'><a href='https://sheet.zoho.com/sheet/open/lhvwf04b16d7de44a45c4990b34f11eb25387?sheetid=4&range=F1' style='color:white; text-decoration: none;'>Please Click Here</a></button><p><br>BLINKSWAG © 2023 All Right Reserved</p></div>";
+sendmail
+[
+	from :zoho.loginuserid
+	to :"hasnain@blinkswag.com,f.rajput@blinkswag.com,yasir@blinkswag.com,shahzaib@blinkswag.com"
+	subject :"Verification Request - Retainer Invoice Deleted by " + zoho.loginuser
+	message :msg
+]

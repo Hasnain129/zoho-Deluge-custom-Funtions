@@ -1,0 +1,68 @@
+///Sales Person updatet
+/////create zoho sheet
+////// Add two Sheet
+/////sheet1 and sheet2
+
+///////////https://sheet.zoho.com/sheet/open/78y3b5b8a173d45ba47acafb37ed85bd0c205?sheetid=1&range=A401
+
+
+Blink_Signs = "1316483000000062001";
+Darlene_Zwolinski = "1316483000008134145";
+//Fatima_Khanzada = ""; 2
+Lauren_Sweet = "1316483000008263009";
+Naveed_Zafar = "1316483000053234191";
+Steve_Weber = "1316483000008261021";
+Req_Para = Map();
+Req_Para.put("method","worksheet.records.fetch");
+Req_Para.put("resource_id","78y3b5b8a173d45ba47acafb37ed85bd0c205");
+Req_Para.put("workbook_name","Invoices SR Issue");
+Req_Para.put('worksheet_name','Sheet1');
+Req_Para.put('records_start_index',1);
+//Req_Para.put('count', 2);
+CreateResp = invokeurl
+[
+	url :"https://sheet.zoho.com/api/v2/78y3b5b8a173d45ba47acafb37ed85bd0c205"
+	type :POST
+	parameters:Req_Para
+	connection:"zoho_sheet"
+];
+records = CreateResp.get("records");
+count = 1;
+for each  record in records
+{
+	salesperson_id = "";
+	Mp = {"invoice_number":record.get("NUMBER")};
+	invoice_obj = zoho.books.getRecords("invoices","666479573",Mp,"zoho_books").get("invoices").get(0);
+	info count + ":	" + invoice_obj.get("invoice_number");
+	if(invoice_obj.get("salesperson_name") == "" || invoice_obj.get("salesperson_name") != record.get("Sales Person"))
+	{
+		// 			info "invoice " +  invoice_obj.get("salesperson_name");
+		// 			info "record " + record.get("Sales Person");
+		if(record.get("Sales Person") == "Blink Signs")
+		{
+			salesperson_id = "Blink Signs";
+		}
+		else if(record.get("Sales Person") == "Darlene Zwolinski")
+		{
+			salesperson_id = "Darlene Zwolinski";
+		}
+		else if(record.get("Sales Person") == "Lauren Sweet")
+		{
+			salesperson_id = "Lauren Sweet";
+		}
+		else if(record.get("Sales Person") == "Naveed Zafar")
+		{
+			salesperson_id = "Naveed Zafar";
+		}
+		else if(record.get("Sales Person") == "Steve Weber")
+		{
+			salesperson_id = "Steve Weber";
+		}
+		data_mp = Map();
+		data_mp.put("customer_id",invoice_obj.get("customer_id"));
+		data_mp.put("salesperson_name",salesperson_id);
+		resp = zoho.books.updateRecord("invoices","666479573",invoice_obj.get("invoice_id"),data_mp);
+		info resp.get("message");
+	}
+	count = count + 1;
+}

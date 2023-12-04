@@ -3,6 +3,7 @@
 
 
 
+
 /*
 This is a sample function. Uncomment to execute or make changes to this function.
 invoiceID = invoice.get("invoice_id");
@@ -26,14 +27,33 @@ crm_contact = invokeurl
 [
 	url :"https://www.zohoapis.com/crm/v2/Contacts/search?criteria=(Email:equals:" + customer_email + ")"
 	type :GET
-	connection:"zoho_crm"
+	connection:"crm_con"
 ];
-if(crm_contact.size() > 0)
+info crm_contact.get("data").size();
+if(crm_contact.get("data").size() > 0)
 {
-	if(crm_contact.get("data").get(0).get("Parent_Customer") != "")
+	if(crm_contact.get("data").get(0).get("Parent_Customer") == null)
+	{
+		comment_description = "" + invoice_number + " Parent customer (Motto Mortgage) does not exist";
+		headers_data = Map();
+		headers_data.put("description",comment_description);
+		//headers_data.put("payment_expected_date","2023-12-07");
+		headers_data.put("show_comment_to_clients",false);
+		JSONString = Map();
+		JSONString.put("JSONString",headers_data);
+		response = invokeurl
+		[
+			url :"https://www.zohoapis.com/books/v3/invoices/" + invoiceID + "/comments?organization_id=" + organizationID + ""
+			type :POST
+			parameters:JSONString
+			connection:"zoho_book"
+		];
+		info response;
+	}
+	else if(crm_contact.get("data").get(0).get("Parent_Customer") != "")
 	{
 		Parent_customer_id = crm_contact.get("data").get(0).get("Parent_Customer").get("id");
-		info Parent_customer_id;
+		info "Parent_customer_id" + Parent_customer_id;
 	}
 }
 // /////////////////////////////////////////Getting payment detail against invoice/////////////////////////////////
@@ -49,6 +69,7 @@ if(Parent_customer_id == "3205780000005121061")
 		parameters:searchParams
 		connection:"zoho_book"
 	];
+	info resp;
 	/////////////////////////////////////////////Getting all necessray payment info////////////////////////////////
 	payment_det = resp.get("payments");
 	// info payment_det;
@@ -71,55 +92,58 @@ if(Parent_customer_id == "3205780000005121061")
 		}
 	}
 	/////////////////////////Checking if payment_method = "COOP" and it's true then get line_items/////////////
-	if(payment_coop == true)
+	// 	if(payment_coop == true)
+	// 	{
+	prepaid_Items = "";
+	regular_Items = "";
+	Invoice_Line_Items = Invoice_Details.get("invoice").get("line_items");
+	Rate = Invoice_Details.get("invoice").get("total");
+	prepaid_item_total = 0;
+	//////////////////////////Getting required data from line_items for description//////////////////////////
+	for each  items in Invoice_Line_Items
 	{
-		prepaid_Items = "";
-		regular_Items = "";
-		Invoice_Line_Items = Invoice_Details.get("invoice").get("line_items");
-		Rate = Invoice_Details.get("invoice").get("total");
-		prepaid_item_total = 0;
-		//////////////////////////Getting required data from line_items for description//////////////////////////
-		for each  items in Invoice_Line_Items
+		Line_item_id = items.get("item_id");
+		Item_Details = zoho.books.getRecordsByID("items",organizationID,Line_item_id);
+		category_ID = Item_Details.get("item").get("category_id");
+		// 		//category id of Nook Motto
+		/////////Checking category if it's Nook(Motto) then dividing items in two sections : Prepaid Item section and Regular Item section////////////////////////////////////////////////////////////////////////////  
+		if(category_ID == "1316483000043646783" && payment_coop == true)
 		{
-			Line_item_id = items.get("item_id");
-			Item_Details = zoho.books.getRecordsByID("items",organizationID,Line_item_id);
-			category_ID = Item_Details.get("item").get("category_id");
-			// 		//category id of Nook Motto
-			/////////Checking category if it's Nook(Motto) then dividing items in two sections : Prepaid Item section and Regular Item section////////////////////////////////////////////////////////////////////////////  
-			if(category_ID == "1316483000043646783")
-			{
-				prepaid_Items = prepaid_Items + items.get("sku") + "	";
-				prepaid_Items = prepaid_Items + items.get("quantity").toNumber() + "	";
-				prepaid_Items = prepaid_Items + items.get("rate") + "\n";
-				prepaid_item_total = prepaid_item_total + items.get("item_total");
-			}
-			else
-			{
-				regular_Items = regular_Items + items.get("sku") + "	";
-				regular_Items = regular_Items + items.get("quantity").toNumber() + "	";
-				regular_Items = regular_Items + items.get("rate") + "\n";
-			}
+			prepaid_Items = prepaid_Items + items.get("sku") + "	";
+			prepaid_Items = prepaid_Items + items.get("quantity").toNumber() + "	";
+			prepaid_Items = prepaid_Items + items.get("rate") + "\n";
+			prepaid_item_total = prepaid_item_total + items.get("item_total");
+		}
+		else
+		{
+			regular_Items = regular_Items + items.get("sku") + "	";
+			regular_Items = regular_Items + items.get("quantity").toNumber() + "	";
+			regular_Items = regular_Items + items.get("rate") + "\n";
 		}
 	}
-	//  	info "prepaid_Items:	"+ prepaid_Items;
-	//  	info "regular_Items:	"+ regular_Items;
-	////////////////////Checking discount that none of it's field get null by chance if there is null then consider discount == 0.0 ////////////////////////////////////////////////////////////////////////////////////////////////
+	//}
+	info "prepaid_Items:	" + prepaid_Items;
+	info "regular_Items:	" + regular_Items;
+	//////////////////Checking discount that none of it's field get null by chance if there is null then consider discount == 0.0 ////////////////////////////////////////////////////////////////////////////////////////////////
 	Discount = ifnull(paid_via_amount,0) + ifnull(prepaid_item_total,0);
 	///////////////////Appneding all required data into description so that our line_item should look good according to requirements//////////////////////////////////////////////////////////////////////////////////////////////// 
 	description = "" + invoice_number + "\t:\t" + customer_name + "\nOrder Date\t:\t" + Invoice_Date + "\n\nPrepaid Items:\n" + prepaid_Items.replaceAll(",","") + "\n---------------------------------\n\nRegular Items:\n" + regular_Items.replaceAll(",","") + "\n---------------------------------\nPaid via " + ifnull(paid_via_gateway,"CC") + "\t$" + ifnull(paid_via_amount,"0") + "\n\n---------------------------------\nShippingCharges\t$" + ifnull(shipping_charges,"0") + "";
+	// .replaceAll(",","")	
+	// 	.replaceAll(",","")
 	////////////////searching monthly invoice according to current month date and reference number////////?//////////////////////
 	searchParams = {"reference_number":"Monthly Invoice"};
 	Motto_invoices = zoho.books.getRecords("invoices",organizationID,searchParams);
 	if(Motto_invoices.get("invoices").size() > 0)
 	{
 		current_date = zoho.currentdate.toString("yyyy-MM-dd").left(7);
-		// 	current_date = "2023-05";
 		for each  inv in Motto_invoices.get("invoices")
 		{
-			info inv.get("date");
+			//info inv.get("date");
 			if(inv.get("date").left(7) == current_date)
 			{
 				Monthly_Invoice = inv;
+				info "Month Found";
+				info inv.get("date");
 			}
 		}
 	}
@@ -153,8 +177,9 @@ if(Parent_customer_id == "3205780000005121061")
 		line_item_list.add(line_items);
 		Mp.put("custom_fields",CF_list);
 		Mp.put("line_items",line_item_list);
+		//Mp.put("reason","Invoice Missed");
 		response = zoho.books.updateRecord("invoices",organizationID,Monthly_Invoice.get("invoice_id"),Mp);
-		//info response;
+		info response.get("message");
 	}
 	else
 	{
@@ -189,6 +214,6 @@ if(Parent_customer_id == "3205780000005121061")
 		Mp.put("line_items",items);
 		info Mp;
 		response = zoho.books.createRecord("invoices",organizationID,Mp);
-		//info response;
+		info response.get("message");
 	}
 }

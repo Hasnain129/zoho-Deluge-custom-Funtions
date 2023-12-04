@@ -16,21 +16,24 @@ and update it to zoho crm
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 Sign_Project_obj = zoho.crm.getRecordById("Deals",deal_id,"zoho_crm");
 CurrentStage = Sign_Project_obj.get("Stage");
-TransitionsIDs = Sign_Project_obj.get("Blueprint_Transitions_IDs").toMap();
+if(Sign_Project_obj.get("Blueprint_Transitions_IDs") != null)
+{
+	TransitionsIDs = Sign_Project_obj.get("Blueprint_Transitions_IDs").toMap();
+}
 dataMp = Map();
 blueprint1 = Map();
-if(Z_Project_Status == "Completed")
-{
-	blueprint1.put("transition_id",TransitionsIDs.get("Project Completed"));
-}
-else if(Z_Project_Status == "On Hold")
+// if(Z_Project_Status == "Completed")
+// {
+// 	blueprint1.put("transition_id",TransitionsIDs.get("Project Completed"));
+// }
+if(Z_Project_Status == "On Hold" && Sign_Project_obj.get("Blueprint_Transitions_IDs") != null)
 {
 	blueprint1.put("transition_id",TransitionsIDs.get("Hold"));
 	dataMp.put("Reason_for_Hold","Status Updated by Zoho Project");
 	dataMp.put("Notes_for_Hold","Status Updated by Zoho Project");
 	blueprint1.put("data",dataMp);
 }
-else if(Z_Project_Status == "Lost")
+else if(Z_Project_Status == "Lost" && Sign_Project_obj.get("Blueprint_Transitions_IDs") != null)
 {
 	blueprint1.put("transition_id",TransitionsIDs.get("Lost"));
 	dataMp.put("Reason_for_Lost","Status Updated by Zoho Project");
@@ -59,7 +62,10 @@ else if(Z_Project_Status == "Lost")
 }
 else
 {
-	blueprint1.put("transition_id",TransitionsIDs.get("Pre-Production"));
+	if(Sign_Project_obj.get("Blueprint_Transitions_IDs") != null)
+	{
+		blueprint1.put("transition_id",TransitionsIDs.get("Pre-Production"));
+	}
 }
 blueprintList = List();
 blueprintList.add(blueprint1);

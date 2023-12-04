@@ -6,8 +6,6 @@ Funtion Description : Calculate and updates the margin in the cost item when the
 Workflow Description : Calculates and updates margin when selling prices is edited.
 
 
-
-
 /*
     Calculate and updates the margin in the cost item when the selling price is updated.
 	Function		= Update Margin

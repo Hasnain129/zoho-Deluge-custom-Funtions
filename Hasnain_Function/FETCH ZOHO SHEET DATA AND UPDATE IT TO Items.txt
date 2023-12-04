@@ -1,0 +1,22 @@
+////ADD DATA IN ZOHO SHEET
+
+
+
+
+res = zoho.sheet.getRecords("78y3b5b8a173d45ba47acafb37ed85bd0c205","Sheet1");
+info res;
+// for each  rec in res.get('records')
+// 	{    
+// 		info res ;
+// 	   	itemID = item.get("item_id");
+// 		organizationID = organization.get("organization_id");
+// 		Item = zoho.books.getRecordsByID("items",666479573,itemID);
+// 		cost_price = Item.get("item").get("purchase_rate");
+// 		initial_stock = Item.get("item").get("initial_stock");
+// 		Update = Map();
+// 		Update.put("initial_stock",initial_stock);
+// 		Update.put("initial_stock_rate",cost_price);
+// 		response = zoho.books.updateRecord("items","666479573",itemID,Update);
+// 		info response ;
+// 	}  
+return "";

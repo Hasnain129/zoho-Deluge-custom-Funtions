@@ -1,0 +1,35 @@
+
+Salesorder_id = invoice.get("salesorders");
+Ref_SO = invoice.get("reference_number");
+//////////////////Get Sales order//////////////////
+Mp = {"salesorder_number":Ref_SO};
+salesorder = zoho.books.getRecords("salesorders",organization.get("organization_id"),Mp).get("salesorders").get(0);
+info salesorder;
+project_name = salesorder.get("cf_project");
+////////////////////////////////////////////////////////////////
+cf_list = List();
+cf_project_id = Map();
+cf_project_id.put("label","Project ID");
+cf_project_id.put("value",salesorder.get("cf_project_unformatted"));
+cf_project_name = Map();
+//////////label fields fetch in preference////////////
+cf_project_name.put("label","Project Name");
+cf_project_name.put("value",salesorder.get("cf_project"));
+cf_so_number = Map();
+cf_so_number.put("label","SO #");
+cf_so_number.put("value",salesorder.get("salesorder_number"));
+estimate_no = Map();
+estimate_no.put("label","Quote #");
+estimate_no.put("value",salesorder.get("reference_number"));
+cf_list.add(estimate_no);
+cf_list.add(cf_so_number);
+cf_list.add(cf_project_name);
+cf_list.add(cf_project_id);
+// // 	/////customer_id is required when we updated invoice
+line_items = invoice.get("line_items").toJSONList();
+data = Map();
+data.put("customer_id",invoice.get("customer_id"));
+data.put("custom_fields",cf_list);
+data.put("line_items",line_items);
+response = zoho.books.updateRecord("Invoices",organization.get("organization_id"),invoice.get("invoice_id"),data);
+info response.get("message");

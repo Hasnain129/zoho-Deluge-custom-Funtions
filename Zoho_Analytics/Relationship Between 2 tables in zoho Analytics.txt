@@ -1,0 +1,7 @@
+SELECT
+         finance."Project ID" As 'Project ID',
+         finance."Project Name" As 'Project Name',
+         customer."Customer Name" As 'Customer Name',
+         zp."Status" As 'Status',
+         finance."Project Cost" As 'Project Cost'
+FROM  "Projects (Zoho Finance)" finance

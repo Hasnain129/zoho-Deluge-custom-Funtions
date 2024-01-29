@@ -1,0 +1,22 @@
+SELECT
+    SalesOrder."Sales Order#" AS "Sales Order#",
+    CASE
+        WHEN SalesOrder."Invoiced Status" = 'invoiced' AND SalesOrder."Paid Status" = 'paid' THEN 'CLOSED'
+        ELSE SalesOrder."Status"
+    END AS 'SO Status',
+    SalesOrder."Paid Status" AS "Paid Status",
+    SalesOrder."Invoiced Status" AS "Invoices Status",
+    SalesOrder."Organization Name" AS "Organization Name",
+    SalesOrder."Reference Number" AS "SO Reference Number",
+    SalesOrder."Total (BCY)" AS "SO Total Amount",
+    Invoice."Invoice Number" AS "Invoice Number",
+    Invoice."Invoice Status" AS "Invoice Status",
+    Invoice."Total (BCY)" AS "Invoice Sub Total",
+    Invoice."Balance (BCY)" AS "Invoice Due Balance",
+    Invoice."Project Name" AS "Project Name"
+FROM "Sales Orders (Zoho Finance)" SalesOrder
+LEFT JOIN "SO - INV" SOInvoice ON SalesOrder."Sales order ID" = SOInvoice."inv_so_id" 
+LEFT JOIN "Invoices (Zoho Finance)" Invoice ON SOInvoice."inv_id" = Invoice."Invoice ID"  
+WHERE SalesOrder."Organization Name" NOT IN ('Blink Swag', 'Blink Sourcing')
+  AND SalesOrder."Status" NOT IN ('draft', 'void', 'rejected','invoiced')
+  AND Invoice."Invoice Status" NOT IN ('Void', 'rejected', 'Draft');

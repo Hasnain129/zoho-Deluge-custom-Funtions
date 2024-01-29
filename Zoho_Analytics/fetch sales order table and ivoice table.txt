@@ -1,0 +1,23 @@
+SELECT
+		 SalesOrder."Sales order ID" As 'Sales order ID',
+		 SalesOrder."Sales Order#" As 'Sales Order#',
+		 SalesOrder."Status" As 'SO Status',
+		 SalesOrder."Organization Name" As 'Organization Name',
+		 SalesOrder."Reference Number" As 'SO Refrence Number',
+		 SalesOrder."Total (BCY)" As 'SO Total Amount',
+		 Invoice."Invoice Number" As 'Invoice Number',
+		 Invoice."Invoice Status" As 'Invoice Status',
+		 Invoice."Total (BCY)" As 'Invoice Sub Total',
+		 Invoice."Balance (BCY)" As 'Invoice Due Balance'
+FROM  "Sales Orders (Zoho Finance)" SalesOrder
+LEFT JOIN "Invoices (Zoho Finance)" Invoice ON SalesOrder."Customer ID"  = Invoice."Customer ID"  
+WHERE	 SalesOrder."Organization Name"  != 'Blink Swag'
+ AND	SalesOrder."Organization Name"  != 'Blink Sourcing'
+ AND	SalesOrder."Status"  != 'draft'
+ AND	SalesOrder."Status"  != 'void'
+ AND	SalesOrder."Status"  != 'rejected'
+ AND	Invoice."Invoice Status"  != 'Void'
+ AND	Invoice."Invoice Status"  != 'rejected'
+ AND	Invoice."Invoice Status"  != 'Draft'
+
+

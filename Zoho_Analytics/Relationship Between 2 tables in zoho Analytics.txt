@@ -5,3 +5,6 @@ SELECT
          zp."Status" As 'Status',
          finance."Project Cost" As 'Project Cost'
 FROM  "Projects (Zoho Finance)" finance
+LEFT JOIN "Customers (Zoho Finance)" customer ON finance."Customer ID"  = customer."Customer ID" 
+LEFT JOIN "Projects (Zoho Projects)" zp ON finance."Zoho Project Reference ID"  = zp."Project ID"  
+WHERE     zp."Status"  = 'Completed'

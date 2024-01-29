@@ -1,0 +1,20 @@
+SELECT
+		 Customer."Customer Name" As 'Customer Name',
+		 SalesOrder."Sales Order#" As 'Sales Order#',
+		 SalesOrder."Order Date" As 'Order Date',
+		 SalesOrder."Expected Shipment Date" As 'Expected Shipment Date',
+		 SalesOrder."Status" As 'SO Status',
+		 SalesOrder."Organization Name" As 'Organization Name',
+		 SalesOrder."Sub Total (BCY)" As 'Sub Total (BCY)',
+		 projects."Project Name" As 'Project Name',
+		 SalesOrder."Expected Install Date" As 'Expected Install Date',
+		 SalesOrder."Reference Number" As 'SO Refrence Number',
+		 SalesOrder."Customer PO" As 'Customer PO',
+		 users."UserName" As 'UserName',
+		 SalesOrder."Production Manager" As 'Production Manager'
+FROM  "Sales Orders (Zoho Finance)" SalesOrder
+LEFT JOIN "Customers (Zoho Finance)" Customer ON SalesOrder."Customer ID"  = Customer."Customer ID" 
+LEFT JOIN "Projects (Zoho Finance)" projects ON SalesOrder."Project"  = projects."Project ID" 
+LEFT JOIN "Users (Zoho Finance)" users ON SalesOrder."Production Manager"  = users."User ID"  
+WHERE	 SalesOrder."Customer ID"  = '1316483000048968663'
+ AND	SalesOrder."Organization Name"  = 'Blink Signs'

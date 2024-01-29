@@ -1,0 +1,7 @@
+	//Search record invoice module
+
+	Salesorder_id = invoice.get("salesorders");
+	Ref_SO = invoice.get("reference_number");
+	//////////////////Get Sales order//////////////////
+	Mp = {"salesorder_number":Ref_SO};
+	salesorder = zoho.books.getRecords("salesorders",organization.get("organization_id"),Mp).get("salesorders").get(0);

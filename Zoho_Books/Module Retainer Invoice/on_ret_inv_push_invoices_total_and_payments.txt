@@ -4,77 +4,86 @@
 
 
 
+
 Paid_Invoices_Total = 0;
 Invoices_Total = 0;
 Payments = 0;
+Books_Project_ID = null;
 /////////////////////////////////////////////////////////////////////////
 Custom_fields = retainer_invoice.get("custom_fields");
+// info Custom_fields;
 for each  cus_fields in Custom_fields
 {
 	if(cus_fields.get("customfield_id") == "1316483000010496040")
 	{
 		Books_Project_ID = cus_fields.get("value");
+		info Books_Project_ID;
 	}
 }
 // ///////////////////////////////////////////////// Get Retainer Invoices Payment  ////////////////////////////////////////
-response = zoho.crm.searchRecords("Deals","(Project_ID:equals:" + Books_Project_ID + ")");
-Down_payment_Invoice = zoho.crm.getRelatedRecords("Down_payment_Invoice","Deals",response.get("0").get("id"));
-for each  PO_data in Down_payment_Invoice
+if(Books_Project_ID != null)
 {
-	DP_Invoice = zoho.crm.getRecordById("Down_Payment_Invoices",PO_data.get("id"));
-	Books_DP_Invoice = zoho.books.getRecordsByID("retainerinvoices","666479573",DP_Invoice.get("Retainer_Invoice_ID"));
-	if(Books_DP_Invoice.get("code") == 0)
+	response = zoho.crm.searchRecords("Deals","(Project_ID:equals:" + Books_Project_ID.remove(" ") + ")");
+	//info response;
+	Down_payment_Invoice = zoho.crm.getRelatedRecords("Down_payment_Invoice","Deals",response.get("0").get("id"));
+	for each  PO_data in Down_payment_Invoice
 	{
-		if(Books_DP_Invoice.get("retainerinvoice").get("payments").size() != 0 && Books_DP_Invoice.get("invoices").size() == 0)
+		DP_Invoice = zoho.crm.getRecordById("Down_Payment_Invoices",PO_data.get("id"));
+		Books_DP_Invoice = zoho.books.getRecordsByID("retainerinvoices","666479573",DP_Invoice.get("Retainer_Invoice_ID"));
+		if(Books_DP_Invoice.get("code") == 0)
 		{
-			Retainer_Inv_Payments = Books_DP_Invoice.get("retainerinvoice").get("payments");
-			for each  Ret_Inv in Retainer_Inv_Payments
+			if(Books_DP_Invoice.get("retainerinvoice").get("payments").size() != 0 && Books_DP_Invoice.get("invoices").size() == 0)
 			{
-				Payments = Payments + Ret_Inv.get("amount");
+				Retainer_Inv_Payments = Books_DP_Invoice.get("retainerinvoice").get("payments");
+				for each  Ret_Inv in Retainer_Inv_Payments
+				{
+					Payments = Payments + Ret_Inv.get("amount");
+				}
 			}
 		}
 	}
-}
-// /////////////////////////////////////////// Get All invoices Against Project ID //////////////////////////////////
-for each  pro in response
-{
-	Project_id = pro.get("id");
-}
-searchParam = {"zcrm_potential_id":Project_id};
-All_Invoices = zoho.books.getRecords("invoices","666479573",searchParam);
-// /////////////////////////////////////////////////////////////////////////////////////////////////////////////	
-for each  invoices in All_Invoices.get("invoices")
-{
-	invoice_id = invoices.get("invoice_id");
-	invoice_details = zoho.books.getRecordsByID("invoices","666479573",invoice_id);
-	Paid_Invoices_Total = Paid_Invoices_Total + ifnull(invoice_details.get("invoice").get("payment_made"),0).toDecimal();
-	if(invoices.get("status") != "void")
+	/////////////////////////////////////////// Get All invoices Against Project ID //////////////////////////////////
+	for each  pro in response
 	{
-		Invoices_Total = Invoices_Total + invoices.get("total");
+		Project_id = pro.get("id");
 	}
-}
-//////////////// Sales Rep Commssion Calculation /////////////////////////
-try 
-{
-	Sales_Rep_Commission = response.get("0").get("Sales_Rep_Commission1");
-	Paid_PO_total = response.get("0").get("Paid_PO_Total");
-	Gross_Profit = Paid_Invoices_Total - Paid_PO_total;
-	if(Sales_Rep_Commission > 0 && Gross_Profit > 0)
+	searchParam = {"zcrm_potential_id":Project_id};
+	All_Invoices = zoho.books.getRecords("invoices","666479573",searchParam);
+	// /////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+	for each  invoices in All_Invoices.get("invoices")
 	{
-		Sale_Rep_Com = Sales_Rep_Commission / 100 * Gross_Profit;
+		invoice_id = invoices.get("invoice_id");
+		invoice_details = zoho.books.getRecordsByID("invoices","666479573",invoice_id);
+		Paid_Invoices_Total = Paid_Invoices_Total + ifnull(invoice_details.get("invoice").get("payment_made"),0).toDecimal();
+		if(invoices.get("status") != "void")
+		{
+			Invoices_Total = Invoices_Total + invoices.get("total");
+		}
 	}
-	else
+	//////////////// Sales Rep Commssion Calculation /////////////////////////
+	try 
 	{
-		Sale_Rep_Com = 0;
+		Sales_Rep_Commission = response.get("0").get("Sales_Rep_Commission1");
+		Paid_PO_total = response.get("0").get("Paid_PO_Total");
+		Gross_Profit = Paid_Invoices_Total - Paid_PO_total;
+		if(Sales_Rep_Commission > 0 && Gross_Profit > 0)
+		{
+			Sale_Rep_Com = Sales_Rep_Commission / 100 * Gross_Profit;
+		}
+		else
+		{
+			Sale_Rep_Com = 0;
+		}
 	}
+	catch (e)
+	{
+	}
+	////////////////////////////////////////////////////////////////////////////
+	Mp = Map();
+	Mp.put("Sales_Rep_Commission",Sale_Rep_Com);
+	Mp.put("Invoices_Total",Invoices_Total);
+	Mp.put("Paid_Invoices_Total",Paid_Invoices_Total.toString());
+	Mp.put("Payment_Total",(Paid_Invoices_Total.toDecimal().round(2) + Payments.toDecimal()).toString());
+	info Mp;
+	res = zoho.crm.updateRecord("Deals",response.get(0).get("id"),Mp,{"trigger":{"workflow"}});
 }
- catch (e)
-{}
-////////////////////////////////////////////////////////////////////////////
-Mp = Map();
-Mp.put("Sales_Rep_Commission",Sale_Rep_Com);
-Mp.put("Invoices_Total",Invoices_Total);
-Mp.put("Paid_Invoices_Total",Paid_Invoices_Total.toString());
-Mp.put("Payment_Total",(Paid_Invoices_Total.toDecimal().round(2) + Payments.toDecimal()).toString());
-info Mp;
-res = zoho.crm.updateRecord("Deals",response.get(0).get("id"),Mp,{"trigger":{"workflow"}});

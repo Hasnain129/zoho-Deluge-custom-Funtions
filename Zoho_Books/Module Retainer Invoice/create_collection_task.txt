@@ -1,6 +1,3 @@
-						Funtion Name : create_collection_task
-
-
 
 /*
 This is a sample function. Uncomment to execute or make changes to this function.  

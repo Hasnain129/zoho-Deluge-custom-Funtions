@@ -1,0 +1,40 @@
+res = zoho.sheet.getRecords("sz3vxd128408d30704a628172170524d837b0","Sheet2");
+
+for each  rec in res.get("records")
+{
+	info "SKU :" + rec.get("sku");
+	searchParam = {"sku":rec.get("sku")};
+	response = zoho.books.getRecords("items",666479573,searchParam,"zoho_books");
+	info response;
+	itemID = response.get("items").get(0).get("item_id");
+	Item = invokeurl
+	[
+		url :"https://www.zohoapis.com/books/v3/items/" + itemID + "?organization_id=666479573"
+		type :GET
+		connection:"zoho_books"
+	];
+	
+	purchase_account_name = Item.get("item").toCollection().get("Prepaid Inventory");
+	item_name = Item.get("item").toCollection().get("name");
+	rate = Item.get("item").toCollection().get("rate");
+	info purchase_account_name;
+	info item_name;
+	info rate;
+// 	initial_stock_rate = ifnull(Item.get("item").toCollection().get("initial_stock_rate"),0.0);
+// 	info initial_stock_rate;
+// 	status = ifnull(Item.get("item").toCollection().get("status"),0.0);
+// 	info status;
+// 	if(status == "inactive")
+// 	{
+		update_mp = Map();
+		update_mp.put("purchase_account_id", "1316483000252725309");
+		update_mp.put("rate",rate);		
+		update_mp.put("name",item_name);
+
+// 		update_mp.put("initial_stock_rate","0");
+ 		response = zoho.books.updateRecord("items","666479573",itemID,update_mp);
+		
+// 	}
+		info response ;
+}
+return "";

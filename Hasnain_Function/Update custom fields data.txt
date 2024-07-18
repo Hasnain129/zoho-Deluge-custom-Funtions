@@ -1,26 +1,26 @@
+salesorderid = salesorder.get("salesorder_id");
+salesorder_info = zoho.books.getRecordsByID("salesorders", 666479573, salesorderid);
+estimate_info = zoho.books.getRecordsByID("Estimates", 666479573, salesorder_info.get("salesorder").get("estimate_id"));
+customer_id = estimate_info.get("estimate").get("customer_id");
+Profit_margin = estimate_info.get("estimate").get("custom_field_hash").get("cf_profit_margin").remove("%");
+Gross_profit = estimate_info.get("estimate").get("custom_field_hash").get("cf_gross_profit").remove("$");
+
 cf_list = List();
-cf_project_id = Map();
-cf_project_id.put("label","Project ID");
-cf_project_id.put("value",salesorder.get("cf_project_unformatted"));
+Planned_margin = Map();
+Planned_margin.put("label","Planned Margin (SO)");
+Planned_margin.put("value",Profit_margin);
 
-cf_project_name = Map();
-cf_project_name.put("label","Project Name");
-cf_project_name.put("value",salesorder.get("cf_project"));
+gross_profit = Map();
+gross_profit.put("label","Planned Gross Profit (SO)");
+gross_profit.put("value",Gross_profit);
 
-cf_so_number = Map();
-cf_so_number.put("label","SO #");
-cf_so_number.put("value",salesorder.get("salesorder_number"));
+cf_list.add(Planned_margin);
+cf_list.add(gross_profit);
 
-cf_list.add(cf_so_number);
-cf_list.add(cf_project_name);
-cf_list.add(cf_project_id);
-// // 	/////customer_id is required when we updated invoice
-line_items = invoice.get("line_items").toJSONList();
+
 data = Map();
-data.put("customer_id",invoice.get("customer_id"));
-data.put("custom_fields",cf_list);
-data.put("line_items",line_items);
+			data.put("customer_id",customer_id);
+			data.put("custom_fields", cf_list);
+response = zoho.books.updateRecord("salesorders",organization.get("organization_id"),salesorderid ,data);
 
-/////Update in invoice//////////////
-response = zoho.books.updateRecord("Invoices",organization.get("organization_id"),invoice.get("invoice_id"),data);
-info response.get("message");
+info response ;

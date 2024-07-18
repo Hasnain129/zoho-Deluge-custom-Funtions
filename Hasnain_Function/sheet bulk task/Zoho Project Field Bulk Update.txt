@@ -1,0 +1,68 @@
+res = zoho.sheet.getRecords("u1em1ea97adbabf004c8fae90a007a8ecdbfc","Sheet1");
+record = res.get("records");
+for each  rec in record
+{
+	project_obj = invokeurl
+	[
+		url :"https://www.zohoapis.com/books/v3/projects/" + rec.get("Project Ids") + "?organization_id=666479573"
+		type :GET
+		connection:"zoho_book"
+	];
+	project_name = project_obj.get("project").get("project_name");
+	customer_id = project_obj.get("project").get("customer_id");
+	billing_type = project_obj.get("project").get("billing_type");
+	////////////////////////////////////// For Invoices /////////////////////////////////////////////////////
+	project_inv = invokeurl
+	[
+		url :"https://www.zohoapis.com/books/v3/projects/" + rec.get("Project Ids") + "/invoices?organization_id=666479573"
+		type :GET
+		connection:"zoho_book"
+	];
+	Total_Invoices = 0;
+	Invoices = project_inv.get("invoices");
+	for each  inv in Invoices
+	{
+		if(inv.get("status") != "void" && inv.get("status") != "draft")
+		{
+			Total_Invoices = Total_Invoices + inv.get("total");
+		}
+	}
+	///////////////////////////////////////// Bills //////////////////////////////////
+	project_bills = invokeurl
+	[
+		url :"https://www.zohoapis.com/books/v3/projects/" + rec.get("Project Ids") + "/bills?organization_id=666479573"
+		type :GET
+		connection:"zoho_book"
+	];
+	Total_Bills = 0;
+	Bills = project_bills.get("bills");
+	for each  bill in Bills
+	{
+		if(bill.get("status") != "void" && bill.get("status") != "draft")
+		{
+			Total_Bills = Total_Bills + bill.get("total");
+		}
+	}
+	Custom_Fields = List();
+	CoGs_update = Map();
+	CoGs_update.put("label","CoGs");
+	CoGs_update.put("value",Total_Bills);
+	Custom_Fields.add(CoGs_update);
+	Revenue_update = Map();
+	Revenue_update.put("label","Revenue");
+	Revenue_update.put("value",Total_Invoices);
+	Custom_Fields.add(Revenue_update);
+	Mp = Map();
+	Mp.put("project_name",project_name);
+	Mp.put("customer_id",customer_id);
+	Mp.put("billing_type",billing_type);
+	Mp.put("custom_fields",Custom_Fields);
+	response = invokeurl
+	[
+		url :"https://www.zohoapis.com/books/v3/projects/" + rec.get("Project Ids") + "?organization_id=666479573"
+		type :PUT
+		parameters:Mp.toString()
+		connection:"zoho_book"
+	];
+	info response.get("message") + " " + rec.get("Project Ids") + " Total Bills: " + Total_Bills + " & Total Invocies: " + Total_Invoices;
+}

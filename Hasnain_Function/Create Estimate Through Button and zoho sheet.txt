@@ -1,0 +1,69 @@
+
+// Define the required variables
+estimateID = estimate.get("estimate_id");
+organizationID = organization.get("organization_id");
+res1 = zoho.sheet.getRecords("u1em1ea97adbabf004c8fae90a007a8ecdbfc","Sheet1");
+record = res1.get("records");
+updated_line_item = list();
+//////////////////// Line items ////////////////////////
+for each  item in record
+{
+	skus = item.get("SKU");
+	Mp = {"sku":skus};
+	items_response = zoho.books.getRecords("items",organizationID,Mp);
+	if(items_response.containsKey("items") && items_response.get("items").size() > 0)
+	{
+		item_details = items_response.get("items").get(0);
+		all_sku = items_response.get("items").get(0).get("item_id");
+		Skus_Description = item.get("Sku Description");
+		rate = item.get("RATE");
+		QTY = item.get("QUANTITY");
+		Update_estimate = Map();
+		Update_estimate.put("item_id",all_sku);
+		Update_estimate.put("description",Skus_Description);
+		Update_estimate.put("rate",rate);
+		Update_estimate.put("quantity",QTY);
+		updated_line_item.add(Update_estimate);
+	}
+}
+org_name = res1.get("records").get(0).get("Organization Name");
+Estimator_name = res1.get("records").get(0).get("Estimator");
+Bid_Estimate = res1.get("records").get(0).get("Bid Estimate");
+Proj_id = res1.get("records").get(0).get("Project Name");
+work_drive = res1.get("records").get(0).get("Zoho Work Drive Link");
+Pro_Manager = res1.get("records").get(0).get("Project Manager");
+Custom_Fields = list();
+organization_name = Map();
+organization_name.put("label","Organization Name");
+////id
+organization_name.put("value",org_name);
+Custom_Fields.add(organization_name);
+// 	Estimator_Name = map();
+//     Estimator_Name.put("label", "Estimator"); //////id
+//     Estimator_Name.put("value", Estimator_name);
+//     Custom_Fields.add(Estimator_Name);
+Bid_estimate = Map();
+Bid_estimate.put("label","Bid Estimate");
+Bid_estimate.put("value",Bid_Estimate);
+Custom_Fields.add(Bid_estimate);
+Project_id = Map();
+Project_id.put("label","Project Name");
+Project_id.put("value",Proj_id);
+/////id
+Custom_Fields.add(Project_id);
+zoho_work_drive = Map();
+zoho_work_drive.put("label","Zoho Work Drive Link");
+zoho_work_drive.put("value",work_drive);
+Custom_Fields.add(zoho_work_drive);
+// 	Project_Manager = map();
+//     Project_Manager.put("label", "Project Manager");
+//     Project_Manager.put("value", Pro_Manager);
+//     Custom_Fields.add(Project_Manager);
+Mp = Map();
+Mp.put("customer_id",res1.get("records").get(0).get("Customer id"));
+Mp.put("salesperson_name",res1.get("records").get(0).get("Salesperson"));
+Mp.put("project_id",res1.get("records").get(0).get("Project Name"));
+Mp.put("line_items",updated_line_item);
+Mp.put("custom_fields",Custom_Fields);
+response = zoho.books.createRecord("estimates","666479573",Mp);
+info response;

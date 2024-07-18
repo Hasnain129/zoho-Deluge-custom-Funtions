@@ -1,0 +1,33 @@
+org_name = "Blink Swag";
+res = zoho.sheet.getRecords("u1em1ea97adbabf004c8fae90a007a8ecdbfc","Sheet1");
+record = res.get("records");
+for each  rec in record
+{
+    Sales_Order_obj = invokeUrl
+    [
+        url: "https://www.zohoapis.com/books/v3/salesorders/" + rec.get("Sales Order Ids") + "?organization_id=666479573"
+        type: GET
+        connection: "zoho_book"
+    ];
+
+    // Prepare the custom field update with the correct custom field ID
+    Custom_Field = Map();
+    Custom_Field.put("customfield_id", "1316483000009817051");  // Replace with the correct custom field ID
+    Custom_Field.put("value", org_name);
+    
+    Custom_Fields_List = List();
+    Custom_Fields_List.add(Custom_Field);
+    
+    Update_Map = Map();
+    Update_Map.put("custom_fields", Custom_Fields_List);
+    Update_Map.put("customer_id", 1316483000276289621);
+    // Send the PUT request to update the sales order
+    response = invokeUrl
+    [
+        url: "https://www.zohoapis.com/books/v3/salesorders/" + rec.get("Sales Order Ids") + "?organization_id=666479573"
+        type: PUT
+        parameters: Update_Map.toString()
+        connection: "zoho_book"
+    ];
+    info response.get("message") + " " + rec.get("Sales Order Ids");
+}

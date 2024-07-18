@@ -1,0 +1,8 @@
+// 	 Contact_Details = invokeurl 
+// 	 [ 
+// 		url :" https://desk.zoho.com/api/v1/tickets/"+Ticket_id+"?include=contacts,products,assignee,departments,team" 
+// 		type :GET 
+// 		connection:"zoho_desk" 
+// 		headers: {"featureFlags":"lookUp"}
+// 	 ]; 
+	

@@ -1,0 +1,33 @@
+
+salesorderid = salesorder.get("salesorder_id");
+Mp = {"estimate_number":salesorder.get("reference_number")};
+estimate_info = zoho.books.getRecords("Estimates",666479573,Mp,"zoho_book");
+if(estimate_info.get("estimates").size() > 0)
+{
+	Profit_margin = 0;
+	Gross_profit = 0;
+	if(estimate_info.get("estimates").get(0).containKey("cf_profit_margin_unformatted"))
+	{
+		Profit_margin = estimate_info.get("estimates").get(0).get("cf_profit_margin_unformatted");
+	}
+	if(estimate_info.get("estimates").get(0).containKey("cf_gross_profit_unformatted"))
+	{
+		Gross_profit = estimate_info.get("estimates").get(0).get("cf_gross_profit_unformatted");
+	}
+	info Profit_margin;
+	info Gross_profit;
+	cf_list = List();
+	Planned_margin = Map();
+	Planned_margin.put("label","Planned Margin (SO)");
+	Planned_margin.put("value",Profit_margin);
+	gross_profit = Map();
+	gross_profit.put("label","Planned Gross Profit (SO)");
+	gross_profit.put("value",Gross_profit);
+	cf_list.add(Planned_margin);
+	cf_list.add(gross_profit);
+	data = Map();
+	data.put("customer_id",salesorder.get("customer_id"));
+	data.put("custom_fields",cf_list);
+	response = zoho.books.updateRecord("salesorders",organization.get("organization_id"),salesorderid,data);
+	info response.get("message");
+}

@@ -4,6 +4,7 @@
 Decription : Creates salesorder form accepted estimate.
 
 
+
 estimate_id = estimate.get("estimate_id");
 organization_id = organization.get("organization_id");
 customer_id = estimate.get("customer_id");
@@ -53,7 +54,7 @@ for each  item in estimate_line_items
 }
 salesorder_custom_fields = invokeurl
 [
-	url :"https://books.zoho.com/api/v3/settings/fields?entity=salesorder&organization_id=" + organization_id
+	url :"https://https://www.zohoapis.com/books/v3/settings/fields?entity=salesorder&organization_id=" + organization_id
 	type :GET
 	connection:"zoho_book"
 ];
@@ -121,21 +122,21 @@ create_salesorder = zoho.books.createRecord("salesorders",organization_id,saleso
 ///////////////////// Submit Sales Order for Approval  //////////////////////////////
 // Confirmed_SO = invokeurl
 // [
-// 	url :"https://books.zoho.com/api/v3/salesorders/" + salesorder_id + "/submit"
+// 	url :"https://www.zohoapis.com/books/v3/salesorders/" + salesorder_id + "/submit"
 // 	type :POST
 // 	connection:"zoho_book"
 // ];
 // ///////////////////// Approve Sales Order //////////////////////////////
 // Approve_SO = invokeurl
 // [
-// 	url :"https://books.zoho.com/api/v3/salesorders/" + salesorder_id + "/approve"
+// 	url :"https://www.zohoapis.com/books/v3/salesorders/" + salesorder_id + "/approve"
 // 	type :POST
 // 	connection:"zoho_book"
 // ];
 // ///////////////////// Comfired/Open SalesOrder //////////////////////////////
 // Open_SO = invokeurl
 // [
-// 	url :"https://books.zoho.com/api/v3/salesorders/" + salesorder_id + "/status/open"
+// 	url :"https://www.zohoapis.com/books/v3/salesorders/" + salesorder_id + "/status/open"
 // 	type :POST
 // 	connection:"zoho_book"
 // ];
@@ -149,7 +150,7 @@ if(code != 0)
 	comment_json.put("JSONString",comment);
 	create_comment = invokeurl
 	[
-		url :"https://books.zoho.com/api/v3/estimates/" + estimate_id + "/comments?organization_id=" + organization_id
+		url :"https://www.zohoapis.com/books/v3/estimates/" + estimate_id + "/comments?organization_id=" + organization_id
 		type :POST
 		parameters:comment_json
 		connection:"zoho_book"

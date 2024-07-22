@@ -5,12 +5,13 @@
 
 
 
+info customer_payment.containsKey("retainerinvoice_id");
 Paid_Invoices_Total = 0;
 Invoices_Total = 0;
 Payments = 0;
 response = "";
 ///////////////////////////////////////////////////////////////////////////
-if(customer_payment.get("retainerinvoice_id") != null)
+if(customer_payment.containsKey("retainerinvoice_id") == true)
 {
 	retainer_invoice = zoho.books.getRecordsByID("retainerinvoices","666479573",customer_payment.get("retainerinvoice_id"));
 	Custom_fields = retainer_invoice.get("retainerinvoice").get("custom_fields");
@@ -19,20 +20,42 @@ if(customer_payment.get("retainerinvoice_id") != null)
 		if(cus_fields.get("customfield_id") == "1316483000010496040")
 		{
 			Books_Project_ID = cus_fields.get("value");
+			info Books_Project_ID;
 		}
 	}
 }
 else
 {
-	/////////////////////////////////////////////////////////////////////////////////////////////////////////////	
-	Invoice_Against_Payment = zoho.books.getRecordsByID("invoices","666479573",customer_payment.get("invoices").get(0).get("invoice_id"));
-	if(!Invoice_Against_Payment.get("invoice").get("zcrm_potential_id").isNull())
+	if(customer_payment.get("invoices").size() > 0)
 	{
-		Project = zoho.crm.getRecordById("Deals",Invoice_Against_Payment.get("invoice").get("zcrm_potential_id"));
-		Books_Project_ID = Project.get("Project_ID");
+		Invoice_Against_Payment = zoho.books.getRecordsByID("invoices","666479573",customer_payment.get("invoices").get(0).get("invoice_id"));
+		// Check if "invoices" is not null and has elements
+		if(Invoice_Against_Payment.get("invoices") != null && Invoice_Against_Payment.get("invoices").size() > 0)
+		{
+			if(!Invoice_Against_Payment.get("invoice").get("zcrm_potential_id").isNull())
+			{
+				Project = zoho.crm.getRecordById("Deals",Invoice_Against_Payment.get("invoice").get("zcrm_potential_id"));
+				if(Project != null)
+				{
+					Books_Project_ID = Project.get("Project_ID");
+					info Books_Project_ID;
+				}
+				else
+				{
+					info "Project is null";
+				}
+			}
+			else
+			{
+				info "zcrm_potential_id is null";
+			}
+		}
+		else
+		{
+			info "No invoices found for payment";
+		}
 	}
 }
-info Books_Project_ID;
 // /////////////////////////////////////////////// Get Retainer Invoices Payment  ////////////////////////////////////////
 if(!Books_Project_ID.isNull())
 {

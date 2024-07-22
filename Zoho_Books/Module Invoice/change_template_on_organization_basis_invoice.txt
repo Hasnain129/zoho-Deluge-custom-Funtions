@@ -1,0 +1,53 @@
+
+/*
+This is a sample function. Uncomment to execute or make changes to this function.
+invoiceID = invoice.get("invoice_id");
+invoicedate = invoice.get("date").toDate();
+organizationID = organization.get("organization_id");
+*/
+invoiceID = invoice.get("invoice_id");
+organizationID = organization.get("organization_id");
+Inv_Detail = zoho.books.getRecordsByID("invoices",organizationID,invoiceID);
+custom_fields = Inv_Detail.get("invoice").get("custom_fields");
+for each index fields in custom_fields
+{
+	if(custom_fields.get(fields).containValue("Organization Name") == true)
+	{
+		org_Id = custom_fields.get(fields).get("selected_option_id");
+		info org_Id;
+	}
+}
+Template_Det = invokeurl
+[
+	url :"https://www.zohoapis.com/books/v3/invoices/templates?organization_id=" + organizationID + ""
+	type :GET
+	connection:"zoho_book"
+];
+info Template_Det;
+Templates = Template_Det.get("templates");
+for each index temp_item in Templates
+{
+	if(Templates.get(temp_item).containValue("BinkSwag Invoice Template") == true && org_Id == 1316483000009817063)
+	{
+		temp_id = Templates.get(temp_item).get("template_id");
+	}
+	else if(Templates.get(temp_item).containValue("Blink Signs Standard Template") == true && org_Id == 1316483000009817065)
+	{
+		temp_id = Templates.get(temp_item).get("template_id");
+	}
+	else if(Templates.get(temp_item).containValue("Blink Sourcing Invoice Template") == true && org_Id == 1316483000017177025)
+	{
+		temp_id = Templates.get(temp_item).get("template_id");
+	}
+}
+mp = Map();
+mp.put("template_id",temp_id);
+mp.put("template_type","standard");
+response = invokeurl
+[
+	url :"https://www.zohoapis.com/books/v3/invoices/" + invoiceID + "/templates/" + temp_id + "?organization_id=" + organizationID + ""
+	type :PUT
+	parameters:mp
+	connection:"zoho_book"
+];
+info response;

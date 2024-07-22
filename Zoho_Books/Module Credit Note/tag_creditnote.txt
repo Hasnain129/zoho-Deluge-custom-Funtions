@@ -6,7 +6,6 @@ Workflow Description : Tagging creditnotes with respective organization name fet
 
 
 
-
 custom_fields = creditnote.get("custom_fields");
 info custom_fields;
 for each  cf in custom_fields

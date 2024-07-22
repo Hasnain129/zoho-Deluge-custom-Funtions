@@ -4,9 +4,10 @@
 workflow Description: Tagging invoices with respective organization name fetched  with the help of ZCRM ID on the invoice.
 
 
+
 invoiceded = invokeurl
 [
-	url :"https://books.zoho.com/api/v3/invoices/" + invoice.get("invoice_id") + "?organization_id=666479573"
+	url :"https://www.zohoapis.com/books/v3/invoices/" + invoice.get("invoice_id") + "?organization_id=666479573"
 	type :GET
 	connection:"zoho_book"
 ];

@@ -1,0 +1,94 @@
+
+try 
+{
+	estimate_Rep_id = "";
+	organizationID = organization.get("organization_id");
+	estimateID = estimate.get("estimate_id");
+	estimate_obj = zoho.books.getRecordsByID("estimates",organizationID,estimateID);
+	if(estimate.get("zcrm_potential_id") != "")
+	{
+		deal = zoho.crm.getRecordById("deals",estimate.get("zcrm_potential_id"));
+		Deal_SalesRep = deal.get("Lead_Owner").get("id");
+		if(estimate.get("salesperson_name") != deal.get("Lead_Owner").get("name"))
+		{
+			users = zoho.crm.getRecordById("users",deal.get("Lead_Owner").get("id"));
+			deal_Rep_email = users.get("users").get(0).get("email");
+			/////////////////////////// Find Estimate SaleRep Email ////////////////////////////
+			salesresps = invokeurl
+			[
+				url :"https://www.zohoapis.com/books/v3/salespersons?organization_id=" + organizationID
+				type :GET
+				connection:"zoho_book"
+			];
+			for each  salesresp in salesresps.get("data")
+			{
+				if(salesresp.get("salesperson_email") == deal_Rep_email)
+				{
+					estimate_Rep_id = salesresp.get("salesperson_id");
+				}
+			}
+			//////////////////////////// Find Deal Sales Rep Email //////////////////////////////
+			Mp = Map();
+			Mp.put("salesperson_id",estimate_Rep_id);
+			update = zoho.books.updateRecord("estimates",organizationID,estimateID,Mp);
+			info update.get("message");
+		}
+	}
+	else if(estimate_obj.get("estimate").containKey("project"))
+	{
+		project_id = estimate_obj.get("estimate").get("project").get("project_id");
+		books_project = zoho.books.getRecordsByID("projects",organizationID,project_id);
+		Z_Project = invokeurl
+		[
+			url :"https://projectsapi.zoho.com/restapi/portal/blinksigns/projects/" + books_project.get("project").get("zprojects_project_id") + "/"
+			type :GET
+			connection:"zoho_projects"
+		];
+		if(!Z_Project.containsKey("error"))
+		{
+			custom_fields = Z_Project.get("projects").get(0).get("custom_fields");
+			for each  custom_field in custom_fields
+			{
+				if(custom_field.containsKey("CRM Id"))
+				{
+					deal_id = custom_field.get("CRM Id");
+				}
+			}
+			deal = zoho.crm.getRecordById("deals",deal_id);
+			if(estimate.get("salesperson_name") != deal.get("Lead_Owner").get("name"))
+			{
+				users = zoho.crm.getRecordById("users",deal.get("Lead_Owner").get("id"));
+				deal_Rep_email = users.get("users").get(0).get("email");
+				/////////////////////////// Find Estimate SaleRep Email ////////////////////////////
+				salesresps = invokeurl
+				[
+					url :"https://www.zohoapis.com/books/v3/salespersons?organization_id=" + organizationID
+					type :GET
+					connection:"zoho_book"
+				];
+				for each  salesresp in salesresps.get("data")
+				{
+					if(salesresp.get("salesperson_email") == deal_Rep_email)
+					{
+						estimate_Rep_id = salesresp.get("salesperson_id");
+					}
+				}
+				//////////////////////////// Find Deal Sales Rep Email //////////////////////////////
+				Mp = Map();
+				Mp.put("salesperson_id",estimate_Rep_id);
+				update = zoho.books.updateRecord("estimates",organizationID,estimateID,Mp);
+				info update.get("message");
+			}
+		}
+	}
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"shahzaib@blinkswag.com"
+		subject :"update_salesperson_from_deal"
+		message :"Record ID: " + estimateID + " Root Cause: " + e
+	]
+}

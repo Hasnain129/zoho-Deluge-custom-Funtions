@@ -1,0 +1,15 @@
+
+/*
+This is a sample function. Uncomment to execute or make changes to this function.  
+billID = bill.get("bill_id");
+billDate = bill.get("date").toDate();
+organizationID = organization.get("organization_id");
+*/
+bill_id = bill.get("bill_id");
+response = invokeurl
+[
+	url :"https://www.zohoapis.com/books/v3/bills/" + bill_id + "/status/open?organization_id=666479573"
+	type :POST
+	connection:"zoho_book"
+];
+info response;

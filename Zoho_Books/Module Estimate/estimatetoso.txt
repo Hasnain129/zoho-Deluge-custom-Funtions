@@ -4,13 +4,14 @@
 Description : Convert Accepted estimates to SO
 
 
+
 estimateID = estimate.get("estimate_id");
 estimatedate = estimate.get("date").toDate();
 organizationID = organization.get("organization_id");
 customerID = estimate.get("customer_id");
 estimateDetails = invokeurl
 [
-	url :"https://books.zoho.com/api/v3/estimates/" + estimateID + "?organization_id=" + organizationID
+	url :"https://www.zohoapis.com/books/v3/estimates/" + estimateID + "?organization_id=" + organizationID
 	type :GET
 	connection:"zoho_book"
 ];
@@ -46,7 +47,7 @@ for each  find in lineItems
 }
 getSOCustomFields = invokeurl
 [
-	url :"https://books.zoho.com/api/v3/settings/fields?entity=salesorder&organization_id=" + organizationID
+	url :"https://www.zohoapis.com/books/v3/settings/fields?entity=salesorder&organization_id=" + organizationID
 	type :GET
 	connection:"zoho_book"
 ];
@@ -114,7 +115,7 @@ params.put("JSONString",json);
 info params;
 createSO = invokeurl
 [
-	url :"https://books.zoho.com/api/v3/salesorders?organization_id=" + organizationID
+	url :"https://www.zohoapis.com/books/v3/salesorders?organization_id=" + organizationID
 	type :POST
 	parameters:params
 	connection:"zoho_book"
@@ -129,7 +130,7 @@ if(soCode != 0)
 	cmtMap.put("JSONString",cmt);
 	comment = invokeurl
 	[
-		url :"https://books.zoho.com/api/v3/estimates/" + estimateID + "/comments?organization_id=" + organizationID
+		url :"https://www.zohoapis.com/books/v3/estimates/" + estimateID + "/comments?organization_id=" + organizationID
 		type :POST
 		parameters:cmtMap
 		connection:"zoho_book"

@@ -5,6 +5,7 @@
 
 
 
+
 Paid_Invoices_Total = 0;
 Invoices_Total = 0;
 Payments = 0;

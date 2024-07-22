@@ -1,0 +1,85 @@
+
+try 
+{
+	billID = bill.get("bill_id");
+	organizationID = organization.get("organization_id");
+	bill_Details = zoho.books.getRecordsByID("bills",organizationID,billID);
+	if(bill_Details.get("bill").get("custom_field_hash").get("cf_project_unformatted") == Null)
+	{
+		sendmail
+		[
+			from :zoho.adminuserid
+			to :"hasnain@blinkswag.com"
+			subject :"Update cogs in zoho project--"
+			message :"Record ID: " + billID + "Project Name Not added in this Bill: "
+		]
+	}
+	else
+	{
+		Pro_id = bill_Details.get("bill").get("custom_field_hash").get("cf_project_unformatted");
+		Bill_total = bill_Details.get("bill").get("total");
+		project_detail = invokeurl
+		[
+			url :"https://www.zohoapis.com/books/v3/projects/" + Pro_id + "?organization_id=666479573"
+			type :GET
+			connection:"zoho_book"
+		];
+		if(project_detail.get("project").get("custom_field_hash").get("cf_cogs") < 0 || project_detail.get("project").get("custom_field_hash").get("cf_cogs").isNull() || project_detail.get("project").get("custom_field_hash").get("cf_cogs") == "0.00")
+		{
+			info "IF";
+			Custom_Field = List();
+			CoGs_update = Map();
+			CoGs_update.put("label","CoGs");
+			CoGs_update.put("value",Bill_total);
+			Custom_Field.add(CoGs_update);
+			Bill_Update = Map();
+			Bill_Update.put("project_name",project_detail.get("project").get("project_name"));
+			Bill_Update.put("customer_id",project_detail.get("project").get("customer_id"));
+			Bill_Update.put("billing_type",project_detail.get("project").get("billing_type"));
+			Bill_Update.put("custom_fields",Custom_Field);
+			DataJson1 = Bill_Update.toString();
+			response = invokeurl
+			[
+				url :"https://www.zohoapis.com/books/v3/projects/" + Pro_id + "?organization_id=666479573"
+				type :PUT
+				parameters:DataJson1
+				connection:"zoho_book"
+			];
+			info response;
+		}
+		else
+		{
+			info "ELSE";
+			cf_cogs = project_detail.get("project").get("custom_field_hash").get("cf_cogs");
+			Add = cf_cogs.toDecimal() + Bill_total.toDecimal();
+			Custom_Field = List();
+			Bill_Update = Map();
+			CoGs_update = Map();
+			CoGs_update.put("label","CoGs");
+			CoGs_update.put("value",Add);
+			Custom_Field.add(CoGs_update);
+			Bill_Update.put("project_name",project_detail.get("project").get("project_name"));
+			Bill_Update.put("customer_id",project_detail.get("project").get("customer_id"));
+			Bill_Update.put("billing_type",project_detail.get("project").get("billing_type"));
+			Bill_Update.put("custom_fields",Custom_Field);
+			DataJson1 = Bill_Update.toString();
+			response = invokeurl
+			[
+				url :"https://www.zohoapis.com/books/v3/projects/" + Pro_id + "?organization_id=666479573"
+				type :PUT
+				parameters:DataJson1
+				connection:"zoho_book"
+			];
+		}
+	}
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"hasnain@blinkswag.com"
+		subject :"Update cogs in zoho project"
+		message :"Record ID: " + billID + " Root Cause: " + e
+	]
+}

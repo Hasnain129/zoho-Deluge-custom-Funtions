@@ -3,6 +3,7 @@
 						
 
 
+
 // custom_fields = bill.get("custom_fields");
 // for each  custom_field in custom_fields
 // {

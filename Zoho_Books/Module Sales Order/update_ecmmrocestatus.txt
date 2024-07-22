@@ -6,6 +6,7 @@ workflow Description : update the E-commerce status of SO and INV with Reff# "BS
 
 
 
+
 //ReferenceNo = "BS7924";
 //ReferenceNo = "Wireles";
 salesorderID = salesorder.get("salesorder_id");

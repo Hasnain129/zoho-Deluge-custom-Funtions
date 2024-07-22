@@ -1,0 +1,15 @@
+
+Bill_obj = zoho.books.getRecordsByID("bills",organization.get("organization_id"),bill.get("bill_id"));
+purchaseorders = Bill_obj.get("bill").get("purchaseorder_ids");
+if(purchaseorders.size() > 0)
+{
+	for each  po in purchaseorders
+	{
+		po_obj = zoho.books.getRecordsByID("purchaseorders",organization.get("organization_id"),po);
+		so_number = po_obj.get("purchaseorder").get("reference_number");
+		mp = Map();
+		mp.put("reference_number",so_number);
+		update_bill = zoho.books.updateRecord("Bills",organization.get("organization_id"),bill.get("bill_id"),mp);
+		info update_bill.get("message");
+	}
+}

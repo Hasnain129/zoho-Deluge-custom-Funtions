@@ -6,6 +6,7 @@ Workflow Description : Update DPI module when payment is received with "Yes"
 
 
 
+
 //-----------------------------------------------------
 // Get details from Customer Payments module
 customerID = customer_payment.get("customer_id");
@@ -54,7 +55,7 @@ if(!retainer_invoiceID.isNull())
 				JsonString2.put("JSONString",invoice_Payment);
 				resp_inv1 = invokeurl
 				[
-					url :"https://books.zoho.com/api/v3/retainerinvoices/" + retainer_invoiceID + "/invoices?organization_id=666479573"
+					url :"https://www.zohoapis.com/books/v3/retainerinvoices/" + retainer_invoiceID + "/invoices?organization_id=666479573"
 					type :POST
 					parameters:JsonString2
 					connection:"zoho_book"

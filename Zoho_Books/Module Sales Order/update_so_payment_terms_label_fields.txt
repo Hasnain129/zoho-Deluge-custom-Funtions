@@ -1,0 +1,53 @@
+
+salesorderID = salesorder.get("salesorder_id");
+organizationID = organization.get("organization_id");
+salesorder = zoho.books.getRecordsByID("salesorders",organizationID,salesorderID);
+Estimate_Numer = salesorder.get("salesorder").get("reference_number");
+payment_terms = salesorder.get("salesorder").get("payment_terms_label");
+estimate = zoho.books.getRecordsByID("estimates",organizationID,salesorder.get("salesorder").get("estimate_id"));
+cus = Map();
+if(Estimate_Numer.startsWith("EST"))
+{
+	/////////Get Estimate////////////////////
+	est_payment_term = estimate.get("estimate").get("custom_field_hash").get("cf_payment_terms");
+	update_map = Map();
+	update_map.put("payment_terms_label",est_payment_term);
+	update_data = update_map.toString();
+	so_update = zoho.books.updateRecord("salesorders",organizationID,salesorderID,update_data);
+	info so_update.get("message");
+}
+else
+{
+	comment = Map();
+	comment.put("description","No Estimate is associated with this SalesOrder.");
+	comment_json = Map();
+	comment_json.put("JSONString",comment);
+	create_comment = invokeurl
+	[
+		url :"https://www.zohoapis.com/books/v3/salesorders/" + salesorderID + "/comments?organization_id=" + organizationID
+		type :POST
+		parameters:comment_json
+		connection:"zoho_book"
+	];
+	info "comment" + create_comment;
+	info "Estimates are not associated with this So.";
+}
+//////////////////////////////// If Customer is Cleveland MetroParks //////////////////
+if(salesorder.get("salesorder").get("customer_name") = "Cleveland MetroParks" && salesorder.get("salesorder").get("custom_field_hash").get("cf_organization") = "Blink Swag")
+{
+	custom_fields = List();
+	cust_bid_estimate = Map();
+	cust_bid_estimate.put("label","Bid Estimate");
+	cust_bid_estimate.put("value","true");
+	custom_fields.add(cust_bid_estimate);
+	cust_bid_type = Map();
+	cust_bid_type.put("label","Bid Type");
+	cust_bid_type.put("value","Government");
+	custom_fields.add(cust_bid_type);
+	Mp = Map();
+	Mp.put("customer_id",salesorder.get("salesorder").get("customer_id"));
+	Mp.put("custom_fields",custom_fields);
+	resp = zoho.books.updateRecord("salesorders",organizationID,salesorderID,Mp);
+	info resp.get("message");
+}
+///////////////////////////////////// Update Salesorder ////////////////////////////////

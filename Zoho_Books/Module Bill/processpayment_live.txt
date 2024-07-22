@@ -8,155 +8,196 @@ Workflow Description : This will bulk process payments when process payment = tr
 
 
 
-//Get Bill Deails
-venid = bill.get("vendor_id");
-billid = bill.get("bill_id");
-billnum = bill.get("bill_number").removeAllAlpha();
-amount = bill.get("balance").toDecimal();
-paymode = bill.get("custom_field_hash").get("cf_payment_mode");
-venemail = bill.get("custom_field_hash").get("cf_vendor_email");
-venmemo = bill.get("custom_field_hash").get("cf_memo");
-veninv = bill.get("custom_field_hash").get("cf_vendor_invoice");
-if(isnull(veninv))
+
+try 
 {
-	checkdesc = venmemo;
-}
-else if(isnull(venmemo))
-{
-	checkdesc = "(INV-" + veninv + ")";
-}
-else if(isnull(venmemo) && isnull(veninv))
-{
-	checkdesc = "";
-}
-else
-{
-	checkdesc = venmemo + " (INV-" + veninv + ")";
-}
-//Bill Response and Error Handling
-response = Map();
-if(amount == 0 || venemail == "")
-{
-	if(amount == 0)
+	//Get Bill Deails
+	venid = bill.get("vendor_id");
+	billid = bill.get("bill_id");
+	billnum = bill.get("bill_number").removeAllAlpha();
+	amount = bill.get("balance").toDecimal();
+	paymode = bill.get("custom_field_hash").get("cf_payment_mode");
+	venemail = bill.get("custom_field_hash").get("cf_vendor_email");
+	venmemo = bill.get("custom_field_hash").get("cf_memo");
+	veninv = bill.get("custom_field_hash").get("cf_vendor_invoice");
+	if(isnull(veninv))
 	{
-		response.put("message","Your bill has 0 balance and this payment cannot be processed");
-		response.put("code",1);
+		checkdesc = venmemo;
 	}
-	else if(venemail = "")
+	else if(isnull(venmemo))
 	{
-		response.put("Vendor Email not found on Bill");
-		response.put("code",1);
+		checkdesc = "(INV-" + veninv + ")";
 	}
-}
-else if(paymode == "eCheck" || paymode == "ACH")
-{
-	//Get Vendor Details
-	contactdetails = invokeurl
-	[
-		url :"https://books.zoho.com/api/v3/contacts/" + venid + "?organization_id=666479573"
-		type :GET
-		connection:"zoho_book"
-	];
-	Contact_map = contactdetails.get("contact").toMap();
-	//venemail = Contact_map.get("email");
-	venname = Contact_map.get("contact_name");
-	venrouting = Contact_map.get("custom_field_hash").get("cf_routing_number");
-	venaccnum = Contact_map.get("custom_field_hash").get("cf_account_number");
-	venacctype = Contact_map.get("custom_field_hash").get("cf_account_type");
-	//Initiate Payment
-	//Checkbook.io Authorization and Request URL
-	Authcbio = Map();
-	Authcbio.put("Authorization","54190e9928dc4cdfb026aa28a2381884:myvkxrYXBxlnbSMxBzjZcSfYLFQDwn");
-	//APIKey:APISecrect
-	Authcbio.put("content-type","application/json");
-	//Request URL Condition
-	if(paymode == "eCheck")
+	else if(isnull(venmemo) && isnull(veninv))
 	{
-		RequestURL = "https://www.checkbook.io/v3//check/digital";
-	}
-	else if(paymode == "ACH")
-	{
-		RequestURL = "https://www.checkbook.io/v3//check/direct";
-	}
-	//Create eCheck or ACH
-	BodyVal = Map();
-	BodyVal.put("amount",amount);
-	BodyVal.put("name",venname);
-	BodyVal.put("recipient",venemail);
-	if(checkdesc != "")
-	{
-		BodyVal.put("description",checkdesc);
-	}
-	//BodyVal.put("number",billnum);
-	if(paymode == "ACH")
-	{
-		BodyVal.put("routing_number",venrouting);
-		BodyVal.put("account_number",venaccnum);
-		BodyVal.put("account_type",venacctype);
-	}
-	respcbio = invokeurl
-	[
-		url :RequestURL
-		type :POST
-		parameters:BodyVal.toString()
-		headers:Authcbio
-	];
-	//Payment Response and Error Handling
-	if(respcbio.get("status") == "UNPAID" || respcbio.get("status") == "IN_PROCESS")
-	{
-		//Updating Bill Payment
-		infomap = Map();
-		billdetmap = Map();
-		checkidmap = Map();
-		checkimagemap = Map();
-		finalmap = Map();
-		infomap.put("vendor_id",venid);
-		infomap.put("amount",amount);
-		infomap.put("payment_mode",paymode);
-		billdetmap.put("bill_id",billid);
-		billdetmap.put("amount_applied",amount);
-		//infomap.put("cf_cbio_check_image",paymode);
-		checkidmap.put("index",8);
-		checkidmap.put("value",respcbio.get("image_uri"));
-		checkimagemap.put("index",9);
-		checkimagemap.put("value",respcbio.get("id"));
-		infomap.put("custom_fields","[" + checkidmap + "," + checkimagemap + "]");
-		infomap.put("bills","[" + billdetmap + "]");
-		finalmap.put("JSONString",infomap);
-		updatepay = invokeurl
-		[
-			url :"https://books.zoho.com/api/v3/vendorpayments?organization_id=666479573"
-			type :POST
-			parameters:finalmap
-			connection:"zoho_book"
-		];
-		//info updatepay;
-		//Success Message
-		response.put("message",paymode + " sucessfully sent to " + venemail + " for amount " + amount);
-		response.put("code",0);
+		checkdesc = "";
 	}
 	else
 	{
-		//Checkbook.io Error Message
-		response.put("message","There was some error with payment processing service, please contact your administrator, for urgent payments contact AP team in finance department to process manual payment.");
-		response.put("code",1);
-		//Send error mail to "piandbi@rebiz.com" with error message
-		sendmail
-		[
-			from :zoho.adminuserid
-			to :"zohaib.akhund@basecampdata.com"
-			subject :"Checkbook.io Service Error"
-			message :"<div>Following error response received from Checkbook.io:<br> Service Response: " + respcbio + "<br>Value Map: " + finalmap + "</div>"
-		]
+		checkdesc = venmemo + " (INV-" + veninv + ")";
 	}
+	//Bill Response and Error Handling
+	response = Map();
+	if(amount == 0 || venemail == "")
+	{
+		if(amount == 0)
+		{
+			response.put("message","Your bill has 0 balance and this payment cannot be processed");
+			response.put("code",1);
+		}
+		else if(venemail = "")
+		{
+			response.put("Vendor Email not found on Bill");
+			response.put("code",1);
+		}
+	}
+	else if(paymode == "eCheck" || paymode == "ACH")
+	{
+		//Get Vendor Details
+		contactdetails = invokeurl
+		[
+			url :"https://www.zohoapis.com/books/v3/contacts/" + venid + "?organization_id=666479573"
+			type :GET
+			connection:"zoho_book"
+		];
+		Contact_map = contactdetails.get("contact").toMap();
+		//venemail = Contact_map.get("email");
+		venname = Contact_map.get("contact_name");
+		venrouting = Contact_map.get("custom_field_hash").get("cf_routing_number");
+		venaccnum = Contact_map.get("custom_field_hash").get("cf_account_number");
+		venacctype = Contact_map.get("custom_field_hash").get("cf_account_type");
+		//Initiate Payment
+		//Checkbook.io Authorization and Request URL
+		Authcbio = Map();
+		Authcbio.put("Authorization","54190e9928dc4cdfb026aa28a2381884:myvkxrYXBxlnbSMxBzjZcSfYLFQDwn");
+		//APIKey:APISecrect
+		// 		headerMap.put("Content-Type","application/json");
+		Authcbio.put("Content-Type","application/json");
+		//Request URL Condition
+		info "Auth" + Authcbio;
+		info "Brfore if";
+		if(paymode == "eCheck")
+		{
+			RequestURL = "https://www.checkbook.io/v3//check/digital";
+			info RequestURL;
+		}
+		else if(paymode == "ACH")
+		{
+			RequestURL = "https://www.checkbook.io/v3//check/direct";
+			info RequestURL;
+		}
+		//Create eCheck or ACH
+		BodyVal = Map();
+		BodyVal.put("amount",amount);
+		BodyVal.put("name",venname);
+		BodyVal.put("recipient",venemail);
+		// 		recordList=List();
+		// 		recordList.add("PRINT");
+		// 		BodyVal.put("deposit_options",recordList);
+		info BodyVal;
+		if(checkdesc != "")
+		{
+			BodyVal.put("description",checkdesc);
+		}
+		//BodyVal.put("number",billnum);
+		if(paymode == "ACH")
+		{
+			BodyVal.put("routing_number",venrouting);
+			BodyVal.put("account_number",venaccnum);
+			BodyVal.put("account_type",venacctype);
+		}
+		info "Debugging";
+		respcbio1 = invokeurl
+		[
+			url :RequestURL
+			type :POST
+			parameters:BodyVal + ""
+			headers:Authcbio
+		];
+		info respcbio1;
+		respcbio = respcbio1.replaceAll("],[",",",true);
+		info respcbio;
+		///////////testing
+		// 		sendmail
+		// 		[
+		// 			from :zoho.adminuserid
+		// 			to :"Rabia@erphub.biz"
+		// 			subject :"Test Bill/live/bs/values/after resps"
+		// 			message :"passedtocheckbook.io: " + BodyVal + "  response from Checkbook " + respcbio
+		// 		]
+		//Payment Response and Error Handling
+		if(respcbio.get("status") == "UNPAID" || respcbio.get("status") == "IN_PROCESS")
+		{
+			//Updating Bill Payment
+			infomap = Map();
+			billdetmap = Map();
+			checkidmap = Map();
+			checkimagemap = Map();
+			finalmap = Map();
+			infomap.put("vendor_id",venid);
+			infomap.put("amount",amount);
+			infomap.put("payment_mode",paymode);
+			billdetmap.put("bill_id",billid);
+			billdetmap.put("amount_applied",amount);
+			//infomap.put("cf_cbio_check_image",paymode);
+			checkidmap.put("index",8);
+			checkidmap.put("value",respcbio.get("image_uri"));
+			checkimagemap.put("index",9);
+			checkimagemap.put("value",respcbio.get("id"));
+			infomap.put("custom_fields","[" + checkidmap + "," + checkimagemap + "]");
+			infomap.put("bills","[" + billdetmap + "]");
+			finalmap.put("JSONString",infomap);
+			updatepay = invokeurl
+			[
+				url :"https://www.zohoapis.com/books/v3/vendorpayments?organization_id=666479573"
+				type :POST
+				parameters:finalmap
+				connection:"zoho_book"
+			];
+			info updatepay;
+			//Success Message
+			response.put("message",paymode + " sucessfully sent to " + venemail + " for amount " + amount);
+			response.put("code",0);
+		}
+		else
+		{
+			//Checkbook.io Error Message
+			response.put("message","There was some error with payment processing service, please contact your administrator, for urgent payments contact AP team in finance department to process manual payment.");
+			response.put("code",1);
+			//Send error mail to "piandbi@rebiz.com" with error message
+			sendmail
+			[
+				from :zoho.adminuserid
+				to :"rabia@erphub.biz"
+				subject :"Checkbook.io Service Error"
+				message :"<div>Following error response received from Checkbook.io:<br> Service Response: " + respcbio + "<br>Value Map: " + finalmap + "</div>"
+			]
+		}
+	}
+	//Error for Any Payment modes other than ACH or eCheck
+	else
+	{
+		response.put("message","Payment Mode not Supported");
+		response.put("code",1);
+	}
+	//info finalmap;
+	//info updatepay;
+	//return response;
 }
-//Error for Any Payment modes other than ACH or eCheck
-else
+catch (e)
 {
-	response.put("message","Payment Mode not Supported");
-	response.put("code",1);
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"Rabia@erphub.biz","erp@blinksigns.com"
+		subject :"Error/BS/BOOKS/BILLS/PROCESS PAYMENT LIVE"
+		message :"error: " + e + "   passedtocheckbook.io: " + BodyVal + "  response from Checkbook " + respcbio
+	]
 }
-//info finalmap;
-//info updatepay;
-//return response;
-
+// sendmail
+// [
+// 	from :zoho.adminuserid
+// 	to :"Rabia@erphub.biz", "erp@blinksigns.com"
+// 	subject :"Test Bill/live/bs/values"
+// 	message :"passedtocheckbook.io: " + BodyVal + "  response from Checkbook " + respcbio
+// ]

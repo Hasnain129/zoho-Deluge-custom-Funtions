@@ -1,0 +1,76 @@
+
+inv_total = 0;
+po_total = 0;
+Gross_Prof = 0;
+Profit_Margin = 0;
+invoiceID = invoice.get("invoice_id");
+invoicedate = invoice.get("date").toDate();
+organizationID = organization.get("organization_id");
+Invoice_details = zoho.books.getRecordsByID("invoices",organizationID,invoiceID);
+inv_line_items = Invoice_details.get("invoice").get("line_items");
+Customer_id = Invoice_details.get("invoice").get("customer_id");
+//info Invoice_details;
+if(Invoice_details.get("invoice").size() > 0)
+{
+	for each  inv in Invoice_details.get("invoice")
+	{
+		inv_total = Invoice_details.get("invoice").get("total").toLong();
+	}
+}
+So_id = Invoice_details.get("invoice").get("salesorder_id");
+so_details = invokeurl
+[
+	url :"https://www.zohoapis.com/books/v3/salesorders/" + So_id + "?organization_id=666479573"
+	type :GET
+	connection:"zoho_book"
+];
+so_number = so_details.get("salesorder").get("salesorder_number");
+searchParam = {"reference_number":so_number};
+response = zoho.books.getRecords("purchaseorders",organizationID,searchParam,"zoho_book");
+if(response.get("purchaseorders").size() > 0)
+{
+	for each  inv_item in inv_line_items
+	{
+		inv_prefix = inv_item.get("description").substring(0,inv_item.get("description").indexOf(" ",inv_item.get("description").indexOf(" ") + 1));
+		// info inv_prefix;
+		for each  po in response.get("purchaseorders")
+		{
+			Po_obj = zoho.books.getRecordsByID("purchaseorders",organizationID,po.get("purchaseorder_id")).get("purchaseorder");
+			PO_lineitems = Po_obj.get("line_items");
+			for each  po_items in PO_lineitems
+			{
+				po_prefix = po_items.get("description").substring(0,po_items.get("description").indexOf(" ",po_items.get("description").indexOf(" ") + 1));
+				info po_prefix;
+				if(inv_item.get("sku") == po_items.get("sku") && inv_prefix.lower().contains(po_prefix.lower()))
+				{
+					//info "PO Desc: " + po_items.get("name");
+					po_total = po_total + po_items.get("item_total");
+					// 					info inv_prefix;
+					// 					info po_prefix;
+				}
+			}
+		}
+	}
+	info "Purchase order Line items total " + po_total;
+	info "Invoice Line items total" + inv_total;
+	Gross_Prof = inv_total - po_total;
+	po_inv_pro_margi = (inv_total - po_total) * 100 / inv_total;
+}
+cf_list = List();
+gross_profit = Map();
+gross_profit.put("label","Gross Profit");
+gross_profit.put("value",Gross_Prof);
+Profit_Margin = Map();
+Profit_Margin.put("label","Profit Margin");
+Profit_Margin.put("value",po_inv_pro_margi);
+Cogs = Map();
+Cogs.put("label","COGS");
+Cogs.put("value",po_total);
+cf_list.add(gross_profit);
+cf_list.add(Profit_Margin);
+cf_list.add(Cogs);
+data = Map();
+data.put("customer_id",Customer_id);
+data.put("custom_fields",cf_list);
+//update_invoice = zoho.books.updateRecord("invoices",organizationID,invoiceID,data);
+//info update_invoice.get("message");

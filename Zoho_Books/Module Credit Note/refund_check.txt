@@ -5,6 +5,7 @@
 Workflow Description : Send eCheck from CBio when ever a credit note is created with Refund Drop down selection as (echeck)
 
 
+
 creditnote_details = zoho.books.getRecordsByID("Creditnotes",organization.get("organization_id"),creditnote.get("creditnote_id"));
 info creditnote_details;
 ////////////////////////////////// Get Invoice Detials //////////////////////////////////
@@ -75,7 +76,7 @@ if(respcbio.get("status") == "UNPAID" || respcbio.get("status") == "IN_PROCESS")
 	JSONString.put("JSONString",rfnd);
 	cn_refund = invokeurl
 	[
-		url :"https://books.zoho.com/api/v3/creditnotes/" + creditnote.get("creditnote_id") + "/refunds?organization_id=" + organization.get("organization_id")
+		url :"https://www.zohoapis.com/books/v3/creditnotes/" + creditnote.get("creditnote_id") + "/refunds?organization_id=" + organization.get("organization_id")
 		type :POST
 		parameters:JSONString
 		connection:"zoho_book"

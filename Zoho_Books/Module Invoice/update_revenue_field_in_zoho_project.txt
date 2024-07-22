@@ -1,0 +1,86 @@
+Description : Fetch Invoice total and update it to Revenue Field in zoho book project 
+
+
+
+try 
+{
+	InvID = invoice.get("invoice_id");
+	organizationID = organization.get("organization_id");
+	Invoice_Details = zoho.books.getRecordsByID("invoices",organizationID,InvID);
+	invoice_total = Invoice_Details.get("invoice").get("total").toDecimal();
+	SO_id = Invoice_Details.get("invoice").get("salesorder_id");
+	so_details = zoho.books.getRecordsByID("salesorders",organizationID,SO_id);
+	Pro_id = so_details.get("salesorder").get("custom_field_hash").get("cf_project_unformatted");
+	if(so_details.get("salesorder").get("custom_field_hash").get("cf_project_unformatted") != Null)
+	{
+		project_detail = invokeurl
+		[
+			url :"https://www.zohoapis.com/books/v3/projects/" + Pro_id + "?organization_id=666479573"
+			type :GET
+			connection:"zoho_book"
+		];
+		info project_detail;
+		if(project_detail.get("project").get("custom_field_hash").get("cf_revenue") == "0.00" || project_detail.get("project").get("custom_field_hash").get("cf_revenue").isNull() || project_detail.get("project").get("custom_field_hash").get("cf_revenue") < 0)
+		{
+			info "if";
+			Custom_Field = List();
+			Revenue_update = Map();
+			Revenue_update.put("label","Revenue");
+			Revenue_update.put("value",invoice_total);
+			Custom_Field.add(Revenue_update);
+			Inv_Update = Map();
+			Inv_Update.put("project_name",project_detail.get("project").get("project_name"));
+			Inv_Update.put("customer_id",project_detail.get("project").get("customer_id"));
+			Inv_Update.put("billing_type",project_detail.get("project").get("billing_type"));
+			Inv_Update.put("custom_fields",Custom_Field);
+			DataJson1 = Inv_Update.toString();
+			response = invokeurl
+			[
+				url :"https://www.zohoapis.com/books/v3/projects/" + Pro_id + "?organization_id=666479573"
+				type :PUT
+				parameters:DataJson1
+				connection:"zoho_book"
+			];
+			info response;
+		}
+		else
+		{
+			info "ELSE";
+			cf_Revenue = project_detail.get("project").get("custom_field_hash").get("cf_revenue");
+			Add = cf_Revenue.toDecimal() + invoice_total.toDecimal();
+			Custom_Field = List();
+			Revenue_update = Map();
+			Revenue_update.put("label","Revenue");
+			Revenue_update.put("value",Add);
+			Custom_Field.add(Revenue_update);
+			Inv_Update = Map();
+			Inv_Update.put("project_name",project_detail.get("project").get("project_name"));
+			Inv_Update.put("customer_id",project_detail.get("project").get("customer_id"));
+			Inv_Update.put("billing_type",project_detail.get("project").get("billing_type"));
+			Inv_Update.put("custom_fields",Custom_Field);
+			DataJson1 = Inv_Update.toString();
+			response = invokeurl
+			[
+				url :"https://www.zohoapis.com/books/v3/projects/" + Pro_id + "?organization_id=666479573"
+				type :PUT
+				parameters:DataJson1
+				connection:"zoho_book"
+			];
+			info response;
+		}
+	}
+	else
+	{
+		info "Project id Not found in Sales order and invoice";
+	}
+}
+catch (e)
+{
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"hasnain@blinkswag.com"
+		subject :"Update Revenue Field in Zoho Project"
+		message :"Record ID: " + InvID + " Root Cause: " + e
+	]
+}

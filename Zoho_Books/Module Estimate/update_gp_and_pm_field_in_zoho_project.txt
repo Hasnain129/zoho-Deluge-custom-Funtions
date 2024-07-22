@@ -1,0 +1,161 @@
+
+// comments = invokeurl
+// [
+// 	url: "https://www.zohoapis.com/books/v3/estimates/"+ estimate.get("estimate_id") +"/comments?organization_id=666479573"
+// 	type: GET
+// 	connection:"zoho_book"
+// ];
+// info comments;
+Total_Cost_Price = 0.0;
+Total_Selling_Price = 0.0;
+client_gross_profit = 0.0;
+client_profit_margin = 0.0;
+project_gross_profit = 0.0;
+project_profit_margin = 0.0;
+estimateID = estimate.get("estimate_id");
+number = estimate.get("estimate_number");
+organizationID = organization.get("organization_id");
+estimate_detail = zoho.books.getRecordsByID("estimates",organizationID,estimateID);
+/////////////////////// Calculate Client Gross Profit & Magin ///////////////////////////
+searchParam = {"cf_estimate_number":estimateID};
+response = zoho.books.getRecords("cm_cost_item",organizationID,searchParam,"zoho_book");
+if(response.get("module_records").size() > 0)
+{
+	records = response.get("module_records");
+	vendors = list();
+	vendorid = 0;
+	///////// Get all Vendors and remove dulicate //////
+	for each  record in records
+	{
+		if(record.get("cf_estimate_number_formatted") == number)
+		{
+			if(record.get("cf_selling_price") != "" && record.get("cf_cost_price") != "")
+			{
+				if(record.get("cf_qty") > 0)
+				{
+					Total_Cost_Price = Total_Cost_Price + record.get("cf_cost_price").toDecimal() * record.get("cf_qty").toLong();
+					Total_Selling_Price = Total_Selling_Price + record.get("cf_selling_price").toDecimal() * record.get("cf_qty").toLong();
+				}
+			}
+		}
+	}
+	if(Total_Selling_Price > Total_Cost_Price)
+	{
+		client_gross_profit = Total_Selling_Price - Total_Cost_Price;
+		client_profit_margin = ((Total_Selling_Price - Total_Cost_Price) * 100) / Total_Selling_Price;
+		custom_field = List();
+		customfield_1 = Map();
+		customfield_1.put("customfield_id",1316483000170161538);
+		customfield_1.put("value",client_gross_profit);
+		custom_field.add(customfield_1);
+		customfield_2 = Map();
+		customfield_2.put("customfield_id",1316483000170161544);
+		customfield_2.put("value",client_profit_margin);
+		custom_field.add(customfield_2);
+		estimate_mp = Map();
+		estimate_mp.put("customer_id",estimate.get("customer_id"));
+		estimate_mp.put("custom_fields",custom_field);
+		response = zoho.books.updateRecord("estimates","666479573",estimateID,estimate_mp);
+		info response.get("message");
+	}
+}
+///////////////////// Get zoho project Details ////////////////////
+if(estimate_detail.get("estimate").get("project") != Null)
+{
+	pro_id = estimate_detail.get("estimate").get("project").get("project_id");
+	project_detail = invokeurl
+	[
+		url :"https://www.zohoapis.com/books/v3/projects/" + pro_id + "?organization_id=666479573"
+		type :GET
+		connection:"zoho_book"
+	];
+	if(project_detail.get("project").get("custom_field_hash").contains("cf_client_gross_profit"))
+	{
+		project_gross_profit = project_detail.get("project").get("custom_field_hash").get("cf_client_gross_profit").remove("$");
+	}
+	if(project_detail.get("project").get("custom_field_hash").contains("cf_client_profit_margin"))
+	{
+		project_profit_margin = project_detail.get("project").get("custom_field_hash").get("cf_client_profit_margin").remove("%");
+	}
+	if(estimate_detail.get("estimate").get("status") == "accepted")
+	{
+		//////////////////////Add Client Gross profit zoho project ///////////
+		Add_gross_profit = project_gross_profit.toDecimal().round(2) + client_gross_profit.toDecimal().round(2);
+		////////////////////Add Client profit zoho project ///////////////
+		Add_profit_margin = project_profit_margin.toDecimal().round(2) + client_profit_margin.toDecimal().round(2);
+		Custom_Field_1 = Map();
+		Custom_Field_1.put("label","Client Gross Profit");
+		Custom_Field_1.put("value",Add_gross_profit);
+		//		Custom_Field_1.put("value","161.12");
+		Custom_Field_2 = Map();
+		Custom_Field_2.put("label","Client Profit Margin");
+		Custom_Field_2.put("value",Add_profit_margin);
+		// 		Custom_Field_2.put("value","19.28");
+		// Add custom fields to the list
+		Custom_Field = List();
+		Custom_Field.add(Custom_Field_1);
+		Custom_Field.add(Custom_Field_2);
+		// Add project details to the data map
+		Data = Map();
+		Data.put("project_name",project_detail.get("project").get("project_name"));
+		Data.put("customer_id",project_detail.get("project").get("customer_id"));
+		Data.put("billing_type",project_detail.get("project").get("billing_type"));
+		Data.put("custom_fields",Custom_Field);
+		// Convert the data map to JSON
+		DataJson = Data.toString();
+		/////////////// Update project /////////////////
+		response = invokeurl
+		[
+			url :"https://www.zohoapis.com/books/v3/projects/" + pro_id + "?organization_id=666479573"
+			type :PUT
+			parameters:DataJson
+			connection:"zoho_book"
+		];
+		info response.get("message");
+	}
+	else if(estimate_detail.get("estimate").get("status") == "void" || estimate_detail.get("estimate").get("status") == "declined")
+	{
+		//////////////////////Subtract Client Gross profit zoho project ///////////
+		Subtract_gross_profit = project_gross_profit.toDecimal().round(2) - client_gross_profit.toDecimal().round(2);
+		////////////////////Subtract Client profit zoho project ///////////////
+		Subtract_profit_margin = project_profit_margin.toDecimal().round(2) - client_profit_margin.toDecimal().round(2);
+		Custom_Field_1 = Map();
+		Custom_Field_1.put("label","Client Gross Profit");
+		Custom_Field_1.put("value",Subtract_gross_profit);
+		Custom_Field_2 = Map();
+		Custom_Field_2.put("label","Client Profit Margin");
+		Custom_Field_2.put("value",Subtract_profit_margin);
+		// Add custom fields to the list
+		Custom_Field = List();
+		Custom_Field.add(Custom_Field_1);
+		Custom_Field.add(Custom_Field_2);
+		// Add project details to the data map
+		Data = Map();
+		Data.put("project_name",project_detail.get("project").get("project_name"));
+		Data.put("customer_id",project_detail.get("project").get("customer_id"));
+		Data.put("billing_type",project_detail.get("project").get("billing_type"));
+		Data.put("custom_fields",Custom_Field);
+		// Convert the data map to JSON
+		DataJson = Data.toString();
+		///////////////// Update project /////////////////
+		response = invokeurl
+		[
+			url :"https://www.zohoapis.com/books/v3/projects/" + pro_id + "?organization_id=666479573"
+			type :PUT
+			parameters:DataJson
+			connection:"zoho_book"
+		];
+		info response.get("message");
+	}
+}
+else if(estimate_detail.get("estimate").get("project") == Null)
+{
+	msg = "Project name not added in Estimate";
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :"hasnain@blinkswag.com, shahzaib@blinkswag.com"
+		subject :"Project Id Not Associated in this Estimate  " + estimateID
+		message :msg
+	]
+}

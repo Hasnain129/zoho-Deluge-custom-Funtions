@@ -5,6 +5,7 @@ workflow Description : Tagging SO with respective organization name fetched with
 
 
 
+
 custom_fields = salesorder.get("custom_fields");
 info custom_fields;
 for each  cf in custom_fields
@@ -21,7 +22,7 @@ if(org_name == "" || org_name == null)
 	info "Yes";
 	Sale_Order = invokeurl
 	[
-		url :"https://books.zoho.com/api/v3/salesorders/" + salesorder.get("salesorder_id") + "?organization_id=666479573"
+		url :"https://www.zohoapis.com/books/v3/salesorders/" + salesorder.get("salesorder_id") + "?organization_id=666479573"
 		type :GET
 		connection:"zoho_book"
 	];

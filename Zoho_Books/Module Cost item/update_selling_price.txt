@@ -7,6 +7,7 @@ Workflow Description : Updates selling price when the margin is changed in both 
 
 
 
+
 /*
 	Calculates and updates the selling price of the cost item when margins are added or updated.
 	Function			= Update Selling Price

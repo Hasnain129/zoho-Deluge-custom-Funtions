@@ -1,0 +1,41 @@
+
+ref_number = vendor_payment.get("reference_number");
+Payment_Number = vendor_payment.get("payment_number");
+vendor_Name = vendor_payment.get("vendor_name");
+Payment_Mode = vendor_payment.get("payment_mode");
+Amount = vendor_payment.get("amount");
+Bill_NO = vendor_payment.get("bills").get(0).get("bill_number");
+Rows_Det = List();
+row1 = Map();
+row1.put("Date",zoho.currentdate.getDate());
+row1.put("Time - EST",zoho.currenttime.getTime());
+row1.put("Payment Number",Payment_Number);
+row1.put("Reference",ref_number);
+row1.put("Bill Number",Bill_NO);
+row1.put("Vendor",vendor_Name);
+row1.put("Payment Mode",Payment_Mode);
+row1.put("Total Amount","$" + Amount);
+row1.put("Deleted By",zoho.loginuser);
+row1.put("Application","Zoho Books");
+Rows_Det.add(row1);
+resource_id = "lhvwf04b16d7de44a45c4990b34f11eb25387";
+rowData = Map();
+rowData.put("method","worksheet.records.add");
+rowData.put("worksheet_name","Vendor Payment");
+rowData.put("header_row",1);
+rowData.put("json_data",Rows_Det);
+add_records = invokeurl
+[
+	url :"https://sheet.zoho.com/api/v2/" + resource_id
+	type :POST
+	parameters:rowData
+	connection:"sheet_services"
+];
+msg = "<body style='font-family: Arial, sans-serif; background-color: #f5f5f5; width:95%'><div style='background-color: #5d209f; color: white; width: 100%; margin: auto; padding: 10px; text-align:center'><img style='width: 300px; height: auto' src='https://blinkswag.com/united/Logo-1.png'></img></div><div style='margin-left: 5%; margin-right: 5%;'><p><br>Dear Business Development Team,<p>We would like to inform you that a Payment made, bearing reference [" + Payment_Number + "]<b/> has been deleted from Zoho Books, and this action has been attributed to " + zoho.loginuser + "</p></div><div style='margin-left: 5%'>Date: " + zoho.currentdate.getDate() + "<br>Time: " + zoho.currenttime.getTime() + " " + "(EST)" + "<br>Payment Number: " + Payment_Number + "<br>Reference Number: " + ref_number + "<br>Bill Number: " + Bill_NO + "<br>Vendor Name: " + vendor_Name + "<br>Total Amount: " + "$" + Amount + "<br>Deleted by:" + " " + zoho.loginuser + "<br><p>For access to all deleted Payment made information, please click the button below.<p/></div><center><div style='text-align: center;'><br><button style='background-color: #5d209f; border: none; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; border-radius: 5px; margin-top: 20px'><a href='https://sheet.zoho.com/sheet/open/lhvwf04b16d7de44a45c4990b34f11eb25387?sheetid=4&range=F1' style='color:white; text-decoration: none;'>Please Click Here</a></button><p><br>BLINKSWAG © 2023 All Right Reserved</p></div>";
+sendmail
+[
+	from :zoho.loginuserid
+	to :"yasir@blinkswag.com,f.rajput@blinkswag.com,shahzaib@blinkswag.com,hasnain@blinkswag.com"
+	subject :"Verification Request - Payment Made Deleted by " + zoho.loginuser
+	message :msg
+]

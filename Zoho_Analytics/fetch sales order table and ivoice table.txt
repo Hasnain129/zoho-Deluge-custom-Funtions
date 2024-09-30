@@ -19,5 +19,3 @@ WHERE	 SalesOrder."Organization Name"  != 'Blink Swag'
  AND	Invoice."Invoice Status"  != 'Void'
  AND	Invoice."Invoice Status"  != 'rejected'
  AND	Invoice."Invoice Status"  != 'Draft'
-
-

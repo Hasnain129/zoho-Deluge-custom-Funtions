@@ -1,0 +1,197 @@
+/*
+  Created by: Shahzaib Shah and Muhammad Hasnain Raza
+  Date: 2nd August 2024
+  Time: 6:30 PM
+  Description: This function automates creating an estimate in Zoho Books based on CRM deal data, subform items, and user inputs. It also optionally creates cost items for the estimate line items and handles error reporting. 
+
+  URL for Zoho Sheet: https://sheet.zoho.com/sheet/open/u1em1ea97adbabf004c8fae90a007a8ecdbfc?sheetid=0&range=B11
+
+  Functions:
+  - **Fetching Deal Data: Retrieves deal details from Zoho CRM by deal ID.
+  - **Processing Line Items: Fetches item details from Zoho Books, prepares custom fields (e.g., Proof URL), and formats line items.
+  - **Creating the Estimate: Builds and submits the estimate to Zoho Books with customer, project, and item details.
+  - **Custom Fields: Adds organization, bid, and project info as custom fields.
+  - **Cost Items (Optional): Creates cost items if they don’t exist.
+  - **Error/Notification: Sends email notifications for success or errors.
+
+  Usage:
+  - Ensure API connections to Zoho CRM and Zoho Books are properly configured.
+  - Verify that the deal ID, SKU, and other inputs (e.g., Bid Estimate, Customer ID) are accurate.
+  - Optionally, set the Create_Cost_Items flag to “Yes” if cost items are needed.
+
+  Change Log:
+  - **18th September 2024: Initial version.
+*/
+///// Retrieve Deal ID from the input
+deal_id = input.Deal_Name;
+///// Fetch Deal record from Zoho CRM based on the Deal ID
+deal_obj = zoho.crm.getRecordById("deals",deal_id.toLong());
+///// Initialize a list to hold the line items
+lineitems = List();
+// Iterate over each item in the SubForm (likely a deal-related subform)
+for each  items in SubForm
+{
+	///// Prepare SKU parameter for Zoho Books API request
+	mp1 = {"sku":items.SKU};
+	///// Fetch item details from Zoho Books based on SKU
+	items_response = invokeurl
+	[
+		url :"https://www.zohoapis.com/books/v3/items?organization_id=666479573"
+		type :GET
+		parameters:mp1
+		connection:"zoho_books"
+	];
+	///// Check if the item exists in Zoho Books
+	if(items_response.get("items").size() > 0)
+	{
+		///// Initialize a list to hold custom fields related to the item
+		item_custom_fields = List();
+		//// If Proof_URL is not null, extract and store the URL and its status
+		if(items.Proof_URL != null)
+		{
+			proof_url = Map();
+			proof_url.put("label","Proof URL");
+			proof_url.put("value",items.Proof_URL.subString(items.Proof_URL.indexOf("<a href= ") + 10,items.Proof_URL.indexOf(">") - 1));
+			item_custom_fields.add(proof_url);
+			proof_status = Map();
+			proof_status.put("label","Proof Status");
+			proof_status.put("value","Pending");
+			item_custom_fields.add(proof_status);
+		}
+		////// Prepare the item details to update the estimate in Zoho Books
+		Update_estimate = Map();
+		Update_estimate.put("item_id",items_response.get("items").get(0).get("item_id"));
+		Update_estimate.put("description",items.SKU_Description);
+		Update_estimate.put("description",items.SKU_Description);
+		Update_estimate.put("rate",items.Rate);
+		Update_estimate.put("quantity",items.Qty);
+		Update_estimate.put("item_custom_fields",item_custom_fields);
+		//// Add the prepared item to the line items list
+		lineitems.add(Update_estimate);
+	}
+}
+///// Prepare custom fields for the estimate
+custom_fields = List();
+//// Add custom fields like Organization Name, Bid Estimate, Bid Type, etc.
+org = Map();
+org.put("label","Organization Name");
+org.put("value",input.Organization_Name);
+custom_fields.add(org);
+/////////////////
+bid_est = Map();
+bid_est.put("label","Bid Estimate");
+bid_est.put("value",input.Bid_Estimate);
+custom_fields.add(bid_est);
+/////////////////////
+bid_type = Map();
+bid_type.put("label","Bid Type");
+bid_type.put("value",input.Bid_Type);
+custom_fields.add(bid_type);
+////////////////////
+client_po = Map();
+client_po.put("label","Client PO");
+client_po.put("value",input.Client_PO);
+custom_fields.add(client_po);
+// Handle Zoho Work Drive link if provided
+if(input.Zoho_Work_Drive_Link != "")
+{
+	ZP_Link = Map();
+	ZP_Link.put("label","Zoho Work Drive Link");
+	ZP_Link.put("value",input.Zoho_Work_Drive_Link.subString(input.Zoho_Work_Drive_Link.indexOf("<a href= ") + 10,input.Zoho_Work_Drive_Link.indexOf(">") - 2));
+	custom_fields.add(ZP_Link);
+}
+// Add Project ID and Zoho Project ID from the deal record
+Project_ID = Map();
+Project_ID.put("label","Project ID");
+Project_ID.put("value",deal_obj.get("Project_ID"));
+custom_fields.add(Project_ID);
+///////////////////
+ZP_ID = Map();
+ZP_ID.put("label","ZP ID");
+ZP_ID.put("value",deal_obj.get("Zoho_Projects_Project_ID"));
+custom_fields.add(ZP_ID);
+////// Get the current Zoho Books user (estimator) to attach to the estimate
+mp2 = {"email":zoho.loginuserid};
+user = invokeurl
+[
+	url :"https://www.zohoapis.com/books/v3/users?organization_id=666479573"
+	type :GET
+	parameters:mp2
+	connection:"zoho_books"
+];
+estimator = Map();
+estimator.put("label","Estimator");
+estimator.put("value",user.get("users").get(0).get("user_id"));
+custom_fields.add(estimator);
+///// Prepare the estimate payload for Zoho Books
+Mp = Map();
+Mp.put("customer_id",input.Customer_Id);
+Mp.put("Organization Name",input.Organization_Name);
+Mp.put("project_id",input.Books_Project_ID);
+Mp.put("salesperson_name",input.Sales_Person);
+Mp.put("line_items",lineitems);
+Mp.put("custom_fields",custom_fields);
+///// Create the estimate in Zoho Books
+resp = zoho.books.createRecord("estimates","666479573",Mp);
+///// Check if the estimate creation was successful
+if(resp.get("code") == 0)
+{
+	/////// Store the generated estimate number
+	input.Estimate = resp.get("estimate").get("estimate_number");
+	estimate_number = resp.get("estimate").get("estimate_number");
+	////// Send an email notification about the created estimate
+	str = "<div id=':4us' class='a3s aiL'><div>Hello,<br><br>A new <span class=‘il'>" + resp.get("estimate").get("estimate_number") + "</span> has been created. Please check the details.</div><br><table style='font-size:14px cellpadding='5'><tbody><tr><th colspan='2' align='left' style='padding-bottom:10px'><u>User submitted data</u></th></tr><tr><td></td></tr><tr><th align='left'>Deal Name</th><td>" + deal_obj.get("Deal_Name") + "</td></tr><tr><th align='left'>Customer Name</th><td>" + deal_obj.get("Account_Name").get("name") + "</td></tr><tr><th align='left'>Organization Name</th><td>" + input.Organization_Name + "</td></tr><tr><th align='left'>Sales Person</th><td>" + input.Sales_Person + "</td></tr><tr><th align='left'>Production Manager</th><td>" + input.Production_Manager + "</td></tr><tr><th align='left'>Bid <span class='il'>Estimate</span></th><td>  " + input.Bid_Estimate + "</td></tr><tr><th align='left'>Bid Type</th><td>" + input.Bid_Type + "</td></tr><tr><th align='left'>Client PO</th><td>" + input.Client_PO + "</td></tr><tr><th align='left'>Zoho Work Drive Link</th><td>" + input.Zoho_Work_Drive_Link + "</td></tr></tbody></table><div class=‘yj6qo'></div><div class=‘adL'></div></div>";
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :zoho.loginuserid
+		subject :estimate_number + " Created against " + deal_obj.get("Account_Name").get("name")
+		message :str
+	]
+}
+else
+{
+	////// Send an error email if the estimate creation fails
+	sendmail
+	[
+		from :zoho.adminuserid
+		to :zoho.loginuserid
+		subject :"Error while creating Estimate"
+		message :resp.get("message")
+	]
+}
+///////////////////////////////////////////////// create cost item start code //////////////////////////////////////
+/////// Handle the creation of cost items based on the estimate if needed
+// if(input.Create_Cost_Items == "Yes")
+// {
+// 	estimate_id = resp.get("estimate").get("estimate_id");
+// 	customer_id = resp.get("estimate").get("customer_id");
+// 	estimate_line_items = resp.get("estimate").get("line_items");
+// 	/////// Loop through each estimate line item and create cost items if they don't exist
+// 	for each  estiamte_items in estimate_line_items
+// 	{
+// 		line_item_id = estiamte_items.get("line_item_id").toLong();
+// 		searchParam = "cf_est_line_item=" + line_item_id;
+// 		 ////// Check if a cost item already exists for the line item
+// 		cost_items_details = zoho.books.getRecords("cm_cost_item","666479573",searchParam);
+// /////////////////// if cost item Not Found against line item just create it ///////////////	
+// ///// If cost item does not exist, create a new one
+// 		if(cost_items_details.get("module_records").size() <= 0)
+// 		{
+// 			mapVar = Map();
+// 			mapVar.put("record_name",estiamte_items.get("name"));
+// 			mapVar.put("cf_inventory_product_name",estiamte_items.get("item_id"));
+// 			mapVar.put("cf_margin","0.0");
+// 			mapVar.put("cf_cost_price",input.SubForm.Cost_Item_Unit_Cost);
+// 			mapVar.put("cf_selling_price",estiamte_items.get("rate").toDecimal());
+// 			mapVar.put("cf_qty",estiamte_items.get("quantity").round(0));
+// 			//mapVar.put("cf_estimate_number",resp.get("estimate").get("estimate_id"));
+// 			mapVar.put("cf_customer_name",resp.get("estimate").get("customer_id"));
+// 			mapVar.put("cf_est_line_item",estiamte_items.get("line_item_id"));
+// 			////////////////////// Create cost item in Zoho Books
+// 			response = zoho.books.createRecord("cm_cost_item","666479573",mapVar);
+// 			//			info "create_cost_item" + response;
+// 		}
+// 	}
+// }
+///////////////////////////////////// end code //////////////

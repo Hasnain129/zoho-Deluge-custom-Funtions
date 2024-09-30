@@ -1,0 +1,28 @@
+SELECT
+		 SalesOrder."Sales Order#" AS "Sales Order#",
+		 SalesOrder."Status" AS "Status",
+		 SalesOrder."Paid Status" AS "Payment",
+		 SalesOrder."Invoiced Status" AS "Invoices Status",
+		 users."UserName" As 'Production Manager',
+		 SalesOrder."Organization Name" AS "Organization Name",
+		 SalesOrder."Reference Number" AS "SO Reference Number",
+		 SalesOrder."Total (BCY)" AS "SO Total Amount",
+		 SalesOrder."Expected Install Date" AS "Expected Install Date",
+		 SalesOrder."Created Time" As 'So Created Time',
+		 Invoice."Invoice Number" AS "Invoice Number",
+		 Invoice."Invoice Status" AS "Invoice Status",
+		 Invoice."Total (BCY)" AS "Invoice Sub Total",
+		 Invoice."Balance (BCY)" AS "Invoice Due Balance",
+		 pzP."Project Name" As "Project Name",
+		 pzP."Production Managers" AS "Production Managers",
+		 pzP."Project Managers" AS "Project Managers",
+		 pzP."Owner" AS "Project Owner",
+		 pzP."Sales Reps" AS "Sales Reps"
+FROM  "Sales Orders (Zoho Finance)" SalesOrder
+LEFT JOIN "Sales Order Invoice (Zoho Finance)" SOInvoice ON SalesOrder."Sales order ID"  = SOInvoice."Sales Order ID" 
+LEFT JOIN "Invoices (Zoho Finance)" Invoice ON SOInvoice."Invoice ID"  = Invoice."Invoice ID" 
+LEFT JOIN "Users (Zoho Finance)" users ON SalesOrder."Production Manager"  = users."User ID" 
+LEFT JOIN "Projects (Zoho Finance)" pzf ON SalesOrder."Project"  = pzf."Project ID" 
+LEFT JOIN "Projects (Zoho Projects)" pzP ON pzf."Zoho Project Reference ID"  = pzP."Project ID"  
+WHERE	 SalesOrder."Organization Name"  = 'Blink Signs'
+ AND	SalesOrder."Status"  NOT IN ( 'draft'  , 'void'  , 'rejected'  , 'invoiced'  )

@@ -66,3 +66,11 @@ for each  rec in record
 	];
 	info response.get("message") + " " + rec.get("Project Ids") + " Total Bills: " + Total_Bills + " & Total Invocies: " + Total_Invoices;
 }
+
+
+
+
+
+
+
+

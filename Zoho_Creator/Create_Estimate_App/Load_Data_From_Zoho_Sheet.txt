@@ -1,0 +1,111 @@
+try 
+{
+	Error_Msgs = "";
+	input.SubForm.clear();
+	if(input.Sheet_Url != "")
+	{
+		// Get the full URL
+		full_url = input.Sheet_Url;
+		// Define the part of the URL to remove
+		prefix = "https://sheet.zohopublic.com/sheet/published/";
+		// Find the start index of the unique identifier
+		start_index = full_url.indexOf(prefix) + prefix.length();
+		// Extract the unique identifier by removing the prefix
+		unique_id = full_url.subString(start_index,full_url.indexOf("?",start_index));
+		//url = input.Sheet_Url.subString(input.Sheet_Url.indexOf("open/") + 5,input.Sheet_Url.indexOf("?"));
+		if(unique_id.length() == 37)
+		{
+			mp = Map();
+			rowsList = zoho.sheet.getRecords(unique_id,"Sheet1",mp,"zoho_sheet");
+			info rowsList;
+			if(rowsList.contains("error_message"))
+			{
+				Error_Msgs = rowsList.get("error_message");
+			}
+			else
+			{
+				qty_error = false;
+				rate_error = false;
+				rowcollection = Collection();
+				for each  rl in rowsList.get("records")
+				{
+					row1 = Create_Estimate.SubForm();
+					//row1.Qty=2;
+					if(rl.containsIgnoreCase("SKU"))
+					{
+						row1.SKU=rl.get("SKU");
+					}
+					if(rl.containsIgnoreCase("Sku Description"))
+					{
+						row1.SKU_Description=rl.get("Sku Description");
+					}
+					if(rl.containsIgnoreCase("Proof Url"))
+					{
+						row1.Proof_URL=rl.get("Proof Url");
+					}
+					/////////////////// Check Qty is in Numbers ////////////////
+					if(rl.containsIgnoreCase("Qty") || rl.containsIgnoreCase("QUANTITY"))
+					{
+						if(isText(rl.get("Quantity").remove(" ")) && qty_error = false)
+						{
+							qty_error = true;
+							Error_Msgs = Error_Msgs + "> Qty can be only in Numbers \n";
+						}
+						else
+						{
+							row1.Qty=rl.get("Quantity");
+						}
+					}
+					else
+					{
+						Error_Msgs = Error_Msgs + "> Quantity Column Not Found! \n";
+					}
+					///////////////////// Check Rate is in Numbers ////////////////
+					if(rl.containsIgnoreCase("Rate"))
+					{
+						if(isText(rl.get("Rate").remove(" ")) && rate_error = false)
+						{
+							rate_error = true;
+							Error_Msgs = Error_Msgs + "> Rate can be only in Numbers \n";
+						}
+						else
+						{
+							row1.Rate=rl.get("Rate");
+						}
+					}
+					else
+					{
+						Error_Msgs = Error_Msgs + "> Rate Column Not Found! \n";
+					}
+					//////////////////////////////////////////////////////////////////
+					if(isText(rl.get("Quantity")) == false && isText(rl.get("Rate")) == false)
+					{
+						row1.Amount=rl.get("Quantity") * rl.get("Rate");
+					}
+					rowcollection.insert(row1);
+				}
+			}
+		}
+		else
+		{
+			Error_Msgs = "Incorrect Sheet url added.";
+		}
+	}
+	else
+	{
+		hide SubForm;
+	}
+	if(Error_Msgs != "")
+	{
+		alert Error_Msgs.distinct();
+	}
+	else
+	{
+		input.SubForm.insert(rowcollection);
+		show SubForm;
+	}
+}
+catch (e)
+{
+	alert e;
+}

@@ -1,0 +1,232 @@
+
+/*
+  Created by: [ Muhammad Hasnain Raza ]
+  Date: [ 1/sep/2024 ]
+  Time: [ 6:30 PM]
+  Description: This code is designed to update sales orders, create and approve invoices, and manage related operations in Zoho Books and add data in  URL for Zoho Sheet: https://sheet.zoho.com/sheet/open/a1gov682fd828dd80489988f8097567085540?sheetid=0&range=A2
+
+  Notes:
+  - Fetches sales order details and modifies line item rates.
+  - Creates and approves invoices from sales orders.
+  - Updates sales order status and logs key information.
+  - Customization is included for the customer "WWT INDIA PRIVATE LIMITED".
+
+  Functions:
+  - **Fetching Sales Order Details:** Retrieves the sales order ID and details from Zoho Books.
+  - **Updating Sales Order:** Modifies line item rates, updates custom fields, and changes the sales order status.
+  - **Creating and Approving Invoices:** Creates invoices from the sales order and approves them.
+  - **Updating Sales Order Status:** Changes status from Approved to Confirmed and updates the sales order sub-status.
+  - **Handling Shipping Details:** Retrieves and formats shipping address details and customer email from sales order notes.
+  - **Adding Data to Zoho Sheet:** Prepares and adds a new row with sales order and invoice details to a Zoho Sheet.
+
+  Workflow:
+  1. Fetch sales order details and customer name.
+  2. Update line item rates to 0.0 for specific customers.
+  3. Prepare custom fields and update the sales order.
+  4. Approve and confirm the sales order.
+  5. Check if the sales order has associated invoices; if not, create and approve an invoice.
+  6. Update sales order status and add data to Zoho Sheet.
+
+  Usage:
+  - Ensure that Zoho Books and Zoho Sheet API connections are configured.
+  - Verify that the sales order ID, customer name, and other relevant details are accurate.
+
+  Change Log:
+  - **1st September 2024:** Initial version.
+*/
+/// Fetch the sales order ID from the salesorder object
+sales_order_id = salesorder.get("salesorder_id");
+// Retrieve detailed sales order data using the sales order ID from Zoho Books
+salesorder_details = zoho.books.getRecordsByID("salesorders","666479573",sales_order_id);
+// Get the customer name from the sales order details
+customer_name = salesorder_details.get("salesorder").get("customer_name");
+// If the customer is "WWT INDIA PRIVATE LIMITED", proceed with the updates
+if(customer_name == "WWT INDIA PRIVATE LIMITED")
+{
+	// Fetch the sales order ID, customer ID, and sales order number
+	so_id = salesorder_details.get("salesorder").get("salesorder_id");
+	customer_id = salesorder_details.get("salesorder").get("customer_id");
+	So_number = salesorder_details.get("salesorder").get("salesorder_number");
+	// Fetch the line items from the sales order
+	line_items_id = salesorder_details.get("salesorder").get("line_items");
+	line_items_list = List();
+	// Initialize a list to hold updated line items
+	////Loop through each line item and set its rate to 0.0
+	for each  items in line_items_id
+	{
+		line_item = Map();
+		// Create a map to hold the line item details
+		line_item.put("line_item_id",items.get("line_item_id"));
+		line_item.put("rate","0.0");
+		// Setting the rate to 0.0
+		line_items_list.add(line_item);
+		// Add the updated line item to the list
+	}
+	////// Prepare custom fields for the sales order
+	Custom_Fields = List();
+	// Initialize a list for custom fields
+	step_due_Date = Map();
+	step_due_Date.put("label","STEP DUE DATE");
+	step_due_Date.put("value","2024-09-15");
+	// Set the due date
+	Product_manager = Map();
+	Product_manager.put("label","Production Manager");
+	Product_manager.put("value","1316483000078158006");
+	// Set the production manager ID that is Mirza Noman
+	Custom_Fields.add(Product_manager);
+	Custom_Fields.add(step_due_Date);
+	//// Create a map to hold the sales order update details
+	Mp = Map();
+	Mp.put("customer_id",customer_id);
+	Mp.put("line_items",line_items_list);
+	Mp.put("shipment_date","2024-09-15");
+	Mp.put("custom_fields",Custom_Fields);
+	//////////Update the sales order with the new details
+	Update_salesorder = zoho.books.updateRecord("salesorders","666479573",sales_order_id,Mp);
+	///// Approve the sales order by changing its status from Draft to Approved
+	Approved = invokeurl
+	[
+		url :"https://www.zohoapis.com/books/v3/salesorders/" + sales_order_id + "/approve?organization_id=666479573"
+		type :POST
+		connection:"zoho_book"
+	];
+	//// Change the sales order status from Approved to Confirmed
+	Confirmed = invokeurl
+	[
+		url :"https://www.zohoapis.com/books/v3/salesorders/" + sales_order_id + "/status/open?organization_id=666479573"
+		type :POST
+		connection:"zoho_book"
+	];
+	////Check if the sales order has any invoices associated with it
+	if(salesorder_details.get("salesorder").get("invoices") == null || salesorder_details.get("salesorder").get("invoices").isEmpty())
+	{
+		//////Initialize a list to hold the invoice line items
+		Create_Line_items = List();
+		// Loop through each sales order line item and prepare a map for the invoice line items
+		line_items = salesorder_details.get("salesorder").get("line_items");
+		sheet = List();
+		product_description = "";
+		for each  inv_items in line_items
+		{
+			products = inv_items.get("name");
+			sku = inv_items.get("sku");
+			//// Concatenate product name and SKU with labels and add newline for formatting
+			product_description = product_description + "Product Name: " + products + "\nSKU: " + sku + "\n\n";
+			line_item = Map();
+			line_item.put("item_id",inv_items.get("item_id"));
+			line_item.put("rate",inv_items.get("rate"));
+			Create_Line_items.add(line_item);
+			item_custom_field = inv_items.get("item_custom_fields");
+		}
+		// Remove the extra newline characters from the product description
+		if(product_description.endsWith("\n\n"))
+		{
+			product_description = product_description.subString(0,product_description.length() - 2);
+		}
+		/////Prepare custom fields for the invoice
+		custom_fields2 = List();
+		Contact = Map();
+		Contact.put("label","Contact");
+		Contact.put("value",salesorder_details.get("salesorder").get("custom_fields").get(2).get("value"));
+		custom_fields2.add(Contact);
+		Organization_Name = Map();
+		Organization_Name.put("label","Organization Name");
+		Organization_Name.put("value",salesorder_details.get("salesorder").get("custom_fields").get(0).get("value"));
+		custom_fields2.add(Organization_Name);
+		//// Prepare the invoice map with all required fields
+		invoice_map = Map();
+		invoice_map.put("customer_id",customer_id);
+		invoice_map.put("reference_number",salesorder_details.get("salesorder").get("salesorder_number"));
+		invoice_map.put("line_items",Create_Line_items);
+		invoice_map.put("salesorder_id",salesorder_details.get("salesorder").get("salesorder_number"));
+		invoice_map.put("notes",salesorder_details.get("salesorder").get("notes"));
+		invoice_map.put("custom_fields",custom_fields2);
+		///// Convert the invoice map to JSON format
+		invoice_json = invoice_map.toString();
+		///// Create the invoice from the sales order using the API
+		create_invoice = invokeurl
+		[
+			url :"https://www.zohoapis.com/books/v3/invoices/fromsalesorder?salesorder_id=" + sales_order_id
+			type :POST
+			parameters:invoice_json
+			connection:"zoho_book"
+		];
+		info create_invoice;
+		///// Retrieve the newly created invoice ID
+		invoice_id = create_invoice.get("invoice").get("invoice_id");
+		///// Approve the invoice by changing its status from Draft to Approved		
+		Invoice_Status_Paid = invokeurl
+		[
+			url :"https://www.zohoapis.com/books/v3/invoices/" + invoice_id + "/approve?organization_id=666479573"
+			type :POST
+			connection:"zoho_book"
+		];
+		info Invoice_Status_Paid;
+		//// Mark the invoice as "Draft to Sent" Sent = Paid
+		Invoice_Mark_As_Sent = invokeurl
+		[
+			url :"https://www.zohoapis.com/books/v3/invoices/" + invoice_id + "/status/sent?organization_id=666479573"
+			type :POST
+			connection:"zoho_book"
+		];
+		////// Update the sales order status to "Being Fulfilled"
+		So_Being_Fullfilled = invokeurl
+		[
+			url :"https://www.zohoapis.com/books/v3/salesorders/" + sales_order_id + "/substatus/cs_beingfu?organization_id=666479573"
+			type :POST
+			connection:"zoho_book"
+		];
+		info So_Being_Fullfilled;
+		////// Retrieve shipping address details from the sales order
+		address = salesorder_details.get("salesorder").get("shipping_address").get("address");
+		street2 = salesorder_details.get("salesorder").get("shipping_address").get("street2");
+		city = salesorder_details.get("salesorder").get("shipping_address").get("city");
+		state = salesorder_details.get("salesorder").get("shipping_address").get("state");
+		zip = salesorder_details.get("salesorder").get("shipping_address").get("zip");
+		country = salesorder_details.get("salesorder").get("shipping_address").get("country");
+		phone = salesorder_details.get("salesorder").get("shipping_address").get("phone");
+		//////// Retrieve the last customer email from the sales order notes
+		Customer_Notes = salesorder_details.get("salesorder").get("notes").toJSONList();
+		LastEmail = null;
+		for each  note in Customer_Notes
+		{
+			LastEmail = note.get("Customer Email");
+		}
+		// Retrieve the contact person name from the sales order's custom fields
+		Contact = salesorder_details.get("salesorder").get("custom_fields");
+		for each  cont in Contact
+		{
+			if(cont.get("label") == "Contact")
+			{
+				Att_to_name = cont.get("value");
+			}
+		}
+		////// Prepare a map for the row to be added in Zoho Sheet
+		Rows_Det = List();
+		row1 = Map();
+		row1.put("Date",zoho.currentdate.getDate());
+		row1.put("SO #",salesorder_details.get("salesorder").get("salesorder_number"));
+		row1.put("INV #",create_invoice.get("invoice").get("invoice_number"));
+		row1.put("Att to name",Att_to_name);
+		row1.put("Product and description",product_description);
+		row1.put("Shipping address","Address: " + address + "\nStreet2: " + street2 + "\nCity: " + city + "\nState: " + state + "\nZip: " + zip + "\nCountry: " + country + "\nPhone " + phone);
+		row1.put("Email address",LastEmail);
+		row1.put("contact #",phone);
+		Rows_Det.add(row1);
+		resource_id = "a1gov682fd828dd80489988f8097567085540";
+		rowData = Map();
+		rowData.put("method","worksheet.records.add");
+		rowData.put("worksheet_name","Sheet1");
+		rowData.put("header_row",1);
+		rowData.put("json_data",Rows_Det);
+		///// Add the row to Zoho Sheet
+		add_records = invokeurl
+		[
+			url :"https://sheet.zoho.com/api/v2/" + resource_id
+			type :POST
+			parameters:rowData
+			connection:"zoho_sheet"
+		];
+		info add_records;
+	}
+}

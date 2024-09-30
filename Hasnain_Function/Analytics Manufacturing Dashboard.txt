@@ -1,0 +1,38 @@
+SELECT
+		 items."Item Name" AS "Item Name",
+		 ROUND(SUM(po_items."Total (BCY)"), 2) AS "Total BCY",
+		 COUNT(po_items."Product ID") AS "Product Count",
+			CASE
+				 WHEN vendor."Vendor Name"  = 'Payler Wholesale Print' THEN 'Payler Wholesale Print'
+				 WHEN vendor."Vendor Name"  = 'Flex Mark USA' THEN 'Flex Mark USA'
+				 WHEN vendor."Vendor Name"  = 'Ally Wholesale Signs' THEN 'Ally Wholesale Signs'
+				 WHEN vendor."Vendor Name"  = 'Traffic Signs Corporation' THEN 'Traffic Signs Corporation'
+				 WHEN vendor."Vendor Name"  = 'Nprint Graphix' THEN 'Nprint Graphix'
+				 WHEN vendor."Vendor Name"  = 'Illuminated Image' THEN 'Illuminated Image'
+				 WHEN vendor."Vendor Name"  = 'Sign Partners USA' THEN 'Sign Partners USA'
+				 WHEN vendor."Vendor Name"  = 'Sign Stop' THEN 'Sign Stop'
+				 WHEN vendor."Vendor Name"  = 'IceAlert, Inc.' THEN 'IceAlert, Inc.'
+				 WHEN vendor."Vendor Name"  = 'Imagine This Wholesale Printing' THEN 'Imagine This Wholesale Printing'
+				 WHEN vendor."Vendor Name"  = 'Amtek Signs' THEN 'Amtek Signs'
+				 WHEN vendor."Vendor Name"  = 'Repros Inc.' THEN 'Repros Inc.'
+				 WHEN vendor."Vendor Name"  = 'Leroy Signs Inc.' THEN 'Leroy Signs Inc.'
+				 WHEN vendor."Vendor Name"  = 'Xacto Signs' THEN 'Xacto Signs'
+				 WHEN vendor."Vendor Name"  = 'City sign services Inc TX' THEN 'City sign services Inc TX'
+				 WHEN vendor."Vendor Name"  = 'SHENZHEN COSUN SIGN SMART-TECH CO., LTD' THEN 'SHENZHEN COSUN SIGN SMART-TECH CO., LTD'
+				 WHEN vendor."Vendor Name"  = 'Osburn Associates, Inc.' THEN 'Osburn Associates, Inc.'
+				 WHEN vendor."Vendor Name"  = 'Hanson Sign Companies' THEN 'Hanson Sign Companies'
+				 WHEN vendor."Vendor Name"  = 'Indy Imaging Inc.' THEN 'Indy Imaging Inc.'
+				 WHEN vendor."Vendor Name"  = 'Erybay Sign Company' THEN 'Erybay Sign Company'
+				 WHEN vendor."Vendor Name"  = 'Shenzhen Ad-Sun Signs Co., LTD' THEN 'Shenzhen Ad-Sun Signs Co., LTD'
+				 ELSE 'Other Vendor'
+			 END AS "Vendor Name"
+FROM  "Items (Zoho Finance)" items
+LEFT JOIN "Purchase Order Items (Zoho Finance)" po_items ON po_items."Product ID"  = items."Item ID" 
+LEFT JOIN "Purchase Orders (Zoho Finance)" po ON po."Purchase Order ID"  = po_items."Purchase Order ID" 
+LEFT JOIN "Vendors (Zoho Finance)" vendor ON vendor."Vendor ID"  = po."Vendor ID"  
+WHERE	 items."Item Name"  IN ( 'Panaflex Face'  , 'Rigid Face - Lexan Panels'  , 'Rigid Face - ACM Panels'  , 'Rigid Face - Aluminum Panels'  )
+ AND	vendor."Vendor Name"  IN ( 'IceAlert, Inc.'  , 'Shenzhen Ad-Sun Signs Co., LTD'  , 'Erybay Sign Company'  , 'Indy Imaging Inc.'  , 'Hanson Sign Companies'  , 'Osburn Associates, Inc.'  , 'Payler Wholesale Print'  , 'Flex Mark USA'  , 'Ally Wholesale Signs'  , 'Traffic Signs Corporation'  , 'Nprint Graphix'  , 'Illuminated Image'  , 'Sign Partners USA'  , 'Sign Stop'  , 'IceAlert, Inc'  , 'Imagine This Wholesale Printing'  , 'Amtek Signs'  , 'Repros Inc.'  , 'Leroy Signs Inc.'  , 'Xacto Signs'  , 'City sign services Inc TX'  , 'SHENZHEN COSUN SIGN SMART-TECH CO., LTD'  )
+ AND	po_items."Created Time"  BETWEEN '2023-01-01'  AND  '2024-12-31'
+GROUP BY items."Item Name",
+	  vendor."Vendor Name" 
+ORDER BY "Vendor Name" ASC 

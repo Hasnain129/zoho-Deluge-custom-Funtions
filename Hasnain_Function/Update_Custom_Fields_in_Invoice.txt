@@ -1,4 +1,3 @@
-
 Salesorder_id = invoice.get("salesorders");
 Ref_SO = invoice.get("reference_number");
 //////////////////Get Sales order//////////////////

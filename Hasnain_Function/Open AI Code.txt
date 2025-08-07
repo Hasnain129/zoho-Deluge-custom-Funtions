@@ -1,0 +1,86 @@
+Ticket = invokeurl
+[
+	url :"https://desk.zoho.com/api/v1/tickets/" + Ticket_id
+	type :GET
+	connection:"zoho_desk"
+];
+ticket_Subject = Ticket.get("subject");
+ticket_number = Ticket.get("ticketNumber");
+weburl = Ticket.get("webUrl");
+Ticket_history = invokeurl
+[
+	url :"https://desk.zoho.com/api/v1/tickets/" + Ticket_id + "/History"
+	type :GET
+	connection:"zoho_desk"
+];
+event_info = Ticket_history.get("data");
+for each  event in event_info
+{
+	event_data = event.get("eventInfo");
+	for each  property in event_data
+	{
+		if(property.get("propertyName") == "To Address")
+		{
+			to_address = property.get("propertyValue");
+		}
+	}
+}
+Ticket_threads = invokeurl
+[
+	url :"https://desk.zoho.com/api/v1/tickets/" + Ticket_id + "/latestThread"
+	type :GET
+	connection:"zoho_desk"
+];
+raw_html = Ticket_threads.get("content");
+//Check recipient address and build OpenAI prompt
+if(to_address = "ap@blinksigns.zohodesk.com" || to_address == "ap@blinksigns.com")
+{
+	openAIRequest = Map();
+	openAIRequest.put("model","gpt-4o");
+	messages = List();
+	message_content = Map();
+	message_content.put("role","system");
+	message_content.put("content","Please can you identify if this email is related to promotional. If yes, please reply answer Yes" + raw_html);
+	messages.add(message_content);
+	openAIRequest.put("messages",messages);
+	openAIRequest.put("temperature",0.9);
+	openAIRequest.put("max_tokens",1500);
+	input_data = openAIRequest.toString();
+	headerdata = Map();
+	headerdata.put("Content-Type","application/json");
+	headerdata.put("Authorization","Bearer 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");
+	openAIResponse = invokeurl
+	[
+		url :"https://api.openai.com/v1/chat/completions"
+		type :POST
+		parameters:input_data + ""
+		headers:headerdata
+	];
+	Answer = openAIResponse.get("choices").get(0).get("message").get("content");
+	info Answer;
+	if(Answer = "Yes")
+	{
+		Ticket_close = Map();
+		Ticket_close.put("id",Ticket_id);
+		Ticket_close.put("status","Closed");
+		Close_ticket = invokeurl
+		[
+			url :"https://desk.zoho.com/api/v1/tickets/" + Ticket_id
+			type :PUT
+			parameters:Ticket_close.toString()
+			connection:"zoho_desk"
+		];
+		emailBody = "<body>" + "<div style='margin-left: 5%; margin-right: 5%;'>" + "<p>We would like to inform you that this is the promotional ticket [" + ticket_number + "] thats why we are closing this Ticket.</p>" + "</div>" + "<div style='margin-left: 5%;'>" + "<p>Ticket #: " + ticket_number + "<br>" + "Subject: " + ticket_Subject + "<br>" + "Ticket Link: " + weburl + "</p>" + "<p>If you have any further questions, feel free to reach out to the Business Development Team.</p>" + "</div>" + "<center><div style='text-align: center;'>" + "<p>BLINKSIGNS © 2025 All Rights Reserved</p>" + "</div></center>" + "</body>";
+		sendmail
+		[
+			from :zoho.adminuserid
+			to :"hasnain@blinkswag.com"
+			subject :"Ticket # " + ticket_number
+			message :emailBody
+		]
+	}
+}
+else
+{
+	info "Only work in these emails ap@blinksigns.zohodesk.com , ap@blinksigns.com & this ticket address is " + to_address;
+}

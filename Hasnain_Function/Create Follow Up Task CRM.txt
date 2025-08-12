@@ -16,3 +16,22 @@ mp.put("Lead_Status",lead_obj.get("Lead_Status"));
 //mp.put("Send_Notification_Email",true);
 createTask = zoho.crm.createRecord("Tasks",mp);
 info "Message: " + createTask;
+lead_obj = zoho.crm.getRecordById("Leads",lead_id);
+///////////// Create Follow Up Task /////////////////
+sub_desc = "Call - " + lead_obj.get("Full_Name");
+mp = Map();
+mp.put("Owner",lead_obj.get("Owner").get("id"));
+mp.put("Subject",sub_desc);
+mp.put("$se_module","Leads");
+mp.put("What_Id",lead_obj.get("id"));
+mp.put("Phone",lead_obj.get("Phone"));
+mp.put("Mobile",lead_obj.get("Mobile"));
+mp.put("Due_Date",lead_obj.get("Created_Time").toDate().addBusinessDay(1));
+mp.put("Sales_Rep",lead_obj.get("Owner").get("name"));
+mp.put("Status","Not Started");
+mp.put("Link_Url","https://crm.zoho.com/crm/org666155072/tab/Leads/" + lead_id + "/canvas/3205780000752223001");
+mp.put("Lead_Status",lead_obj.get("Lead_Status"));
+//mp.put("Send_Notification_Email",true);
+createTask = zoho.crm.createRecord("Tasks",mp);
+info "Message: " + createTask;
+

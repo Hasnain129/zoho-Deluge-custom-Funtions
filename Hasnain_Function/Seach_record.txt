@@ -5,3 +5,17 @@
 	//////////////////Get Sales order//////////////////
 	Mp = {"salesorder_number":Ref_SO};
 	salesorder = zoho.books.getRecords("salesorders",organization.get("organization_id"),Mp).get("salesorders").get(0);
+
+
+
+
+	///////////////// Search record Another tricks use contain ////////////////////
+
+	Mp = {"tax_name_contains":label,"tax_percentage":rate_percent};
+	response = invokeurl
+	[
+		url :"https://www.zohoapis.com/books/v3/settings/taxes?organization_id=666479573"
+		type :GET
+		parameters:Mp
+		connection:"zoho_books1"
+	];
